@@ -1,3 +1,5 @@
+package org.neo4j.cypher.pipes.matching
+
 /**
  * Copyright (c) 2002-2011 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
@@ -17,21 +19,21 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.pipes
 
-import matching.MatchingContext
-import org.neo4j.cypher.SymbolTable
-import org.neo4j.cypher.commands._
+import org.scalatest.junit.JUnitSuite
+import org.scalatest.Assertions
+import org.junit.Test
+import org.neo4j.graphdb.Direction
 
-class MatchPipe(source: Pipe, patterns: Seq[Pattern]) extends Pipe {
-  val matchingContext = new MatchingContext(patterns)
-  val symbols = source.symbols ++ new SymbolTable(patterns.flatMap(_ match {
-    case RelatedTo(left, right, rel, relType, dir) => Seq(NodeIdentifier(left), NodeIdentifier(right), RelationshipIdentifier(rel))
-  }))
+class PatternRelationshipTest extends JUnitSuite with Assertions {
+  @Test def returnsTheOtherNode() {
+    val a = new PatternNode("a")
+    val b = new PatternNode("b")
 
-  def foreach[U](f: (Map[String, Any]) => U) {
-    source.foreach(sourcePipeRow => {
-      matchingContext.getMatches(sourcePipeRow).foreach(patternMatch => f(patternMatch ++ sourcePipeRow))
-    })
+    val r = a.relateTo("r", b, None, Direction.BOTH)
+
+    val result = r.getOtherNode(a)
+
+    assert(result === b)
   }
 }

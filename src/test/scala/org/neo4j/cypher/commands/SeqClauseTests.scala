@@ -17,37 +17,17 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.pipes.matching
+package org.neo4j.cypher.commands
 
-import org.scalatest.Assertions
 import org.junit.Test
-import org.neo4j.graphdb.Direction
-import org.neo4j.cypher.GraphDatabaseTestBase
+import org.scalatest.Assertions
 
-class PatternNodeTest extends GraphDatabaseTestBase with Assertions {
-  @Test def returnsPatternRelationships() {
-    val a = new PatternNode("a")
-    val b = new PatternNode("b")
+class SeqClauseTests extends Assertions {
+  @Test def allStringsBeginWithA() {
+    val strings = Seq("Andres", "Andres")
+    val inner = Equals(Literal("Andres"), EntityValue("x"))
+    val all = new AllInSeq(EntityValue("strings"), "x", inner)
 
-    val r = a.relateTo("r", b, None, Direction.BOTH)
-
-    val rels = a.getPRels(Seq())
-
-    assert(rels === Seq(r))
-  }
-
-  @Test def doesntReturnRelsAlreadyVisited() {
-    val a = createNode()
-    val b = createNode()
-    val rel = relate(a, b, "r")
-
-    val pA = new PatternNode("a")
-    val pB = new PatternNode("b")
-
-    val pRel = pA.relateTo("r", pB, None, Direction.BOTH)
-
-    val rels = pA.getPRels(Seq(MatchingPair(pRel, rel)))
-
-    assert(rels === Seq())
+    assert(all.isMatch(Map("strings" -> strings)))
   }
 }

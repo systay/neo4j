@@ -19,29 +19,15 @@
  */
 package org.neo4j.cypher.pipes
 
-import org.neo4j.cypher.commands.{RelatedTo, NamedPath, PathIdentifier}
-import org.neo4j.cypher.{PathImpl, SymbolTable}
-import org.neo4j.graphdb.PropertyContainer
+import org.neo4j.cypher.SymbolTable
+import org.neo4j.cypher.commands.{Identifier, LiteralIdentifier}
 
-class PathPipe(source: Pipe, path: NamedPath) extends Pipe {
+class ParameterPipe(params: Map[String, Any]) extends Pipe {
   def foreach[U](f: (Map[String, Any]) => U) {
-
-    source.foreach(m => {
-      def get(x:String):PropertyContainer = m(x).asInstanceOf[PropertyContainer]
-
-      val firstNode = path.pathPattern.head match {
-        case RelatedTo(left, right, relName, x, xx) => left
-      }
-
-      val p = Seq(get(firstNode)) ++ path.pathPattern.flatMap(p => p match {
-        case RelatedTo(left, right, relName, x, xx) => Seq(get(relName), get(right))
-      })
-
-      val pathImpl = new PathImpl(p: _*)
-
-      f( m + (path.pathName -> pathImpl) )
-    })
+    f(params)
   }
 
-  val symbols: SymbolTable = source.symbols.add(Seq(PathIdentifier(path.pathName)))
+  val identifiers: Seq[Identifier] = params.keys.map(k => LiteralIdentifier("$" + k)).toSeq
+
+  val symbols: SymbolTable = new SymbolTable(identifiers)
 }

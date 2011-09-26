@@ -1,5 +1,3 @@
-package org.neo4j.cypher.parser
-
 /**
  * Copyright (c) 2002-2011 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
@@ -19,19 +17,8 @@ package org.neo4j.cypher.parser
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-import org.neo4j.cypher.commands._
-import scala.util.parsing.combinator._
-trait WhereClause extends JavaTokenParsers with Tokens with Clauses {
-  def where: Parser[Clause] = ignoreCase("where") ~> clause
+package org.neo4j.cypher
+
+class ParameterNotFoundException(message:String, cause:Throwable) extends RuntimeException(message, cause) {
+  def this(message:String)=this(message,null)
 }
-
-
-
-
-
-
-
-
-
-
-

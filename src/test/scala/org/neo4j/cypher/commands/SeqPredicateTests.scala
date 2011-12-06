@@ -22,11 +22,11 @@ package org.neo4j.cypher.commands
 import org.junit.Test
 import org.scalatest.Assertions
 
-class SeqClauseTests extends Assertions {
+class SeqPredicateTests extends Assertions {
   @Test def allStringsBeginWithA() {
     val strings = Seq("Andres", "Andres")
     val inner = Equals(Literal("Andres"), EntityValue("x"))
-    val all = new AllInSeq(EntityValue("strings"), "x", inner)
+    val all = new AllInIterable(EntityValue("strings"), "x", inner)
 
     assert(all.isMatch(Map("strings" -> strings)))
   }

@@ -19,10 +19,29 @@
  */
 package org.neo4j.kernel.api;
 
-public class PropertyKeyIdNotFoundException extends KernelException
+public abstract class EntityNotFoundException extends KernelException
 {
-    public PropertyKeyIdNotFoundException( long propertyKeyId, Exception cause )
+    protected EntityNotFoundException( EntityType entityType, String key, Throwable cause )
     {
-        super( "Property key id '" + propertyKeyId + "' not found", cause );
+        super( buildMessage( entityType.getNameFromKey( key ) ), cause );
+    }
+
+    protected EntityNotFoundException( EntityType entityType, String key )
+    {
+        super( buildMessage( entityType.getNameFromKey( key ) ) );
+    }
+
+    protected EntityNotFoundException( EntityType entityType, long id, Throwable cause )
+    {
+        super( buildMessage( entityType.getNameFromId( id ) ), cause );
+    }
+
+    protected EntityNotFoundException( EntityType entityType, long id )
+    {
+        super( buildMessage( entityType.getNameFromId( id ) ) );
+    }
+
+    private static String buildMessage( String identifier ) {
+        return identifier + " not found";
     }
 }

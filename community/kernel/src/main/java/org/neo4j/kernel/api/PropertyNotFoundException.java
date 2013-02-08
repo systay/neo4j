@@ -19,15 +19,28 @@
  */
 package org.neo4j.kernel.api;
 
-public class PropertyKeyNotFoundException extends KernelException
+@SuppressWarnings("UnusedDeclaration")
+public class PropertyNotFoundException extends EntityNotFoundException
 {
-    public PropertyKeyNotFoundException( String propertyKey )
+    public static final EntityType TYPE = EntityType.PROPERTY;
+
+    public PropertyNotFoundException( String key, Throwable cause )
     {
-        super( "Property key '" + propertyKey + "' not found" );
+        super( TYPE, key, cause );
     }
-    
-    public PropertyKeyNotFoundException( String propertyKey, Exception cause )
+
+    public PropertyNotFoundException( String key )
     {
-        super( "Property key '" + propertyKey + "' not found", cause );
+        super( TYPE, key );
+    }
+
+    public PropertyNotFoundException( long id, Throwable cause )
+    {
+        super( TYPE, id, cause );
+    }
+
+    public PropertyNotFoundException( long id )
+    {
+        super( TYPE, id );
     }
 }

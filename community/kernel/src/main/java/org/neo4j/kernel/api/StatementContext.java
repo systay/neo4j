@@ -46,14 +46,14 @@ public interface StatementContext
     
     /**
      * Returns a label id for a label name. If the label doesn't exist a
-     * {@link LabelNotFoundKernelException} will be thrown.
+     * {@link LabelNotFoundException} will be thrown.
      * 
      * @param label the name of the label to get the id for.
      * @return the label id for the given label name.
-     * @throws LabelNotFoundKernelException if the label for the given name
+     * @throws LabelNotFoundException if the label for the given name
      * doesn't exist.
      */
-    long getLabelId( String label ) throws LabelNotFoundKernelException;
+    long getLabelId( String label ) throws LabelNotFoundException;
     
     /**
      * Labels a node with the label corresponding to the given label id.
@@ -93,9 +93,9 @@ public interface StatementContext
      * 
      * @param labelId the label id to get the name for.
      * @return the name of the label with the given id.
-     * @throws LabelNotFoundKernelException if the label doesn't exist.
+     * @throws LabelNotFoundException if the label doesn't exist.
      */
-    String getLabelName( long labelId ) throws LabelNotFoundKernelException;
+    String getLabelName( long labelId ) throws LabelNotFoundException;
     
     /**
      * Closes this statement. Statements must be closed when done and before
@@ -153,19 +153,19 @@ public interface StatementContext
 
     /**
      * Returns a property key id for the given property key. If the property key doesn't exist a
-     * {@link PropertyKeyNotFoundException} will be thrown.
+     * {@link PropertyNotFoundException} will be thrown.
      * 
      * @param propertyKey the property key to get the id for.
      * @return the property key id for the given property key.
-     * @throws PropertyKeyNotFoundException if the property key doesn't exist.
+     * @throws PropertyNotFoundException if the property key doesn't exist.
      */
-    long getPropertyKeyId( String propertyKey ) throws PropertyKeyNotFoundException;
+    long getPropertyKeyId( String propertyKey ) throws PropertyNotFoundException;
 
     /**
      * Returns the name of a property given it's property key id
      * @param propertyId the property key id for the given property key.
      * @return the property key for the property key id.
-     * @throws PropertyKeyIdNotFoundException if the property key id doesn't exist.
+     * @throws PropertyNotFoundException if the property key id doesn't exist.
      */
-    String getPropertyKeyName( long propertyId ) throws PropertyKeyIdNotFoundException;
+    String getPropertyKeyName( long propertyId ) throws PropertyNotFoundException;
 }

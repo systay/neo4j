@@ -37,7 +37,7 @@ import org.neo4j.helpers.ThisShouldNotHappenError;
 import org.neo4j.helpers.collection.IterableWrapper;
 import org.neo4j.kernel.ThreadToStatementContextBridge;
 import org.neo4j.kernel.api.ConstraintViolationKernelException;
-import org.neo4j.kernel.api.LabelNotFoundKernelException;
+import org.neo4j.kernel.api.LabelNotFoundException;
 import org.neo4j.kernel.api.StatementContext;
 import org.neo4j.kernel.impl.transaction.LockType;
 import org.neo4j.kernel.impl.traversal.OldTraverserWrapper;
@@ -321,7 +321,7 @@ public class NodeProxy implements Node
             StatementContext ctx = statementCtxProvider.getCtxForWriting();
             ctx.removeLabelFromNode( ctx.getLabelId( label.name() ), getId() );
         }
-        catch ( LabelNotFoundKernelException e )
+        catch ( LabelNotFoundException e )
         {
             // OK, no such label... cool
         }
@@ -335,7 +335,7 @@ public class NodeProxy implements Node
             StatementContext ctx = statementCtxProvider.getCtxForReading();
             return ctx.isLabelSetOnNode( ctx.getLabelId( label.name() ), getId() );
         }
-        catch ( LabelNotFoundKernelException e )
+        catch ( LabelNotFoundException e )
         {
             return false;
         }
@@ -355,7 +355,7 @@ public class NodeProxy implements Node
                 {
                     return label( ctx.getLabelName( labelId ) );
                 }
-                catch ( LabelNotFoundKernelException e )
+                catch ( LabelNotFoundException e )
                 {
                     throw new ThisShouldNotHappenError( "Mattias", "Listed labels for node " + nodeId +
                             ", but the returned label " + labelId + " doesn't exist anymore" );

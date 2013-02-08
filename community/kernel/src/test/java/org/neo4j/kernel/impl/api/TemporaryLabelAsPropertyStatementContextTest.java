@@ -41,7 +41,7 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.GraphDatabaseAPI;
-import org.neo4j.kernel.api.PropertyKeyNotFoundException;
+import org.neo4j.kernel.api.PropertyNotFoundException;
 import org.neo4j.kernel.api.StatementContext;
 import org.neo4j.kernel.impl.core.PropertyIndexManager;
 import org.neo4j.kernel.impl.persistence.PersistenceManager;
@@ -314,7 +314,7 @@ public class TemporaryLabelAsPropertyStatementContextTest
             statement.getPropertyKeyId( "non-existent-property-key" );
             fail( "Should have failed with property key not found exception" );
         }
-        catch ( PropertyKeyNotFoundException e )
+        catch ( PropertyNotFoundException e )
         {
             // Good
         }

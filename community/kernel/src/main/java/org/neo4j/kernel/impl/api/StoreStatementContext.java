@@ -30,9 +30,8 @@ import org.neo4j.helpers.Function;
 import org.neo4j.helpers.Predicate;
 import org.neo4j.helpers.collection.PrefetchingIterator;
 import org.neo4j.kernel.api.ConstraintViolationKernelException;
-import org.neo4j.kernel.api.LabelNotFoundKernelException;
-import org.neo4j.kernel.api.PropertyKeyIdNotFoundException;
-import org.neo4j.kernel.api.PropertyKeyNotFoundException;
+import org.neo4j.kernel.api.LabelNotFoundException;
+import org.neo4j.kernel.api.PropertyNotFoundException;
 import org.neo4j.kernel.api.StatementContext;
 import org.neo4j.kernel.impl.core.KeyNotFoundException;
 import org.neo4j.kernel.impl.core.PropertyIndexManager;
@@ -91,7 +90,7 @@ public class StoreStatementContext implements StatementContext
     }
 
     @Override
-    public long getLabelId( String label ) throws LabelNotFoundKernelException
+    public long getLabelId( String label ) throws LabelNotFoundException
     {
         try
         {
@@ -99,7 +98,7 @@ public class StoreStatementContext implements StatementContext
         }
         catch ( KeyNotFoundException e )
         {
-            throw new LabelNotFoundKernelException( label, e );
+            throw new LabelNotFoundException( label, e );
         }
     }
 
@@ -144,7 +143,7 @@ public class StoreStatementContext implements StatementContext
     }
     
     @Override
-    public String getLabelName( long labelId ) throws LabelNotFoundKernelException
+    public String getLabelName( long labelId ) throws LabelNotFoundException
     {
         try
         {
@@ -152,7 +151,7 @@ public class StoreStatementContext implements StatementContext
         }
         catch ( KeyNotFoundException e )
         {
-            throw new LabelNotFoundKernelException( "Label by id " + labelId, e );
+            throw new LabelNotFoundException( labelId, e );
         }
     }
 
@@ -238,7 +237,7 @@ public class StoreStatementContext implements StatementContext
     }
 
     @Override
-    public long getPropertyKeyId( String propertyKey ) throws PropertyKeyNotFoundException
+    public long getPropertyKeyId( String propertyKey ) throws PropertyNotFoundException
     {
         try
         {
@@ -246,12 +245,12 @@ public class StoreStatementContext implements StatementContext
         }
         catch ( KeyNotFoundException e )
         {
-            throw new PropertyKeyNotFoundException( propertyKey, e );
+            throw new PropertyNotFoundException( propertyKey, e );
         }
     }
 
     @Override
-    public String getPropertyKeyName( long propertyId ) throws PropertyKeyIdNotFoundException
+    public String getPropertyKeyName( long propertyId ) throws PropertyNotFoundException
     {
         try
         {
@@ -259,7 +258,7 @@ public class StoreStatementContext implements StatementContext
         }
         catch ( KeyNotFoundException e )
         {
-            throw new PropertyKeyIdNotFoundException( propertyId, e );
+            throw new PropertyNotFoundException( propertyId, e );
         }
     }
 }

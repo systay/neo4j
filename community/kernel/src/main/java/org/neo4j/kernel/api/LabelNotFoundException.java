@@ -19,10 +19,29 @@
  */
 package org.neo4j.kernel.api;
 
-public class LabelNotFoundKernelException extends KernelException
+@SuppressWarnings("UnusedDeclaration")
+public class LabelNotFoundException extends EntityNotFoundException
 {
-    public LabelNotFoundKernelException( String message, Exception cause )
+    public static final EntityType TYPE = EntityType.LABEL;
+
+    public LabelNotFoundException( String key, Throwable cause )
     {
-        super( message, cause );
+        super( TYPE, key, cause );
     }
+
+    public LabelNotFoundException( String key )
+    {
+        super( TYPE, key );
+    }
+
+    public LabelNotFoundException( long id, Throwable cause )
+    {
+        super( TYPE, id, cause );
+    }
+
+    public LabelNotFoundException( long id )
+    {
+        super( TYPE, id );
+    }
+    
 }

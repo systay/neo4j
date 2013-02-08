@@ -21,17 +21,13 @@ package org.neo4j.kernel.impl.api;
 
 import org.neo4j.graphdb.NotInTransactionException;
 import org.neo4j.kernel.api.ConstraintViolationKernelException;
-import org.neo4j.kernel.api.LabelNotFoundKernelException;
-import org.neo4j.kernel.api.PropertyKeyNotFoundException;
 import org.neo4j.kernel.api.StatementContext;
 
-public class ReadOnlyStatementContext implements StatementContext
+public class ReadOnlyStatementContext extends DelegatingStatementContext
 {
-    private final StatementContext delegate;
-
     public ReadOnlyStatementContext( StatementContext delegate )
     {
-        this.delegate = delegate;
+        super( delegate );
     }
 
     @Override
@@ -47,41 +43,11 @@ public class ReadOnlyStatementContext implements StatementContext
     }
 
     @Override
-    public long getLabelId( String label ) throws LabelNotFoundKernelException
-    {
-        return delegate.getLabelId( label );
-    }
-
-    @Override
-    public boolean isLabelSetOnNode( long labelId, long nodeId )
-    {
-        return delegate.isLabelSetOnNode( labelId, nodeId );
-    }
-    
-    @Override
-    public Iterable<Long> getLabelsForNode( long nodeId )
-    {
-        return delegate.getLabelsForNode( nodeId );
-    }
-    
-    @Override
-    public String getLabelName( long labelId ) throws LabelNotFoundKernelException
-    {
-        return delegate.getLabelName( labelId );
-    }
-
-    @Override
     public boolean removeLabelFromNode( long labelId, long nodeId )
     {
         throw readOnlyException();
     }
     
-    @Override
-    public Iterable<Long> getNodesWithLabel( long labelId )
-    {
-        return delegate.getNodesWithLabel( labelId );
-    }
-
     @Override
     public void addIndexRule( long labelId, long propertyKey ) throws ConstraintViolationKernelException
     {
@@ -89,27 +55,9 @@ public class ReadOnlyStatementContext implements StatementContext
     }
 
     @Override
-    public Iterable<Long> getIndexRules( long labelId )
-    {
-        return delegate.getIndexRules( labelId );
-    }
-
-    @Override
     public long getOrCreatePropertyKeyId( String propertyKey )
     {
         throw readOnlyException();
-    }
-
-    @Override
-    public long getPropertyKeyId( String propertyKey ) throws PropertyKeyNotFoundException
-    {
-        return delegate.getPropertyKeyId( propertyKey );
-    }
-
-    @Override
-    public void close( boolean successful )
-    {
-        delegate.close( successful );
     }
 
     private NotInTransactionException readOnlyException()

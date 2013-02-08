@@ -19,41 +19,28 @@
  */
 package org.neo4j.kernel.impl.api;
 
-import static java.util.Collections.emptyList;
-import static org.neo4j.helpers.collection.Iterables.filter;
-import static org.neo4j.helpers.collection.Iterables.map;
-import static org.neo4j.kernel.impl.api.LabelAsPropertyData.representsLabel;
+import org.neo4j.graphdb.TransactionFailureException;
+import org.neo4j.helpers.Function;
+import org.neo4j.helpers.Predicate;
+import org.neo4j.helpers.collection.PrefetchingIterator;
+import org.neo4j.kernel.api.*;
+import org.neo4j.kernel.impl.core.KeyNotFoundException;
+import org.neo4j.kernel.impl.core.PropertyIndex;
+import org.neo4j.kernel.impl.core.PropertyIndexManager;
+import org.neo4j.kernel.impl.nioneo.store.*;
+import org.neo4j.kernel.impl.nioneo.store.SchemaRule.Kind;
+import org.neo4j.kernel.impl.persistence.PersistenceManager;
+import org.neo4j.kernel.impl.util.ArrayMap;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 
-import org.neo4j.graphdb.TransactionFailureException;
-import org.neo4j.helpers.Function;
-import org.neo4j.helpers.Predicate;
-import org.neo4j.helpers.collection.PrefetchingIterator;
-import org.neo4j.kernel.api.ConstraintViolationKernelException;
-import org.neo4j.kernel.api.LabelNotFoundKernelException;
-import org.neo4j.kernel.api.PropertyKeyNotFoundException;
-import org.neo4j.kernel.api.StatementContext;
-import org.neo4j.kernel.impl.core.KeyNotFoundException;
-import org.neo4j.kernel.impl.core.PropertyIndex;
-import org.neo4j.kernel.impl.core.PropertyIndexManager;
-import org.neo4j.kernel.impl.nioneo.store.IndexRule;
-import org.neo4j.kernel.impl.nioneo.store.InvalidRecordException;
-import org.neo4j.kernel.impl.nioneo.store.NeoStore;
-import org.neo4j.kernel.impl.nioneo.store.PropertyBlock;
-import org.neo4j.kernel.impl.nioneo.store.PropertyData;
-import org.neo4j.kernel.impl.nioneo.store.PropertyRecord;
-import org.neo4j.kernel.impl.nioneo.store.PropertyStore;
-import org.neo4j.kernel.impl.nioneo.store.PropertyType;
-import org.neo4j.kernel.impl.nioneo.store.SchemaRule;
-import org.neo4j.kernel.impl.nioneo.store.SchemaRule.Kind;
-import org.neo4j.kernel.impl.nioneo.store.SchemaStore;
-import org.neo4j.kernel.impl.nioneo.store.UnderlyingStorageException;
-import org.neo4j.kernel.impl.persistence.PersistenceManager;
-import org.neo4j.kernel.impl.util.ArrayMap;
+import static java.util.Collections.emptyList;
+import static org.neo4j.helpers.collection.Iterables.filter;
+import static org.neo4j.helpers.collection.Iterables.map;
+import static org.neo4j.kernel.impl.api.LabelAsPropertyData.representsLabel;
 
 // TODO This is the hack where we temporarily store the labels in the property store
 public class TemporaryLabelAsPropertyStatementContext implements StatementContext
@@ -332,6 +319,19 @@ public class TemporaryLabelAsPropertyStatementContext implements StatementContex
         catch ( KeyNotFoundException e )
         {
             throw new PropertyKeyNotFoundException( propertyKey, e );
+        }
+    }
+
+    @Override
+    public String getPropertyKeyName( long propertyId ) throws PropertyKeyIdNotFoundException
+    {
+        try
+        {
+            return propertyIndexManager.getKeyById( (int) propertyId ).getKey();
+        }
+        catch ( KeyNotFoundException e )
+        {
+            throw new PropertyKeyIdNotFoundException( propertyId, e );
         }
     }
 }

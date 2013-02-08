@@ -258,6 +258,14 @@ class ErrorMessagesTest extends ExecutionEngineHelper with Assertions with Strin
       "All sub queries in an UNION must have the same column names")
   }
 
+  @Test def creating_an_index_twice_should_return_sensible_error() {
+    createIndex("LabelName", "Prop")
+
+    expectError(
+      "CREATE INDEX ON :LabelName(Prop)",
+      "Property `Prop` is already indexed for label `LabelName`.")
+  }
+
   private def expectError(query: String, expectedError: String):CypherException = {
     val error = intercept[CypherException](engine.execute(query).toList)
     val s = """

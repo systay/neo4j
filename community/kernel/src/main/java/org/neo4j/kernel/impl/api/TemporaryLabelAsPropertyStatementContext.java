@@ -88,7 +88,7 @@ public class TemporaryLabelAsPropertyStatementContext implements StatementContex
     }
 
     @Override
-    public long getLabelId( String label ) throws LabelNotFoundKernelException
+    public long getLabelId( String label ) throws LabelNotFoundException
     {
         try
         {
@@ -96,7 +96,7 @@ public class TemporaryLabelAsPropertyStatementContext implements StatementContex
         }
         catch ( KeyNotFoundException e )
         {
-            throw new LabelNotFoundKernelException( label, e );
+            throw new LabelNotFoundException( label, e );
         }
     }
 
@@ -159,7 +159,7 @@ public class TemporaryLabelAsPropertyStatementContext implements StatementContex
     }
     
     @Override
-    public String getLabelName( long labelId ) throws LabelNotFoundKernelException
+    public String getLabelName( long labelId ) throws LabelNotFoundException
     {
         try
         {
@@ -168,7 +168,7 @@ public class TemporaryLabelAsPropertyStatementContext implements StatementContex
         }
         catch ( KeyNotFoundException e )
         {
-            throw new LabelNotFoundKernelException( "Label by id " + labelId, e );
+            throw new LabelNotFoundException( labelId, e );
         }
     }
 
@@ -310,7 +310,7 @@ public class TemporaryLabelAsPropertyStatementContext implements StatementContex
     }
 
     @Override
-    public long getPropertyKeyId( String propertyKey ) throws PropertyKeyNotFoundException
+    public long getPropertyKeyId( String propertyKey ) throws PropertyNotFoundException
     {
         try
         {
@@ -318,12 +318,12 @@ public class TemporaryLabelAsPropertyStatementContext implements StatementContex
         }
         catch ( KeyNotFoundException e )
         {
-            throw new PropertyKeyNotFoundException( propertyKey, e );
+            throw new PropertyNotFoundException( propertyKey, e );
         }
     }
 
     @Override
-    public String getPropertyKeyName( long propertyId ) throws PropertyKeyIdNotFoundException
+    public String getPropertyKeyName( long propertyId ) throws PropertyNotFoundException
     {
         try
         {
@@ -331,7 +331,7 @@ public class TemporaryLabelAsPropertyStatementContext implements StatementContex
         }
         catch ( KeyNotFoundException e )
         {
-            throw new PropertyKeyIdNotFoundException( propertyId, e );
+            throw new PropertyNotFoundException( propertyId, e );
         }
     }
 }

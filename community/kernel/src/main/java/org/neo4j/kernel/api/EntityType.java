@@ -19,11 +19,25 @@
  */
 package org.neo4j.kernel.api;
 
-@SuppressWarnings("UnusedDeclaration")
-public class UnknownKernelException extends KernelException
+public enum EntityType
 {
-    public UnknownKernelException( Throwable cause )
+    PROPERTY,
+    LABEL;
+
+    public String getNameFromKey( String key )
     {
-        super(cause);
+        switch(this) {
+            case LABEL:
+                return ":" + key;
+            default:
+                return this.name().toLowerCase() + "(name=" + key + ")";
+        }
+    }
+
+
+    public String getNameFromId( long id)
+    {
+        return this.name().toLowerCase() + "(id=" + id + ")";
     }
 }
+

@@ -32,7 +32,7 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.helpers.collection.PrefetchingIterator;
 import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.kernel.ThreadToStatementContextBridge;
-import org.neo4j.kernel.api.LabelNotFoundKernelException;
+import org.neo4j.kernel.api.LabelNotFoundException;
 import org.neo4j.kernel.api.StatementContext;
 import org.neo4j.kernel.impl.core.NodeManager;
 
@@ -157,7 +157,7 @@ public class GlobalGraphOperations
                 }
             };
         }
-        catch ( LabelNotFoundKernelException e )
+        catch ( LabelNotFoundException e )
         {
             // That label hasn't been created yet, there cannot possibly be any nodes labeled with it
             return Collections.emptyList();

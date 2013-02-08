@@ -27,7 +27,7 @@ import org.neo4j.graphdb.schema.IndexCreator;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.graphdb.schema.Schema;
 import org.neo4j.helpers.Function;
-import org.neo4j.kernel.api.LabelNotFoundKernelException;
+import org.neo4j.kernel.api.LabelNotFoundException;
 import org.neo4j.kernel.api.StatementContext;
 import org.neo4j.kernel.impl.core.KeyHolder;
 import org.neo4j.kernel.impl.core.PropertyIndex;
@@ -65,7 +65,7 @@ public class SchemaImpl implements Schema
                 }
             }, context.getIndexRules( context.getLabelId( label.name() ) ) );
         }
-        catch ( LabelNotFoundKernelException e )
+        catch ( LabelNotFoundException e )
         {
             return emptyList();
         }

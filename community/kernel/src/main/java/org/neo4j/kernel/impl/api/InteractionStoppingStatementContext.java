@@ -20,9 +20,8 @@
 package org.neo4j.kernel.impl.api;
 
 import org.neo4j.kernel.api.ConstraintViolationKernelException;
-import org.neo4j.kernel.api.LabelNotFoundKernelException;
-import org.neo4j.kernel.api.PropertyKeyIdNotFoundException;
-import org.neo4j.kernel.api.PropertyKeyNotFoundException;
+import org.neo4j.kernel.api.LabelNotFoundException;
+import org.neo4j.kernel.api.PropertyNotFoundException;
 import org.neo4j.kernel.api.StatementContext;
 
 public class InteractionStoppingStatementContext implements StatementContext
@@ -43,7 +42,7 @@ public class InteractionStoppingStatementContext implements StatementContext
     }
 
     @Override
-    public long getLabelId( String label ) throws LabelNotFoundKernelException
+    public long getLabelId( String label ) throws LabelNotFoundException
     {
         assertOperationsAllowed();
         return delegate.getLabelId( label );
@@ -71,7 +70,7 @@ public class InteractionStoppingStatementContext implements StatementContext
     }
     
     @Override
-    public String getLabelName( long labelId ) throws LabelNotFoundKernelException
+    public String getLabelName( long labelId ) throws LabelNotFoundException
     {
         assertOperationsAllowed();
         return delegate.getLabelName( labelId );
@@ -121,14 +120,14 @@ public class InteractionStoppingStatementContext implements StatementContext
     }
 
     @Override
-    public long getPropertyKeyId( String propertyKey ) throws PropertyKeyNotFoundException
+    public long getPropertyKeyId( String propertyKey ) throws PropertyNotFoundException
     {
         assertOperationsAllowed();
         return delegate.getPropertyKeyId( propertyKey );
     }
 
     @Override
-    public String getPropertyKeyName( long propertyId ) throws PropertyKeyIdNotFoundException
+    public String getPropertyKeyName( long propertyId ) throws PropertyNotFoundException
     {
         assertOperationsAllowed();
         return delegate.getPropertyKeyName( propertyId );

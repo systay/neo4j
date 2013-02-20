@@ -17,22 +17,20 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.internal.pipes
+package org.neo4j.cypher.internal.helpers
 
-import org.neo4j.cypher.internal.commands.Predicate
-import org.neo4j.cypher.internal.symbols.SymbolTable
-import org.neo4j.cypher.internal.data.SimpleVal
-import org.neo4j.cypher.internal.ExecutionContext
+/**
+ * Subclasses prefer to use StringBuilders to render themselves
+ */
+trait StringRenderingSupport {
+  override def toString = {
+    val builder = new StringBuilder
+    render(builder)
+    builder.toString()
+  }
 
-class FilterPipe(source: Pipe, predicate: Predicate) extends PipeWithSource(source) {
-  val symbols = source.symbols
-
-  protected def internalCreateResults(input: Iterator[ExecutionContext],state: QueryState) = input.filter(ctx => predicate.isMatch(ctx)(state))
-
-  override def executionPlanDescription =
-    source.executionPlanDescription.andThen(this, "Filter", "pred" -> SimpleVal.fromStr(predicate))
-
-  def throwIfSymbolsMissing(symbols: SymbolTable) {
-    predicate.throwIfSymbolsMissing(symbols)
+  def render(builder: StringBuilder) {
+    builder ++= super.toString
   }
 }
+

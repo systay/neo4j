@@ -19,20 +19,20 @@
  */
 package org.neo4j.cypher.internal.commands.expressions
 
-import org.neo4j.cypher.internal.symbols.{SymbolTable, CypherType}
+import org.neo4j.cypher.internal.symbols._
 import org.neo4j.cypher.internal.ExecutionContext
 import org.neo4j.cypher.internal.pipes.QueryState
 
-case class Literal(v: Any) extends Expression {
-  def apply(ctx: ExecutionContext)(implicit state: QueryState): Any = v
+case class TimestampFunction() extends Expression {
+  def apply(ctx: ExecutionContext)(implicit state: QueryState):Any = state.readTimeStamp()
+
+  def innerExpectedType = StringType()
+
+  def children = Seq()
 
   def rewrite(f: (Expression) => Expression) = f(this)
 
-  def children = Nil
+  def calculateType(symbols: SymbolTable) = IntegerType()
 
-  def calculateType(symbols: SymbolTable): CypherType = CypherType.fromJava(v)
-
-  def symbolTableDependencies = Set()
-
-  override def toString() = "Literal(" + v + ")"
+  def symbolTableDependencies = Set.empty
 }

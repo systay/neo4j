@@ -33,6 +33,7 @@ object Pattern {
   sealed trait SemanticContext
   object SemanticContext {
     case object Match extends SemanticContext
+    case object Merge extends SemanticContext
     case object Create extends SemanticContext
     case object Expression extends SemanticContext
   }

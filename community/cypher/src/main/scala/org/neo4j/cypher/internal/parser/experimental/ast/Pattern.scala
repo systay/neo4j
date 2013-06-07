@@ -58,7 +58,6 @@ sealed abstract class Pattern extends AstNode {
 
 case class AnonymousPattern(path: PathPattern) extends Pattern {
   def token = path.token
-  def children = Seq(path)
 
   def semanticCheck(context: SemanticContext) = path.semanticCheck(context)
 
@@ -69,7 +68,6 @@ case class AnonymousPattern(path: PathPattern) extends Pattern {
 }
 
 case class NamedPattern(identifier: Identifier, path: PathPattern, token: InputToken) extends Pattern {
-  def children = Seq(identifier, path)
   def semanticCheck(context: SemanticContext) = path.semanticCheck(context) >>= identifier.declare(PathType())
 
   lazy val toLegacyPatterns = path.toLegacyPatterns(Some(identifier.name))
@@ -79,8 +77,6 @@ case class NamedPattern(identifier: Identifier, path: PathPattern, token: InputT
 }
 
 case class RelationshipsPattern(element: PatternElement, token: InputToken) extends Pattern {
-  def children = Seq(element)
-
   def semanticCheck(context: SemanticContext) = element.semanticCheck(context)
 
   lazy val toLegacyPatterns = element.toLegacyPatterns(true)
@@ -101,7 +97,6 @@ sealed abstract class PathPattern extends AstNode {
 
 case class EveryPath(element: PatternElement) extends PathPattern {
   def token = element.token
-  def children = Seq(element)
 
   def semanticCheck(context: SemanticContext) = element.semanticCheck(context)
 
@@ -112,7 +107,6 @@ case class EveryPath(element: PatternElement) extends PathPattern {
 }
 
 case class ShortestPath(element: PatternElement, token: InputToken) extends PathPattern {
-  def children = Seq(element)
   def semanticCheck(context: SemanticContext) = checkContainsSingle >>= checkNoMinimalLength
 
   private def checkContainsSingle : SemanticCheck = element match {
@@ -165,7 +159,6 @@ sealed abstract class PatternElement extends AstNode {
 }
 
 case class RelationshipChain(element: PatternElement, relationship: RelationshipPattern, rightNode: NodePattern, token: InputToken) extends PatternElement {
-  def children = Seq(element, relationship, rightNode)
   def semanticCheck(context: SemanticContext) = {
     element.semanticCheck(context) >>=
     relationship.semanticCheck(context) >>=
@@ -233,15 +226,12 @@ sealed abstract class NodePattern extends PatternElement {
 }
 
 case class NamedNodePattern(identifier: Identifier, labels: Seq[Identifier], properties: Option[Expression], token: InputToken) extends NodePattern {
-  def children = Seq(identifier) ++ labels ++ properties
   override def semanticCheck(context: SemanticContext) = identifier.implicitDeclaration(NodeType()) >>= super.semanticCheck(context)
 
   val legacyName = identifier.name
 }
 
 case class AnonymousNodePattern(labels: Seq[Identifier], properties: Option[Expression],  token: InputToken) extends NodePattern {
-  def children = labels ++ properties
-
   val legacyName = "  UNNAMED" + (token.startPosition.offset+1)
 }
 
@@ -320,7 +310,6 @@ case class NamedRelationshipPattern(
     properties : Option[Expression],
     token: InputToken) extends RelationshipPattern
 {
-  def children = Seq(identifier) ++ types ++ length.toSeq.flatten ++ properties
   override def semanticCheck(context: SemanticContext) = super.semanticCheck(context) >>= identifier.implicitDeclaration(RelationshipType())
 
   val legacyName = identifier.name
@@ -334,7 +323,5 @@ case class AnonymousRelationshipPattern(
     properties : Option[Expression],
     token: InputToken) extends RelationshipPattern
 {
-  def children = types ++ length.toSeq.flatten ++ properties
-
   val legacyName = "  UNNAMED" + token.startPosition.offset
 }

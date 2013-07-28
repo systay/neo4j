@@ -2842,6 +2842,7 @@ class CypherParserTest extends JUnitSuite with Assertions {
         case _ => Some(version)
       }
       testQuery(maybeVersion, query, expectedQuery)
+//      testQuery(maybeVersion, query + ";", expectedQuery)
     }
   }
 

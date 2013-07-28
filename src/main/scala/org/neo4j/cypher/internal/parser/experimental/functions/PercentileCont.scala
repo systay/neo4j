@@ -26,13 +26,14 @@ import org.neo4j.cypher.internal.commands.{expressions => commandexpressions}
 case object PercentileCont extends AggregatingFunction {
   def name = "PERCENTILE_CONT"
 
-  override def semanticCheck(ctx: ast.Expression.SemanticContext, invocation: ast.FunctionInvocation): SemanticCheck =
+  override def semanticCheck(ctx: ast.Expression.SemanticContext, invocation: ast.FunctionInvocation): SemanticCheck = {
     super.semanticCheck(ctx, invocation) then
       checkArgs(invocation, 2) ifOkThen {
-      val firstArg = invocation.arguments(0)
-      invocation.arguments.limitType(NumberType()) then
-      invocation.limitType(firstArg.types)
-    }
+        val firstArg = invocation.arguments(0)
+        invocation.arguments.limitType(NumberType()) then
+          invocation.limitType(firstArg.types)
+      }
+  }
 
   def toCommand(invocation: ast.FunctionInvocation) = {
     val firstArg = invocation.arguments(0).toCommand

@@ -342,7 +342,7 @@ case class SingleIterablePredicate(identifier: Identifier, expression: Expressio
 }
 
 case class Reduce(accumulator: Identifier, init: Expression, id: Identifier, collection: Expression, expression: Expression, token: ContextToken) extends Expression {
-  def semanticCheck(ctx: SemanticContext): SemanticCheck =
+  def semanticCheck(ctx: SemanticContext): SemanticCheck = {
     init.semanticCheck(ctx) then
       collection.semanticCheck(ctx) then
       collection.limitType(CollectionType(AnyType())) then
@@ -353,8 +353,8 @@ case class Reduce(accumulator: Identifier, init: Expression, id: Identifier, col
           accumulator.declare(accType) then
           expression.semanticCheck(SemanticContext.Simple)
       }
+  }
 
-  def toCommand: CommandExpression =
-    commandexpressions.ReduceFunction(collection.toCommand, id.name, expression.toCommand, accumulator.name, init.toCommand)
+  def toCommand: CommandExpression = commandexpressions.ReduceFunction(collection.toCommand, id.name, expression.toCommand, accumulator.name, init.toCommand)
 }
 

@@ -27,12 +27,11 @@ case object EndNode extends Function {
   def name = "ENDNODE"
 
   override def semanticCheck(ctx: ast.Expression.SemanticContext, invocation: ast.FunctionInvocation): SemanticCheck = {
-
     super.semanticCheck(ctx, invocation) then
       checkArgs(invocation, 1) ifOkThen {
-      invocation.arguments(0).limitType(RelationshipType()) then
-        invocation.limitType(NodeType())
-    }
+        invocation.arguments(0).limitType(RelationshipType()) then
+          invocation.limitType(NodeType())
+      }
   }
 
   def toCommand(invocation: ast.FunctionInvocation) = {

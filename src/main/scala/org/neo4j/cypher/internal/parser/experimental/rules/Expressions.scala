@@ -122,7 +122,6 @@ trait Expressions extends Parser
   private def FilterExpression : Rule3[ast.Identifier, ast.Expression, Option[ast.Expression]] =
     IdInColl ~~ (keyword("WHERE") ~~ Expression ~~> (Some(_)) | EMPTY ~ push(None))
 
-
   private def IdInColl: Rule2[ast.Identifier, ast.Expression] =
     Identifier ~~ keyword("IN") ~~ Expression
 

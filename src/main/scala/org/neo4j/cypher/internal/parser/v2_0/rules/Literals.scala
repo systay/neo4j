@@ -24,7 +24,7 @@ import org.parboiled.Context
 import org.parboiled.scala._
 
 trait Literals extends Parser
-  with Base with LiteralSupport {
+  with Base with Strings {
 
   def Expression : Rule1[ast.Expression]
 

@@ -22,8 +22,7 @@ package org.neo4j.cypher.internal.parser.v2_0.rules
 import org.parboiled.scala._
 import org.parboiled.Context
 
-trait LiteralSupport {
-  self: Base =>
+trait Strings extends Base {
 
   protected def StringCharacters(c: Char) = {
     push(new StringBuilder) ~ zeroOrMore(EscapedChar(c) | NormalChar(c)) ~~> (_.toString)

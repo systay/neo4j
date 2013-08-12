@@ -21,7 +21,7 @@ package org.neo4j.cypher.internal.prettifier
 
 import org.parboiled.scala._
 import org.neo4j.cypher.internal.parser.v2_0.rules.Base
-import org.neo4j.cypher.internal.parser.v2_0.rules.LiteralSupport
+import org.neo4j.cypher.internal.parser.v2_0.rules.Strings
 import org.neo4j.cypher.SyntaxException
 
 sealed abstract class SyntaxToken {
@@ -47,7 +47,7 @@ final case class EscapedText(text: String) extends SyntaxToken {
 
 final case class AnyText(text: String) extends SyntaxToken
 
-class PrettifierParser extends Parser with Base with LiteralSupport {
+class PrettifierParser extends Parser with Base with Strings {
 
   def reservedKeyword: Rule0 = rule("reservedKeyword") {
     keyword("START") | keyword("CREATE") | keyword("SET") | keyword("DELETE") | keyword("FOREACH") |

@@ -92,6 +92,8 @@ case class CachedExpression(key:String, typ:CypherType) extends Expression {
   override def toString = "Cached(%s of type %s)".format(key, typ)
 }
 
+
+
 abstract class Arithmetics(left: Expression, right: Expression)
   extends Expression with TypeSafeMathSupport {
   def throwTypeError(bVal: Any, aVal: Any): Nothing = {

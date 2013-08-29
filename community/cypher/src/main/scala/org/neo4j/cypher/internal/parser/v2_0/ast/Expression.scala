@@ -222,10 +222,13 @@ case class CollectionSlice(collection: Expression, from: Option[Expression], to:
   override def semanticCheck(ctx: SemanticContext) =
     collection.semanticCheck(ctx) then
       collection.constrainType(CollectionType(AnyType())) then
+      when(from.isEmpty && to.isEmpty) {
+        SemanticError("The start or end (or both) is required for a collection slice", token)
+      } then
       from.semanticCheck(ctx) then
-      from.constrainType(NumberType()) then
+      from.constrainType(IntegerType(), LongType()) then
       to.semanticCheck(ctx) then
-      to.constrainType(NumberType()) then
+      to.constrainType(IntegerType(), LongType()) then
       specifyType(collection.types)
 
   def toCommand = commandexpressions.SliceExpression(collection.toCommand, from.map(_.toCommand), to.map(_.toCommand))
@@ -238,8 +241,8 @@ case class CollectionIndex(collection: Expression, idx: Expression, token: Input
     collection.semanticCheck(ctx) then
       collection.constrainType(CollectionType(AnyType())) then
       idx.semanticCheck(ctx) then
-      idx.constrainType(NumberType()) then
-      specifyType(collection.types)
+      idx.constrainType(IntegerType(), LongType()) then
+      specifyType(collection.types(_).map(_.iteratedType))
 
   def toCommand = commandexpressions.ElementFromCollection(collection.toCommand, idx.toCommand)
 }

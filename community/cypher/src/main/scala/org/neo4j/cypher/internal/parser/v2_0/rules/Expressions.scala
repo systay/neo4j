@@ -84,17 +84,17 @@ trait Expressions extends Parser
 
   private def Expression4 = Expression3
 
-  private def Expression3: Rule1[ast.Expression] = rule {
+  private def Expression3 : Rule1[ast.Expression] = rule {
     Expression2 ~ zeroOrMore(WS ~ (
-      PropertyLookup
-        | "[" ~~ Expression ~~ "]" ~>> token ~~> ast.ArrayIndexSingle
-        | "[" ~~ optional(Expression) ~~ ".." ~~ optional(Expression) ~~ "]" ~>> token ~~> ast.ArrayIndexBetween
-        | NodeLabels ~>> token ~~> ast.HasLabels
-        | operator("=~") ~> identifier ~~ Expression2 ~~> (ast.FunctionInvocation(_: ast.Expression, _, _))
-        | keyword("IN") ~> identifier ~~ Expression2 ~~> (ast.FunctionInvocation(_: ast.Expression, _, _))
-        | keyword("IS", "NULL") ~> identifier ~~> (ast.FunctionInvocation(_: ast.Expression, _))
-        | keyword("IS", "NOT", "NULL") ~> identifier ~~> (ast.FunctionInvocation(_: ast.Expression, _))
-      ): ReductionRule1[ast.Expression, ast.Expression])
+        PropertyLookup
+      | "[" ~~ Expression ~~ "]" ~>> token ~~> ast.CollectionIndex
+      | "[" ~~ optional(Expression) ~~ ".." ~~ optional(Expression) ~~ "]" ~>> token ~~> ast.CollectionSlice
+      | NodeLabels ~>> token ~~> ast.HasLabels
+      | operator("=~") ~> identifier ~~ Expression2 ~~> (ast.FunctionInvocation(_: ast.Expression, _, _))
+      | keyword("IN") ~> identifier ~~ Expression2 ~~> (ast.FunctionInvocation(_: ast.Expression, _, _))
+      | keyword("IS", "NULL") ~> identifier ~~> (ast.FunctionInvocation(_: ast.Expression, _))
+      | keyword("IS", "NOT", "NULL") ~> identifier ~~> (ast.FunctionInvocation(_: ast.Expression, _))
+    ) : ReductionRule1[ast.Expression, ast.Expression])
   }
 
   private def Expression2 : Rule1[ast.Expression] = rule (

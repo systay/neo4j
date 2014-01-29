@@ -20,26 +20,35 @@
 
 package org.neo4j.cypher.internal.compiler.v2_1.planner
 
-import org.neo4j.cypher.internal.compiler.v2_1.runtime.{AllNodesScanOp, MapRegisters, Operator}
+import org.neo4j.cypher.internal.compiler.v2_1.runtime.{AllNodesScanOp, MapRegisters, Operator, Runtime}
 
 /*
 Creates the operator tree from the Plan
  */
-trait CodeGenerator {
+class CodeGenerator(runtime: Runtime) {
 
   def translatePlan(plan:AbstractPlan, qg: QueryGraph): Operator = {
     plan match {
-      case AllNodesScan => translateAllNodesScan().translate()
-      case LabelScan => translateLabelScan().translate()
+      case AllNodesScan(_,_) => translateAllNodesScan().translate()
+      case LabelScan(_,_,_) => translateLabelScan().translate()
     }
   }
 
-  def allocateRegisters(qg: QueryGraph, registers: MapRegisters): Long = {
-    ???
+  def allocateIdRegisters(qg: QueryGraph): Int = {
+    // all nodes in the query graph get separate registers
+    qg.maxId.id+1
   }
-  def translate(plan: AbstractPlan, qg: QueryGraph, registers: MapRegisters): Operator =  {
-    allocateRegisters(qg, registers)
-    translatePlan(plan, qg)
+
+  def allocateObjectRegisters(qg: QueryGraph): Int = {
+    ???
+    // handle expressions in selections and projections
+  }
+
+
+  def translate(plan: AbstractPlan, qg: QueryGraph): Operator =  {
+    runtime.allocateIdRegisters(allocateIdRegisters(qg))
+    //translatePlan(plan, qg)
+    null
   }
 }
 

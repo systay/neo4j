@@ -17,10 +17,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.internal.compiler.v2_1.planner
+package org.neo4j.cypher.internal.compiler.v2_1.ast
 
-import org.neo4j.cypher.internal.compiler.v2_1.ast.Query
+import org.neo4j.cypher.internal.compiler.v2_1.{InputPosition, DummyPosition}
+import org.neo4j.cypher.internal.commons.CypherTestSupport
 
-trait QueryGraphBuilder {
-  def produce(ast: Query): QueryGraph
+trait AstConstructionTestSupport extends CypherTestSupport {
+  protected val pos = DummyPosition(0)
+
+  implicit def withPos[T](expr: InputPosition => T): T = expr(pos)
+
+  def ident(name: String) = Identifier(name)(pos)
 }

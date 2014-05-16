@@ -17,20 +17,26 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.internal.compiler.v2_1.helpers
+package org.neo4j.cypher.internal.compiler.v2_1.ast.rewriters
 
-object NameSupport {
+import org.neo4j.cypher.internal.commons.CypherFunSuite
+import org.neo4j.cypher.internal.compiler.v2_1.ast.{Not, Equals, Expression, NotEquals}
+import org.neo4j.cypher.internal.compiler.v2_1.DummyPosition
 
-  implicit class NameString(name: String) {
-    def isNamed = !unnamed
-    def unnamed = NameSupport.notNamed(name)
+class NormalizeNotEqualsTest extends CypherFunSuite {
+
+  val lhs = mock[Expression]
+  val rhs = mock[Expression]
+  val p = DummyPosition(0)
+
+  test("notEquals  iff  not(equals)") {
+    val notEquals = NotEquals(lhs, rhs)(p)
+    val output = normalizeNotEquals(notEquals).get
+    output should equal(Not(Equals(lhs, rhs)(p))(p))
   }
 
-  def newIdName(n: Int): String = "  FRESHID" + n
-
-  def unamedEntity(n: Int): String = "  UNNAMED" + n
-
-  def isNamed(x: String) = !notNamed(x)
-
-  def notNamed(x: String) = x.startsWith("  UNNAMED")
+  test("should do nothing on other expressions") {
+    val output = normalizeNotEquals(lhs)
+    output should equal(None)
+  }
 }

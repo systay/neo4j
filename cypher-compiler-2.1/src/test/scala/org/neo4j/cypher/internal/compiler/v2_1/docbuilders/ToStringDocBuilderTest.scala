@@ -19,17 +19,23 @@
  */
 package org.neo4j.cypher.internal.compiler.v2_1.docbuilders
 
-import org.neo4j.cypher.internal.compiler.v2_1.perty._
-import org.neo4j.cypher.internal.compiler.v2_1.perty.docbuilders.{catchErrors, simpleDocBuilder}
+import org.neo4j.cypher.internal.compiler.v2_1.perty.docbuilders.{toStringDocBuilder, DocBuilderTestSuite}
 
-case object internalDocBuilder extends DocBuilderChain[Any] with TopLevelDocBuilder[Any] {
+class ToStringDocBuilderTest extends DocBuilderTestSuite[Any] {
 
-  val builders = Seq(
-    astExpressionDocBuilder,
-    astDocBuilder,
-    plannerDocBuilder,
-    simpleDocBuilder
-  )
+  val docBuilder = toStringDocBuilder
 
-  override protected def newNestedDocGenerator = catchErrors(super.newNestedDocGenerator)
+  test("handles nulls") {
+    format(null) should equal("null")
+  }
+
+  test("handles values") {
+    format(1) should equal("1")
+  }
+
+  test("handles object instances") {
+    object Test { override def toString = "surprise" }
+
+    format(Test) should equal("surprise")
+  }
 }

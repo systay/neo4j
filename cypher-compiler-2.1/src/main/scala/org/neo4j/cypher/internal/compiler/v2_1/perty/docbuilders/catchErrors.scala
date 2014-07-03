@@ -17,32 +17,35 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.internal.compiler.v2_1
+package org.neo4j.cypher.internal.compiler.v2_1.perty.docbuilders
 
-import org.neo4j.cypher.internal.compiler.v2_1.pipes.QueryState
-import org.neo4j.cypher.GraphDatabaseTestSupport
+import org.neo4j.cypher.internal.compiler.v2_1.perty.{NestedDocGenerator, Doc}
+import scala.reflect.ClassTag
+import scala.util.Try
 
-trait QueryStateTestSupport {
-  self: GraphDatabaseTestSupport =>
+case class catchErrors[T: ClassTag](instance: NestedDocGenerator[T]) extends NestedDocGenerator[T] {
 
-  def withQueryState[T](f: QueryState => T) = {
-    val tx = graph.beginTx()
+  import Doc._
+
+  override def isDefinedAt(v: T) =
     try {
-      val queryState = QueryStateHelper.queryStateFrom(graph, tx)
-      f(queryState)
-    } finally {
-      tx.close()
+      instance.isDefinedAt(v)
     }
-  }
-
-  def withCountsQueryState[T](f: QueryState => T) = {
-    val tx = graph.beginTx()
-    try {
-      val queryState = QueryStateHelper.countStats(QueryStateHelper.queryStateFrom(graph, tx))
-      f(queryState)
-    } finally {
-      tx.close()
+    catch {
+      case _: NotImplementedError => true
+      case _: MatchError          => true
     }
-  }
 
+  override def apply(v: T) =
+    (inner) =>
+      try {
+        instance(v)(inner)
+      }
+      catch {
+        case _: NotImplementedError =>
+          "???"
+
+        case e: Exception  =>
+          group("!!!" :/: Try(text(e.getMessage)).getOrElse(e.getClass.toString :: ":" :/: "Failed to get the message"))
+      }
 }

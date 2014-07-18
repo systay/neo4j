@@ -17,18 +17,22 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.internal.compiler.v2_1.pipes
+package org.neo4j.cypher.internal.compiler.v2_1.functions
 
 import org.neo4j.cypher.internal.compiler.v2_1._
-import commands.Predicate
-import org.neo4j.cypher.internal.compiler.v2_1.planDescription.PlanDescription.Arguments.LegacyExpression
+import ast.convert.ExpressionConverters._
+import commands.{expressions => commandexpressions}
+import symbols._
 
-case class FilterPipe(source: Pipe, predicate: Predicate)
-                     (implicit pipeMonitor: PipeMonitor) extends PipeWithSource(source, pipeMonitor) {
-  val symbols = source.symbols
+case object ToString extends Function with SimpleTypedFunction {
+  def name = "toString"
 
-  protected def internalCreateResults(input: Iterator[ExecutionContext],state: QueryState) =
-    input.filter(ctx => predicate.isTrue(ctx)(state))
+  val signatures = Vector(
+    Signature(argumentTypes = Vector(CTFloat), outputType = CTString),
+    Signature(argumentTypes = Vector(CTInteger), outputType = CTString),
+    Signature(argumentTypes = Vector(CTString), outputType = CTString)
+  )
 
-  def planDescription = source.planDescription.andThen(this, "Filter", LegacyExpression(predicate))
+  def asCommandExpression(invocation: ast.FunctionInvocation) =
+    commandexpressions.ToStringFunction(invocation.arguments(0).asCommandExpression)
 }

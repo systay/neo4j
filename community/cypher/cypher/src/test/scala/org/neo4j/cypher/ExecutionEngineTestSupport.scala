@@ -46,10 +46,10 @@ trait ExecutionEngineTestSupport extends CypherTestSupport {
     eengine = new ExecutionEngine(graph)
   }
 
-  def execute(q: String, params: (String, Any)*): InternalExecutionResult =
+  def execute(q: String, params: (String, Any)*): ExtendedExecutionResult =
     RewindableExecutionResult(eengine.execute(q, params.toMap))
 
-  def profile(q: String, params: (String, Any)*): InternalExecutionResult =
+  def profile(q: String, params: (String, Any)*): ExtendedExecutionResult =
     RewindableExecutionResult(eengine.profile(q, params.toMap))
 
   def runAndFail[T <: Throwable : Manifest](q: String): ExpectedException[T] =

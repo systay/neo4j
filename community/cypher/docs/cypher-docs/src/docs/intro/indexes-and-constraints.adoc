@@ -1,0 +1,22 @@
+[[cypher-intro-indexes-contraints]]
+= Indexes and Constraints
+
+Labels allow you to group nodes, and add indexes or constraints to them.
+Adding an index gives fast lookups for starting nodes in the graph.
+
+== Lookup Indexes
+
+In general, for a graph query to run fast, you don't need indexes, you only need them to find your starting points.
+After that initial lookups you rely on the in-graph structures and first class citizenship of relationships in the graph database to achieve high performance.
+
+You would create an index like this: +CREATE INDEX ON :Movie(title)+
+
+== Unique Constraints
+
+You can also specify unique constraints that guarantee uniqueness of a certain property on nodes with a specific label.
+
+These constraints are also used by the +MERGE+ clause to make certain that a node only exists once.
+
+A constraint definition would look like this: +CREATE CONSTRAINT ON (p:Person) ASSERT p.name IS UNIQUE+.
+
+

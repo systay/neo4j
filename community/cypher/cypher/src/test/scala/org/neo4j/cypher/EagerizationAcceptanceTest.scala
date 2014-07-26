@@ -73,7 +73,7 @@ class EagerizationAcceptanceTest extends ExecutionEngineFunSuite {
     assertNumberOfEagerness(result, 0)
   }
 
-  private def assertNumberOfEagerness(r: InternalExecutionResult, expectedEagerCount: Int) {
+  private def assertNumberOfEagerness(r: ExtendedExecutionResult, expectedEagerCount: Int) {
     val plan = r.executionPlanDescription().toString
     val length = EagerRegEx.findAllIn(plan).length
     assert(length == expectedEagerCount * 2, plan)

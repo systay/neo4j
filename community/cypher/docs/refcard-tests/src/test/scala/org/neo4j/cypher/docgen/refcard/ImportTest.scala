@@ -23,7 +23,7 @@ import java.io.File
 
 import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.docgen.{CsvFile, RefcardTest}
-import org.neo4j.cypher.internal.compiler.v2_2.executionplan.InternalExecutionResult
+import org.neo4j.cypher.ExtendedExecutionResult
 
 class ImportTest extends RefcardTest with QueryStatisticsTestSupport {
   val graphDescription = List()
@@ -61,7 +61,7 @@ class ImportTest extends RefcardTest with QueryStatisticsTestSupport {
     "%ARTIS_WITH_HEADER%" -> (baseUrl + artistWithHeaders.getName),
     "%ARTIST_WITH_FIELD_DELIMITER%" -> (baseUrl + artistFieldTerminator.getName))
 
-  override def assert(name: String, result: InternalExecutionResult) {
+  override def assert(name: String, result: ExtendedExecutionResult) {
     name match {
       case "created" =>
         assertStats(result, nodesCreated = 4, labelsAdded = 4, propertiesSet = 8)

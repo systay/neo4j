@@ -22,7 +22,7 @@ package org.neo4j.cypher.docgen.refcard
 import org.junit.Ignore
 import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.docgen.RefcardTest
-import org.neo4j.cypher.internal.compiler.v2_2.executionplan.InternalExecutionResult
+import org.neo4j.cypher.ExtendedExecutionResult
 
 @Ignore
 class ExamplesTest extends RefcardTest with QueryStatisticsTestSupport {
@@ -30,7 +30,7 @@ class ExamplesTest extends RefcardTest with QueryStatisticsTestSupport {
   val title = "Query Structure"
   val css = "general c2-2 c3-2 c4-2 c5-2"
 
-  override def assert(name: String, result: InternalExecutionResult) {
+  override def assert(name: String, result: ExtendedExecutionResult) {
     name match {
       case "friends" =>
         assertStats(result, nodesCreated = 0)

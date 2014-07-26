@@ -21,7 +21,7 @@ package org.neo4j.cypher.docgen.refcard
 
 import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.docgen.RefcardTest
-import org.neo4j.cypher.internal.compiler.v2_2.executionplan.InternalExecutionResult
+import org.neo4j.cypher.ExtendedExecutionResult
 
 class StartTest extends RefcardTest with QueryStatisticsTestSupport {
   val graphDescription = List("ROOT LINK A", "A LINK B", "B LINK C", "C LINK ROOT")
@@ -29,7 +29,7 @@ class StartTest extends RefcardTest with QueryStatisticsTestSupport {
   val css = "col carddeprecation c2-1 c3-2 c4-3 c5-4 c6-5"
   override def indexProps: List[String] = List("value", "name", "key")
 
-  override def assert(name: String, result: InternalExecutionResult) {
+  override def assert(name: String, result: ExtendedExecutionResult) {
     name match {
       case "create" =>
         assertStats(result, nodesCreated = 1, relationshipsCreated = 1, propertiesSet = 0)

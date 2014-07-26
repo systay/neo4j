@@ -21,14 +21,14 @@ package org.neo4j.cypher.docgen.refcard
 
 import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.docgen.RefcardTest
-import org.neo4j.cypher.internal.compiler.v2_2.executionplan.InternalExecutionResult
+import org.neo4j.cypher.ExtendedExecutionResult
 
 class WhereTest extends RefcardTest with QueryStatisticsTestSupport {
   val graphDescription = List("ROOT FRIEND A", "A FRIEND B", "B FRIEND C", "C FRIEND ROOT")
   val title = "WHERE"
   val css = "read c2-2 c3-2 c4-2 c5-2"
 
-  override def assert(name: String, result: InternalExecutionResult) {
+  override def assert(name: String, result: ExtendedExecutionResult) {
     name match {
       case "returns-one" =>
         assertStats(result, nodesCreated = 0)

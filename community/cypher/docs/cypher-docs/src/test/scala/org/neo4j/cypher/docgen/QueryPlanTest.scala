@@ -108,7 +108,7 @@ class QueryPlanTest extends DocumentingTestBase {
 
           |The following query will produce one row with the value 'hello'.""".stripMargin,
       queryText = """RETURN "hello" AS greeting""",
-      assertions = (p) => assertThat(p.executionPlanDescription().toString, startsWith("Projection"))
+      assertions = (p) => assertThat(p.executionPlanDescription().toString, containsString("Projection"))
     )
   }
 

@@ -19,9 +19,10 @@
  */
 package org.neo4j.cypher
 
+import org.neo4j.cypher.internal.RewindableExecutionResult
+import org.neo4j.cypher.internal.compatability.ExecutionResultWrapperFor2_2
 import org.neo4j.cypher.internal.compiler.v2_2
 import org.neo4j.cypher.internal.compiler.v2_2.executionplan.InternalExecutionResult
-import org.neo4j.cypher.internal.compiler.v2_2.planDescription
 import org.neo4j.cypher.internal.helpers.TxCounts
 import org.neo4j.cypher.internal.commons.CreateTempFileTestSupport
 import org.neo4j.cypher.internal.compiler.v2_2.commands.expressions.StringHelper.RichString
@@ -35,7 +36,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     relate( createNode(), createNode(), "FOO")
 
     //WHEN
-    val result = profile("cypher 2.2-cost match n where n-[:FOO]->() return *")
+    val result = myProfile("cypher 2.2-cost match n where n-[:FOO]->() return *")
 
     //THEN
     assertRows(1)(result)("SemiApply")
@@ -60,7 +61,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     relate( createNode(), createNode(), "FOO")
 
     //WHEN
-    val result = profile("cypher 2.2-cost match n where not n-[:FOO]->() return *")
+    val result = myProfile("cypher 2.2-cost match n where not n-[:FOO]->() return *")
 
     //THEN
     assertRows(1)(result)("AntiSemiApply")
@@ -86,7 +87,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
   test("tracks number of rows") {
     //GIVEN
     createNode("foo" -> "bar")
-    val result = profile("match (n) where id(n) = 0 RETURN n")
+    val result = myProfile("match (n) where id(n) = 0 RETURN n")
 
     //WHEN THEN
     assertRows(1)(result)("NodeById")
@@ -96,7 +97,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
   test("tracks number of graph accesses") {
     //GIVEN
     createNode("foo" -> "bar")
-    val result = profile("match (n) where id(n) = 0 RETURN n.foo")
+    val result = myProfile("match (n) where id(n) = 0 RETURN n.foo")
 
     //WHEN THEN
     assertRows(1)(result)("ColumnFilter", "Extract", "NodeById")
@@ -108,7 +109,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
 
   test("no problem measuring creation") {
     //GIVEN
-    val result = legacyProfile("CREATE n")
+    val result = myProfile("CREATE n")
 
     //WHEN THEN
     assertDbHits(0)(result)("EmptyResult")
@@ -118,7 +119,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     createNode()
 
     //GIVEN
-    val result = profile("MATCH n RETURN n.foo")
+    val result = myProfile("MATCH n RETURN n.foo")
 
     //WHEN THEN
     assertRows(1)(result)("ColumnFilter")
@@ -135,7 +136,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
   test("tracks optional matches") {
     //GIVEN
     createNode()
-    val result = profile("MATCH n optional match (n)-->(x) return x")
+    val result = myProfile("MATCH n optional match (n)-->(x) return x")
 
     //WHEN THEN
     assertDbHits(0)(result)("ColumnFilter", "NullableMatch")
@@ -144,7 +145,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
 
   test("allows optional match to start a query") {
     //GIVEN
-    val result = profile("cypher 2.2-cost optional match (n) return n")
+    val result = myProfile("cypher 2.2-cost optional match (n) return n")
 
     //WHEN THEN
     assertRows(1)(result)("Optional")
@@ -155,7 +156,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     createNode()
     createNode()
     createNode()
-    val result = profile("""MATCH n RETURN n LIMIT 1""")
+    val result = myProfile("""MATCH n RETURN n LIMIT 1""")
 
     // WHEN
     result.toList
@@ -165,25 +166,25 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
   }
 
   test ("should support profiling union queries") {
-    val result = profile("return 1 as A union return 2 as A")
+    val result = myProfile("return 1 as A union return 2 as A")
     result.toSet should equal(Set(Map("A" -> 1), Map("A" -> 2)))
   }
 
   test("should support profiling merge_queries") {
-    val result = legacyProfile("merge (a {x: 1}) return a.x as A")
+    val result = myProfile("merge (a {x: 1}) return a.x as A")
     result.toList.head("A") should equal(1)
   }
 
   test("should support profiling optional match queries") {
     createLabeledNode(Map("x" -> 1), "Label")
-    val result = profile("match (a:Label {x: 1}) optional match (a)-[:REL]->(b) return a.x as A, b.x as B").toList.head
+    val result = myProfile("match (a:Label {x: 1}) optional match (a)-[:REL]->(b) return a.x as A, b.x as B").toList.head
     result("A") should equal(1)
     result("B") should equal(null.asInstanceOf[Int])
   }
 
   test("should support profiling optional match and with") {
     createLabeledNode(Map("x" -> 1), "Label")
-    val executionResult: InternalExecutionResult = profile("match (n) optional match (n)--(m) with n, m where m is null return n.x as A")
+    val executionResult: InternalExecutionResult = myProfile("match (n) optional match (n)--(m) with n, m where m is null return n.x as A")
     val result = executionResult.toList.head
     result("A") should equal(1)
   }
@@ -201,7 +202,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     val initialTxCounts = graph.txCounts
 
     // when
-    val result = legacyProfile(query)
+    val result = myProfile(query)
 
     // then
 
@@ -253,27 +254,25 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     }
   }
 
-  type Planner = (String, Seq[(String, Any)]) => InternalExecutionResult
+  def myProfile(q: String, params: (String, Any)*) = {
+    val a = RewindableExecutionResult(eengine.execute("profile " + q, params.toMap))
 
-  def profileWithPlanner(planner: Planner, q: String, params: (String, Any)*): InternalExecutionResult = {
-    val result = planner("profile " + q, params)
+    val result = a match {
+      case ExecutionResultWrapperFor2_2(inner, v) => inner
+      case _ => throw new InternalException("Can't get the internal execution result of an older compiler")
+    }
+
     assert(result.planDescriptionRequested, "result not marked with planDescriptionRequested")
-    val planDescription: v2_2.planDescription.PlanDescription = result.executionPlanDescription()
-    planDescription.toSeq.foreach {
+    result.executionPlanDescription().toSeq.foreach {
       p =>
         if (!p.arguments.exists(_.isInstanceOf[DbHits])) {
           fail("Found plan that was not profiled with DbHits: " + p.name)
         }
         if (!p.arguments.exists(_.isInstanceOf[Rows])) fail("Found plan that was not profiled with Rows: " + p.name)
     }
+
     result
   }
-
-  override def profile(q: String, params: (String, Any)*): InternalExecutionResult = profileWithPlanner(executeWithNewPlanner(_,_:_*), q, params:_*)
-
-  def legacyProfile(q: String, params: (String, Any)*): InternalExecutionResult = profileWithPlanner(super.execute(_,_:_*), q, params:_*)
-
-
 
   private def getArgument[A <: Argument](plan: v2_2.planDescription.PlanDescription)(implicit manifest: Manifest[A]): A = plan.arguments.collectFirst {
     case x: A => x

@@ -20,7 +20,7 @@
 package org.neo4j.cypher.docgen
 
 import org.neo4j.cypher.internal.RewindableExecutionResult
-import org.neo4j.cypher.internal.compiler.v2_2.executionplan.InternalExecutionResult
+import org.neo4j.cypher.ExtendedExecutionResult
 import org.neo4j.graphdb.index.Index
 import org.junit.Test
 import scala.collection.JavaConverters._
@@ -54,11 +54,11 @@ abstract class ArticleTest extends Assertions with DocumentationHelper {
 
   def title: String
   def section: String
-  def assert(name: String, result: InternalExecutionResult)
+  def assert(name: String, result: ExtendedExecutionResult)
   def graphDescription: List[String]
   def indexProps: List[String] = List()
 
-  private def executeQuery(queryText: String)(implicit engine: ExecutionEngine): InternalExecutionResult = try {
+  private def executeQuery(queryText: String)(implicit engine: ExecutionEngine): ExtendedExecutionResult = try {
     val result = RewindableExecutionResult(engine.execute(replaceNodeIds(queryText)))
     result.dumpToString()
     result
@@ -116,7 +116,7 @@ abstract class ArticleTest extends Assertions with DocumentationHelper {
 
   private def runQuery(emptyGraph: Boolean, query: String, possibleAssertion: Seq[String]): String = {
 
-    def testAssertions(result: InternalExecutionResult) {
+    def testAssertions(result: ExtendedExecutionResult) {
       possibleAssertion.foreach(name => assert(name, result) )
     }
 
@@ -250,7 +250,4 @@ abstract class ArticleTest extends Assertions with DocumentationHelper {
     db
   }
 }
-
-
-
 

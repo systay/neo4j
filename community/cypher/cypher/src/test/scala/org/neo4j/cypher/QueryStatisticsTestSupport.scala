@@ -33,10 +33,14 @@ trait QueryStatisticsTestSupport {
     def apply(actual: InternalExecutionResult) {
       apply(actual.queryStatistics())
     }
+
+    def apply(actual: ExtendedExecutionResult) {
+      apply(actual.queryStatistics())
+    }
   }
 
   def assertStats(
-    result: InternalExecutionResult,
+    result: ExtendedExecutionResult,
     nodesCreated: Int = 0,
     relationshipsCreated: Int = 0,
     propertiesSet: Int = 0,

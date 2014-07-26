@@ -53,8 +53,9 @@ public class CypherDocTest
             types.add( block.type );
         }
         assertThat( types, equalTo( Arrays.asList( BlockType.TITLE, BlockType.TEXT, BlockType.HIDE,
-                BlockType.SETUP, BlockType.QUERY, BlockType.TEST, BlockType.TABLE, BlockType.GRAPH, BlockType.TEXT,
-                BlockType.OUTPUT, BlockType.QUERY, BlockType.TEST ) ) );
+                BlockType.SETUP, BlockType.CYPHER, BlockType.TEST, BlockType.TABLE, BlockType.GRAPH, BlockType.TEXT,
+                BlockType.OUTPUT, BlockType.PARAMETERS, BlockType.CYPHER, BlockType.TEST, BlockType.GRAPH_RESULT,
+                BlockType.SQL, BlockType.SQL_TABLE) ) );
     }
 
     @Test
@@ -104,6 +105,15 @@ public class CypherDocTest
                         containsString( "<span class=\"setup-query\"></span>" ),
                         containsString( "<span class=\"query-output\"></span>" ),
                         containsString( "<simpara role=\"query-output\"></simpara>" ) ) );
+
+        assertThat( output, containsString( "cypherdoc-result" ) );
+    }
+
+    @Test
+    public void test_both_against_cypher_and_sql() throws IOException
+    {
+        String content = FileUtils.readFileToString( resourceFile( "/tests-with-sql.asciidoc" ) );
+        String output = CypherDoc.parse( content, null, "http://url/" );
     }
 
     private File resourceFile( String resource ) throws IOException

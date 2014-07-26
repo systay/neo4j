@@ -79,16 +79,16 @@ trait NewPlannerTestSupport extends CypherTestSupport {
       }
     }
 
-  def executeWithNewPlanner(queryText: String, params: (String, Any)*): InternalExecutionResult =
+  def executeWithNewPlanner(queryText: String, params: (String, Any)*): ExtendedExecutionResult =
     monitoringNewPlanner(innerExecute(queryText, params: _*)) { trace =>
       trace.collect {
         case UnableToHandleQuery(stackTrace) => fail(s"Failed to use the new planner on: $queryText\n$stackTrace")
       }
     }
 
-  private def innerExecute(queryText: String, params: (String, Any)*): InternalExecutionResult =
+  private def innerExecute(queryText: String, params: (String, Any)*): ExtendedExecutionResult =
     eengine.execute(queryText, params.toMap) match {
-      case ExecutionResultWrapperFor2_2(inner: InternalExecutionResult, _) => RewindableExecutionResult(inner)
+      case ExecutionResultWrapperFor2_2(inner: ExtendedExecutionResult, _) => inner
     }
 
   def executeWithOlderPlanner(queryText: String, params: (String, Any)*): ExecutionResult =

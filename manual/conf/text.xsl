@@ -13,12 +13,6 @@
   article   toc,title
   </xsl:param>
 
-  <xsl:template match="d:article/d:articleinfo/d:title" mode="titlepage.mode">
-      <hr />
-        <xsl:apply-imports/>
-      <hr />
-  </xsl:template>
-
   <xsl:template match="d:article/*/d:title" mode="titlepage.mode">
       <hr />
         <xsl:apply-imports/>

@@ -25,10 +25,17 @@ Properties set: 1
 Let's find the node we created:
 
 // output
+[source,json,role=parameters]
+----
+{
+  "name": "Adam"
+}
+----
+
 [source,cypher]
 ----
 MATCH (person:Person)
-WHERE person.name = "Adam"
+WHERE person.name = {name}
 RETURN person;
 ----
 
@@ -36,4 +43,13 @@ RETURN person;
 Adam
 1 row
 ////
+
+//graph_result
+
+[source,sql]
+----
+VALUES(0)
+----
+
+// sqltable
 

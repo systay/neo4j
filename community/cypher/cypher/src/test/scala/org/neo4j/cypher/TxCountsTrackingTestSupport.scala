@@ -26,7 +26,7 @@ import org.neo4j.cypher.internal.helpers.TxCounts
 trait TxCountsTrackingTestSupport extends CypherTestSupport {
   self: CypherFunSuite with GraphDatabaseTestSupport with ExecutionEngineTestSupport =>
 
-  def executeAndTrackTxCounts(queryText: String, params: (String, Any)*): (InternalExecutionResult, TxCounts) = {
+  def executeAndTrackTxCounts(queryText: String, params: (String, Any)*): (ExtendedExecutionResult, TxCounts) = {
     val (result, txCounts) = prepareAndTrackTxCounts(execute(queryText, params: _*))
     (result, txCounts)
   }

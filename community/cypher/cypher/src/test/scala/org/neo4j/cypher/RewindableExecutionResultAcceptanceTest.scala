@@ -61,6 +61,6 @@ class RewindableExecutionResultAcceptanceTest extends ExecutionEngineFunSuite {
     nodes should equal(List(a,b))
   }
 
-  private def rewindableExecutionResult(query: String): InternalExecutionResult =
+  private def rewindableExecutionResult(query: String): ExtendedExecutionResult =
     RewindableExecutionResult(eengine.execute(query))
 }

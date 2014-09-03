@@ -128,7 +128,7 @@ object LogicalPlanProducer {
                         propertyKey: ast.PropertyKeyToken,
                         valueExpr: QueryExpression[Expression], solvedPredicates: Seq[Expression] = Seq.empty,
                         solvedHint: Option[UsingIndexHint] = None,
-                        argumentIds: Set[IdName]) =
+                        argumentIds: Set[IdName]) = {
     NodeIndexSeek(idName, label, propertyKey, valueExpr, argumentIds)(
       PlannerQuery(graph = QueryGraph.empty
         .addPatternNodes(idName)
@@ -137,6 +137,7 @@ object LogicalPlanProducer {
         .addArgumentId(argumentIds.toSeq)
       )
     )
+  }
 
   def planNodeHashJoin(node: IdName, left: LogicalPlan, right: LogicalPlan) =
     NodeHashJoin(node, left, right)(

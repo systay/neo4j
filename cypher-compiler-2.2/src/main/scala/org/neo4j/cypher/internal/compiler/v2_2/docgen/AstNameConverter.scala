@@ -17,14 +17,22 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.internal.compiler.v2_2.ast
+package org.neo4j.cypher.internal.compiler.v2_2.docgen
 
-import org.neo4j.cypher.internal.compiler.v2_2._
-import symbols._
+import org.neo4j.cypher.internal.compiler.v2_2.perty.Doc
 
-case class Skip(expression: Expression)(val position: InputPosition) extends ASTNode with ASTSlicingPhrase with SemanticCheckable {
-  def semanticCheck =
-    expression.semanticCheck(Expression.SemanticContext.Simple) chain
-    expression.expectType(CTInteger.covariant)
+object AstNameConverter {
+  def isJavaIdentifier(name: String) =
+    (name.length > 0) &&
+      Character.isJavaIdentifierStart(name.charAt(0)) &&
+      name.substring(1).forall(Character.isJavaIdentifierPart)
+}
+
+case class AstNameConverter(name: String) {
+  def asDoc: Doc =
+    if (AstNameConverter.isJavaIdentifier(name))
+      name
+    else
+      s"`$name`"
 }
 

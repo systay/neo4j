@@ -21,11 +21,12 @@ package org.neo4j.cypher.internal.compiler.v2_2.planner.logical
 
 import org.neo4j.cypher.internal.commons.CypherFunSuite
 import org.neo4j.cypher.internal.compiler.v2_2.ast.convert.plannerQuery.StatementConverters._
+import org.neo4j.cypher.internal.compiler.v2_2.ast.rewriters.{normalizeWithClauses, normalizeReturnClauses}
 import org.neo4j.cypher.internal.compiler.v2_2.ast.{Query, Statement}
 import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.cardinality._
 import org.neo4j.cypher.internal.compiler.v2_2.planner.{SemanticTable, LogicalPlanningTestSupport, Planner, QueryGraph}
 import org.neo4j.cypher.internal.compiler.v2_2.spi.{GraphStatistics, TokenContext}
-import org.neo4j.cypher.internal.compiler.v2_2.{LabelId, PropertyKeyId, RelTypeId}
+import org.neo4j.cypher.internal.compiler.v2_2.{inSequence, LabelId, PropertyKeyId, RelTypeId}
 import org.scalautils.Equality
 
 import scala.collection.mutable
@@ -36,8 +37,9 @@ trait QueryGraphProducer {
   def produceQueryGraphForPattern(query: String): QueryGraph = {
     val q = query + " RETURN 1"
     val ast = parser.parse(q)
+    val s1 = ast.endoRewrite(inSequence(normalizeReturnClauses, normalizeWithClauses))
 
-    val firstRewriteStep = astRewriter.rewrite(query, ast)._1
+    val firstRewriteStep = astRewriter.rewrite(query, s1)._1
     val rewrittenAst: Statement =
       Planner.rewriteStatement(firstRewriteStep)
 

@@ -21,8 +21,30 @@ package org.neo4j.cypher
 
 import org.neo4j.graphdb._
 import org.neo4j.cypher.internal.PathImpl
+import org.neo4j.graphdb.factory.GraphDatabaseFactory
 
 class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with NewPlannerTestSupport {
+
+  test("apa") {
+    val db = new GraphDatabaseFactory().newEmbeddedDatabase("/Users/ata/dev/neo/ronja-benchmarks/target/benchmarkdb")
+    try {
+
+
+      val engine = new ExecutionEngine(db)
+      val result = engine.profile(
+        """
+          |MATCH (corp:Company)<-[:SIGNED_WITH]-(a1:Artist)-[:PERFORMED_AT]->(c:Concert)-[:IN]->(v:Venue)
+          |MATCH (corp)<-[:SIGNED_WITH]-(a2:Artist)-[:PERFORMED_AT]->(c)
+          |RETURN a1, a2, v LIMIT 1
+        """.
+          stripMargin)
+
+      println(result.dumpToString())
+      println(result.executionPlanDescription())
+    }
+    finally
+      db.shutdown()
+  }
 
   test("should be able to use multiple MATCH clauses to do a cartesian product") {
     createNode("value" -> 1)

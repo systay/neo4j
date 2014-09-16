@@ -27,13 +27,20 @@ import scala.collection.mutable
 
 class QueriedGraphStatistics(graph: GraphDatabaseService, queryContext: QueryContext) extends GraphStatistics {
 
+  val _nodesWithLabelCardinality : mutable.Map[Option[LabelId], Cardinality] = mutable.HashMap.empty
+  val _cardinalityByLabelsAndRelationshipType: mutable.Map[(Option[LabelId], Option[RelTypeId], Option[LabelId]), Cardinality] = mutable.HashMap.empty
+  val _indexSelectivity: mutable.Map[(LabelId, PropertyKeyId), Option[Selectivity]] = mutable.HashMap.empty
+
   def nodesWithLabelCardinality(optLabelId: Option[LabelId]): Cardinality =
-    Cardinality(optLabelId.map {
-      labelId =>
-        queryContext.getNodesByLabel(labelId.id)
-    }.getOrElse(queryContext.nodeOps.all).size)
+    _nodesWithLabelCardinality.getOrElseUpdate(optLabelId,
+      Cardinality(optLabelId.map {
+        labelId =>
+          queryContext.getNodesByLabel(labelId.id)
+      }.getOrElse(queryContext.nodeOps.all).size))
+
 
   def cardinalityByLabelsAndRelationshipType(optFromLabel: Option[LabelId], optRelTypeId: Option[RelTypeId], optToLabel: Option[LabelId]): Cardinality =
+  _cardinalityByLabelsAndRelationshipType.getOrElseUpdate((optFromLabel, optRelTypeId, optToLabel),
     Cardinality((optFromLabel, optRelTypeId, optToLabel) match {
 
       case (Some(LabelId(fromLabelId)), Some(RelTypeId(relTypeId)), Some(LabelId(toLabelId))) =>
@@ -42,7 +49,17 @@ class QueriedGraphStatistics(graph: GraphDatabaseService, queryContext: QueryCon
 
         val toLabelName = queryContext.getLabelName(toLabelId)
 
-        val outRels = queryContext.getNodesByLabel(fromLabelId).flatMap { _.getRelationships(relType, Direction.OUTGOING).asScala }
+        val s1 = queryContext.getNodesByLabel(fromLabelId)
+        val outRels = s1.flatMap { _.getRelationships(relType, Direction.OUTGOING).asScala }
+        val result = outRels.filter { (rel: Relationship) =>
+          rel.getEndNode.getLabels.asScala.exists(_.name() == toLabelName)
+        }
+        result.size
+
+      case (Some(LabelId(fromLabelId)), None, Some(LabelId(toLabelId))) =>
+        val toLabelName = queryContext.getLabelName(toLabelId)
+
+        val outRels = queryContext.getNodesByLabel(fromLabelId).flatMap { _.getRelationships(Direction.OUTGOING).asScala }
         val result = outRels.filter { (rel: Relationship) =>
           rel.getEndNode.getLabels.asScala.exists(_.name() == toLabelName)
         }
@@ -70,28 +87,30 @@ class QueriedGraphStatistics(graph: GraphDatabaseService, queryContext: QueryCon
 
       case (None, None, None) =>
         queryContext.relationshipOps.all.size
-    })
+    }))
 
+  def indexSelectivity(labelId: LabelId, propertyKeyId: PropertyKeyId): Option[Selectivity] =
+    _indexSelectivity.getOrElseUpdate((labelId, propertyKeyId), {
+      val labelName = queryContext.getLabelName(labelId.id)
+      val label = DynamicLabel.label(labelName)
+      val propertyKeyName = queryContext.getPropertyKeyName(propertyKeyId.id)
 
-  def indexSelectivity(labelId: LabelId, propertyKeyId: PropertyKeyId): Option[Selectivity] = {
-    val labelName = queryContext.getLabelName(labelId.id)
-    val label = DynamicLabel.label(labelName)
-    val propertyKeyName = queryContext.getPropertyKeyName(propertyKeyId.id)
+      if (graph.schema().getIndexes(label).asScala.exists(_.getPropertyKeys.asScala.toSeq == Seq(propertyKeyName))) {
+        val indexedNodes = queryContext.getNodesByLabel(labelId.id).filter {
+          _.hasProperty(propertyKeyName)
+        }
 
-    if (graph.schema().getIndexes(label).asScala.exists(_.getPropertyKeys.asScala.toSeq == Seq(propertyKeyName))) {
-      val indexedNodes = queryContext.getNodesByLabel(labelId.id).filter { _.hasProperty(propertyKeyName) }
+        var nodeCount = 0L
+        val valuesMap = new mutable.HashMap[Any, Long]()
+        while (indexedNodes.hasNext) {
+          val propertyValue = indexedNodes.next().getProperty(propertyKeyName)
+          valuesMap(propertyValue) = valuesMap.getOrElse(propertyValue, 0L) + 1L
+          nodeCount += 1L
+        }
 
-      var nodeCount = 0L
-      var valuesMap = new mutable.HashMap[Any, Long]()
-      while (indexedNodes.hasNext) {
-        val propertyValue= indexedNodes.next().getProperty(propertyKeyName)
-        valuesMap(propertyValue) = valuesMap.getOrElse(propertyValue, 0L) + 1L
-        nodeCount += 1L
+        Some(Selectivity(valuesMap.values.map(_.toDouble / nodeCount).sum / valuesMap.size))
+      } else {
+        None
       }
-
-      Some(Selectivity(valuesMap.values.map(_.toDouble/nodeCount).sum / valuesMap.size))
-    } else {
-      None
-    }
-  }
+    })
 }

@@ -69,7 +69,7 @@ class PipeExecutionPlanBuilder(monitors: Monitors) {
       implicit val monitor = monitors.newMonitor[PipeMonitor]()
       plan match {
         case Projection(left, expressions) =>
-          ProjectionNewPipe(buildPipe(left), expressions.mapValues(buildExpression))
+          ProjectionNewPipe(buildPipe(left), expressions.mapValues(buildExpression).toSeq.toMap) // Need to eagerize
 
         case ProjectEndpoints(left, rel, start, end, directed, length) =>
           ProjectEndpointsPipe(buildPipe(left), rel.name, start.name, end.name, directed, length.isSimple)

@@ -29,14 +29,10 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val db = new GraphDatabaseFactory().newEmbeddedDatabase("/Users/ata/dev/neo/ronja-benchmarks/target/benchmarkdb")
     try {
 
-
       val engine = new ExecutionEngine(db)
       val result = engine.profile(
         """
-          |MATCH (corp:Company)<-[:SIGNED_WITH]-(a1:Artist)-[:PERFORMED_AT]->(c:Concert)-[:IN]->(v:Venue)
-          |MATCH (corp)<-[:SIGNED_WITH]-(a2:Artist)-[:PERFORMED_AT]->(c)
-          |RETURN a1, a2, v LIMIT 1
-        """.
+          |MATCH (a)-[:APPEARS_ON]->(b)<-[:CREATED]-(c) RETURN count(*)""".
           stripMargin)
 
       println(result.dumpToString())

@@ -21,7 +21,6 @@ package org.neo4j.cypher.internal.compiler.v2_2.planner.execution
 
 import org.neo4j.cypher.internal.commons.CypherFunSuite
 import org.neo4j.cypher.internal.compiler.v2_2.LabelId
-import org.neo4j.cypher.internal.compiler.v2_2.ast.convert.commands.ExpressionConverters
 import org.neo4j.cypher.internal.compiler.v2_2.ast.convert.commands.ExpressionConverters._
 import org.neo4j.cypher.internal.compiler.v2_2.ast.{Collection, SignedDecimalIntegerLiteral, SignedIntegerLiteral}
 import org.neo4j.cypher.internal.compiler.v2_2.commands.{expressions => legacy}
@@ -32,8 +31,6 @@ import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.plans.{EntityById
 import org.neo4j.graphdb.Direction
 
 class PipeExecutionPlanBuilderTest extends CypherFunSuite with LogicalPlanningTestSupport {
-
-  def solved = PlannerQuery.empty
 
   implicit val planContext = newMockedPlanContext
   implicit val pipeMonitor = monitors.newMonitor[PipeMonitor]()

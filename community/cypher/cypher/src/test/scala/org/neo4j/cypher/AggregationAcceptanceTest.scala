@@ -22,6 +22,11 @@ package org.neo4j.cypher
 import org.neo4j.graphdb.Node
 
 class AggregationAcceptanceTest extends ExecutionEngineFunSuite with NewPlannerTestSupport {
+
+  test("apan fes") {
+    executeWithNewPlanner("optional match n return n")
+  }
+
   test("should handle aggregates inside non aggregate expressions") {
     executeWithNewPlanner(
       "MATCH (a { name: 'Andres' })<-[:FATHER]-(child) RETURN {foo:a.name='Andres',kids:collect(child.name)}"

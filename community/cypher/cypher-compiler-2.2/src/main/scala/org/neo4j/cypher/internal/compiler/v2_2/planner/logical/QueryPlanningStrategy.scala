@@ -21,6 +21,7 @@ package org.neo4j.cypher.internal.compiler.v2_2.planner.logical
 
 import org.neo4j.cypher.internal.compiler.v2_2.planner._
 import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.plans._
+import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.plans.rewriter.unnestEmptyApply
 import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.steps.LogicalPlanProducer._
 import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.steps._
 
@@ -28,15 +29,13 @@ class QueryPlanningStrategy(config: PlanningStrategyConfiguration = PlanningStra
 
   def plan(unionQuery: UnionQuery)(implicit context: LogicalPlanningContext, leafPlan: Option[LogicalPlan] = None): LogicalPlan = unionQuery match {
     case UnionQuery(queries, distinct) =>
-      val logicalPlans: Seq[LogicalPlan] = queries.map(p => planSingleQuery(p))
-      val unionPlan = logicalPlans.reduce[LogicalPlan] {
-        case (p1, p2) => planUnion(p1, p2)
-      }
-
-      if (distinct)
-        planDistinct(unionPlan)
-      else
-        unionPlan
+      val plan = planQuery(queries, distinct)
+      val r = plan.endoRewrite(unnestEmptyApply)
+      println(plan)
+      println("******************************** AFTER REWRITE")
+      println(r)
+      println()
+      r
 
     case _ => throw new CantHandleQueryException
   }
@@ -46,6 +45,18 @@ class QueryPlanningStrategy(config: PlanningStrategyConfiguration = PlanningStra
     val projectedFirstPart = planEventHorizon(query, firstPart)
     val finalPlan = planWithTail(projectedFirstPart, query.tail)
     verifyBestPlan(finalPlan, query)
+  }
+
+  private def planQuery(queries: Seq[PlannerQuery], distinct: Boolean)(implicit context: LogicalPlanningContext, leafPlan: Option[LogicalPlan] = None) = {
+    val logicalPlans: Seq[LogicalPlan] = queries.map(p => planSingleQuery(p))
+    val unionPlan = logicalPlans.reduce[LogicalPlan] {
+      case (p1, p2) => planUnion(p1, p2)
+    }
+
+    if (distinct)
+      planDistinct(unionPlan)
+    else
+      unionPlan
   }
 
   private def planWithTail(pred: LogicalPlan, remaining: Option[PlannerQuery])(implicit context: LogicalPlanningContext): LogicalPlan = remaining match {

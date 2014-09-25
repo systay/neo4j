@@ -31,10 +31,10 @@ class QueryPlanningStrategy(config: PlanningStrategyConfiguration = PlanningStra
     case UnionQuery(queries, distinct) =>
       val plan = planQuery(queries, distinct)
       val r = plan.endoRewrite(unnestEmptyApply)
-      println(plan)
-      println("******************************** AFTER REWRITE")
-      println(r)
-      println()
+//      println(plan)
+//      println("******************************** AFTER REWRITE")
+//      println(r)
+//      println()
       r
 
     case _ => throw new CantHandleQueryException

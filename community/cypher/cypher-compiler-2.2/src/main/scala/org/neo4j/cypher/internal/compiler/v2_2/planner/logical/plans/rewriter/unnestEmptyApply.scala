@@ -7,6 +7,7 @@ case object unnestEmptyApply extends Rewriter {
 
   private val instance: Rewriter = Rewriter.lift {
     case Apply(sr: SingleRow, rhs) if sr.coveredIds.isEmpty => rhs
+    case Apply(lhs, _: SingleRow)                           => lhs
   }
 
   override def apply(input: AnyRef) = bottomUp(instance).apply(input)

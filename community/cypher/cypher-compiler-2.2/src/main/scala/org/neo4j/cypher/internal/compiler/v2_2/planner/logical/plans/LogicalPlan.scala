@@ -69,8 +69,16 @@ abstract class LogicalPlan
       val args = children.toVector
       if ((params.length == args.length + 1) && params.last.isAssignableFrom(classOf[PlannerQuery]))
         constructor.invoke(this, args :+ this.solved: _*).asInstanceOf[this.type]
-      else
+      else try {
         constructor.invoke(this, args: _*).asInstanceOf[this.type]
+      } catch {
+        case e: Throwable =>
+          if(e.getMessage.contains("arguments")) {
+            println(e)
+          }
+
+          throw e
+      }
     }
 
 }

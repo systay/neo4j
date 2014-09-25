@@ -24,7 +24,7 @@ import org.neo4j.graphdb.Node
 class AggregationAcceptanceTest extends ExecutionEngineFunSuite with NewPlannerTestSupport {
 
   test("apan fes") {
-    executeWithNewPlanner("optional match n return n")
+    executeWithNewPlanner("match n return n, count(*) as c order by c")
   }
 
   test("should handle aggregates inside non aggregate expressions") {

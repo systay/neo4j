@@ -113,7 +113,7 @@ class CardinalityModelIntegrationTest extends CypherFunSuite with LogicalPlannin
       withGraphNodes(40).
       withKnownProperty('prop).
       withLabel('A -> 10).
-      shouldHaveCardinality(40.0 * (10.0 / 40) * ( DEFAULT_EQUALITY_SELECTIVITY))
+      shouldHaveCardinality(40.0 * (10.0 / 40) * DEFAULT_EQUALITY_SELECTIVITY)
   }
 
   test("cardinality for label and property equality when index is not present 2") {
@@ -137,7 +137,7 @@ class CardinalityModelIntegrationTest extends CypherFunSuite with LogicalPlannin
       withGraphNodes(40).
       withLabel('A -> 30).
       withIndexSelectivity(('A, 'prop) -> .01).
-      shouldHaveCardinality(30 * .01 * 2)
+      shouldHaveCardinality(40 * (30.0 / 40) * (1 - (1 - .01) * (1 - .01)))
   }
 
   test("cardinality for multiple OR:ed equality predicates on two indexes") {
@@ -146,7 +146,7 @@ class CardinalityModelIntegrationTest extends CypherFunSuite with LogicalPlannin
       withLabel('A -> 30).
       withIndexSelectivity(('A, 'prop) -> .3).
       withIndexSelectivity(('A, 'bar) -> .4).
-      shouldHaveCardinality(40.0 * (30.0 / 40) * (DEFAULT_EQUALITY_SELECTIVITY))
+      shouldHaveCardinality(40.0 * (30.0 / 40) * (1 - (1 - .3) * (1 - .4)))
   }
 
   test("cardinality for multiple OR:ed equality predicates where one is backed by index and one is not") {
@@ -155,7 +155,7 @@ class CardinalityModelIntegrationTest extends CypherFunSuite with LogicalPlannin
       withLabel('A -> 30).
       withIndexSelectivity(('A, 'prop) -> .3).
       withKnownProperty('bar).
-      shouldHaveCardinality(40.0 * (30.0 / 40) * (DEFAULT_EQUALITY_SELECTIVITY))
+      shouldHaveCardinality(40.0 * (30.0 / 40) * (1 - (1 - DEFAULT_EQUALITY_SELECTIVITY) * (1 - .3)))
   }
 
   ignore("cardinality for property equality predicate when property name is unknown") { // We can get away with not doing this
@@ -196,8 +196,27 @@ class CardinalityModelIntegrationTest extends CypherFunSuite with LogicalPlannin
       shouldHaveCardinality(40.0 * (30.0 / 40) * DEFAULT_EQUALITY_SELECTIVITY)
   }
 
+  test("relationship cardinality given no labels or types") {
+    givenPattern("MATCH (a)-->(b)").
+      withGraphNodes(40).
+      withLabel('A -> 30).
+      withLabel('B -> 20).
+      withRelationshipCardinality('A -> 'TYPE -> 'B -> 10).
+      withRelationshipCardinality('B -> 'TYPE -> 'A -> 10).
+      shouldHaveCardinality(40 * 40 * (20.0 / (40.0 * 40)))
+  }
+
   test("relationship cardinality given labels on both sides") {
     givenPattern("MATCH (a:A)-[r:TYPE]->(b:B)").
+      withGraphNodes(40).
+      withLabel('A -> 30).
+      withLabel('B -> 20).
+      withRelationshipCardinality('A -> 'TYPE -> 'B -> 50).
+      shouldHaveCardinality(50)
+  }
+
+  test("relationship cardinality given labels on both sides for incoming pattern") {
+    givenPattern("MATCH (b:B)<-[r:TYPE]-(a:A)").
       withGraphNodes(40).
       withLabel('A -> 30).
       withLabel('B -> 20).

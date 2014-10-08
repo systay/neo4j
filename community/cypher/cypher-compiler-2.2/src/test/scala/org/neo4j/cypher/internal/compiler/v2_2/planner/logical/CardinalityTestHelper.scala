@@ -205,13 +205,8 @@ trait CardinalityTestHelper extends QueryGraphProducer {
     def shouldHaveCardinality(number: Double) {
       val (statistics, semanticTable) = prepareTestContext
       val queryGraph = createQueryGraphAndSemanticStableTable()
-      val cardinalityModel = QueryGraphCardinalityModel(
-        statistics,
-        producePredicates,
-        groupPredicates(estimateSelectivity(statistics, semanticTable)),
-        combinePredicates.default
-      )
-      val result = cardinalityModel(queryGraph)
+      val cardinalityModel = AssumeIndependenceCardinalityModel(statistics, producePredicates)
+      val result = cardinalityModel(queryGraph)(semanticTable)
       result should equal(Cardinality(number))
     }
 

@@ -67,7 +67,7 @@ class ProfileRonjaPlanningTest extends ExecutionEngineFunSuite with QueryStatist
     (compiler, events)
   }
 
-  ignore("Should only be turned on for debugging purposes") {
+  test("Should only be turned on for debugging purposes") {
     val db = new GraphDatabaseFactory().newEmbeddedDatabase("/Users/ata/dev/neo/ronja-benchmarks/target/benchmarkdb").asInstanceOf[GraphDatabaseAPI]
     try {
       val (compiler, events) = buildCompiler(customMetrics(combinePredicates.assumeIndependence))(db)

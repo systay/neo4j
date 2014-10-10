@@ -26,5 +26,6 @@ import org.neo4j.cypher.internal.compiler.v2_2.spi.GraphStatistics
 
 object QueryGraphCardinalityModel {
   def default(statistics: GraphStatistics, semanticTable: SemanticTable): QueryGraphCardinalityModel =
+//    AssumeDependenceQueryGraphCardinalityModel(statistics, producePredicates, groupPredicates(estimateSelectivity(statistics, semanticTable)), combinePredicates.assumeDependence)
     AssumeIndependenceQueryGraphCardinalityModel(statistics, semanticTable, IndependenceCombiner)
 }

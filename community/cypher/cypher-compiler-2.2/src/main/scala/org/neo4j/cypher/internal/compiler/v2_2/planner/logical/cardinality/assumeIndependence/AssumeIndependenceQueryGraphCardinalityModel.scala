@@ -27,10 +27,9 @@ import org.neo4j.cypher.internal.compiler.v2_2.spi.GraphStatistics
 case class AssumeIndependenceQueryGraphCardinalityModel(stats: GraphStatistics,
                                                         semanticTable: SemanticTable,
                                                         combiner: SelectivityCombiner)
+       (implicit val expressionSelectivityEstimator: Expression2Selectivity = ExpressionSelectivityCalculator(stats, combiner),
+        val patternSelectivityEstimator: Pattern2Selectivity = PatternSelectivityCalculator(stats, combiner))
   extends QueryGraphCardinalityModel  {
-
-  private val expressionSelectivityEstimator = ExpressionSelectivityCalculator(stats, combiner)
-  private val patternSelectivityEstimator = PatternSelectivityCalculator(stats, combiner)
 
   def apply(queryGraph: QueryGraph): Cardinality = {
     findQueryGraphCombinations(queryGraph, semanticTable)

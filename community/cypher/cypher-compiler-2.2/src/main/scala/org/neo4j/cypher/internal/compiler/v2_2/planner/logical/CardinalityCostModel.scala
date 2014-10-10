@@ -54,10 +54,8 @@ case class CardinalityCostModel(cardinality: CardinalityModel) extends CostModel
     case NodeIndexSeek(_, _, _, ManyQueryExpression(Collection(elements)), _) =>
       DB_ACCESS_BOUND_PLAN_COST_PER_ROW * Multiplier(elements.size)
 
-    case NodeIndexSeek(_, _, _, ManyQueryExpression(Collection(elements)), _) =>
-      DB_ACCESS_BOUND_PLAN_COST_PER_ROW * Multiplier(10)
-
-    case _ => DB_ACCESS_BOUND_PLAN_COST_PER_ROW
+    case _ =>
+      DB_ACCESS_BOUND_PLAN_COST_PER_ROW
   }
 
   private def cardinalityForPlan(plan: LogicalPlan): Cardinality = plan match {

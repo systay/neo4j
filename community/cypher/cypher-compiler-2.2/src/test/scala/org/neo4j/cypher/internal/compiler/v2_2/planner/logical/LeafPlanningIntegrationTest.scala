@@ -166,6 +166,9 @@ class LeafPlanningIntegrationTest extends CypherFunSuite with LogicalPlanningTes
 
   test("should not use indexes for large collections") {
     // Index selectivity is 0.08, and label selectivity is 0.2.
+    // The property equality is an OR between the 10 numbers in the collection, and since we know the formula, we can
+    // calculate the selectivity: P(S1 OR S2) = ~(~P(S1) AND ~P(S2))
+    // , and
     // So if we have 3 elements in the collection, we should not use the index.
 
     (new given {

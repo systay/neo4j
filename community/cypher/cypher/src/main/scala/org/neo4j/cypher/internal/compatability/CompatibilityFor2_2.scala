@@ -28,7 +28,6 @@ import org.neo4j.cypher.internal.compiler.v2_2
 import org.neo4j.cypher.internal.compiler.v2_2.executionplan.{InternalExecutionResult, ExecutionPlan => ExecutionPlan_v2_2}
 import org.neo4j.cypher.internal.compiler.v2_2.planDescription.InternalPlanDescription.Arguments.{Version, DbHits, Rows}
 import org.neo4j.cypher.internal.compiler.v2_2.planDescription.{Argument, InternalPlanDescription, PlanDescriptionArgumentSerializer}
-import org.neo4j.cypher.internal.compiler.v2_2.spi.{ExceptionTranslatingQueryContext => ExceptionTranslatingQueryContext_v2_2}
 import org.neo4j.cypher.internal.compiler.v2_2.{CypherCompilerFactory, Legacy, PlannerName, Ronja}
 import org.neo4j.cypher.internal.spi.v2_2.{TransactionBoundPlanContext, TransactionBoundQueryContext}
 import org.neo4j.cypher.javacompat.ProfilerStatistics
@@ -65,7 +64,7 @@ trait CompatibilityFor2_2 {
 
     private def queryContext(graph: GraphDatabaseAPI, txInfo: TransactionInfo) = {
       val ctx = new TransactionBoundQueryContext(graph, txInfo.tx, txInfo.isTopLevelTx, txInfo.statement)
-      new ExceptionTranslatingQueryContext_v2_2(ctx)
+      new ExceptionTranslatingQueryContext(ctx)
     }
 
     def profile(graph: GraphDatabaseAPI, txInfo: TransactionInfo, params: Map[String, Any]) =

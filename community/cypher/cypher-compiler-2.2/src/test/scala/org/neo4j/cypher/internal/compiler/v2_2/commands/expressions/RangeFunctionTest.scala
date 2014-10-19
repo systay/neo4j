@@ -20,9 +20,8 @@
 package org.neo4j.cypher.internal.compiler.v2_2.commands.expressions
 
 import org.neo4j.cypher.internal.commons.CypherFunSuite
-import org.neo4j.cypher.internal.compiler.v2_2.ExecutionContext
+import org.neo4j.cypher.internal.compiler.v2_2.{InvalidArgumentException, ExecutionContext}
 import org.neo4j.cypher.internal.compiler.v2_2.pipes.QueryStateHelper
-import org.neo4j.cypher.InvalidArgumentException
 
 class RangeFunctionTest extends CypherFunSuite {
 

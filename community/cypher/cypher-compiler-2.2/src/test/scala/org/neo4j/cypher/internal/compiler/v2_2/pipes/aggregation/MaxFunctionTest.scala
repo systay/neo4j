@@ -19,8 +19,8 @@
  */
 package org.neo4j.cypher.internal.compiler.v2_2.pipes.aggregation
 
-import org.neo4j.cypher.SyntaxException
 import org.neo4j.cypher.internal.commons.CypherFunSuite
+import org.neo4j.cypher.internal.compiler.v2_2.SyntaxException
 import org.neo4j.cypher.internal.compiler.v2_2.commands.expressions.Expression
 
 class MaxFunctionTest extends CypherFunSuite with AggregateTest {

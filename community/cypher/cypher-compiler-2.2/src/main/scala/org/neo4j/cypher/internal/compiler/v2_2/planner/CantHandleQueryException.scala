@@ -19,7 +19,7 @@
  */
 package org.neo4j.cypher.internal.compiler.v2_2.planner
 
-import org.neo4j.cypher.CypherException
+import org.neo4j.cypher.internal.compiler.v2_2.CypherException
 import org.neo4j.kernel.api.exceptions.Status
 
 class CantHandleQueryException(message: String = "Internal error - should have used fall back to execute query, but something went horribly wrong")

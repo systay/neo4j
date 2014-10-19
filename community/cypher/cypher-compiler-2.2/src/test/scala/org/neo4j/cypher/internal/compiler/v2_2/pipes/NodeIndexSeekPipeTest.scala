@@ -19,24 +19,16 @@
  */
 package org.neo4j.cypher.internal.compiler.v2_2.pipes
 
-import org.neo4j.cypher.internal.commons.CypherFunSuite
-import org.neo4j.cypher.internal.compiler.v2_2.spi.QueryContext
-import org.neo4j.cypher.internal.compiler.v2_2.commands.expressions.{Collection, Literal}
-import org.neo4j.cypher.internal.compiler.v2_2.{PropertyKeyId, LabelId}
-import org.neo4j.graphdb.Node
-import org.mockito.Mockito._
 import org.mockito.Matchers._
-import org.neo4j.kernel.api.index.IndexDescriptor
+import org.mockito.Mockito._
+import org.neo4j.cypher.internal.commons.CypherFunSuite
+import org.neo4j.cypher.internal.compiler.v2_2.{CypherTypeException, LabelId, PropertyKeyId}
+import org.neo4j.cypher.internal.compiler.v2_2.ast.{LabelToken, PropertyKeyToken, _}
 import org.neo4j.cypher.internal.compiler.v2_2.commands.{ManyQueryExpression, SingleQueryExpression}
-import org.neo4j.cypher.CypherTypeException
-import org.neo4j.cypher.internal.compiler.v2_2.ast._
-import org.neo4j.cypher.internal.compiler.v2_2.PropertyKeyId
-import org.neo4j.cypher.internal.compiler.v2_2.ast.LabelToken
-import org.neo4j.cypher.internal.compiler.v2_2.LabelId
-import org.neo4j.cypher.internal.compiler.v2_2.commands.expressions.Literal
-import org.neo4j.cypher.internal.compiler.v2_2.commands.ManyQueryExpression
-import org.neo4j.cypher.internal.compiler.v2_2.ast.PropertyKeyToken
-import org.neo4j.cypher.internal.compiler.v2_2.commands.SingleQueryExpression
+import org.neo4j.cypher.internal.compiler.v2_2.commands.expressions.{Collection, Literal}
+import org.neo4j.cypher.internal.compiler.v2_2.spi.QueryContext
+import org.neo4j.graphdb.Node
+import org.neo4j.kernel.api.index.IndexDescriptor
 
 class NodeIndexSeekPipeTest extends CypherFunSuite with AstConstructionTestSupport {
 

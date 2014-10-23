@@ -82,7 +82,7 @@ case class LabelExpressionAction(entity: Expression, labelOp: LabelOp, labels: E
 
     labelOp match {
       case LabelSetOp => queryCtx.setLabelsOnNode(node.getId, labelIds.iterator)
-//      case LabelRemoveOp => queryCtx.removeLabelsFromNode(node.getId, labelIds.iterator)
+      case LabelRemoveOp => queryCtx.removeLabelsFromNode(node.getId, labelIds.iterator)
     }
 
     Iterator(context)

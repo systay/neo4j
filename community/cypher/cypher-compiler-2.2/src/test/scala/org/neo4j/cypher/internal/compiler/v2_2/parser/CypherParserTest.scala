@@ -2484,12 +2484,12 @@ class CypherParserTest extends CypherFunSuite {
     expectQuery(
       "MATCH n SET n LABEL 'Foo'",
       Query.
-        matches(SingleNode("n")).
-        tail(Query.
-             start().
-             updates(LabelExpressionAction(Identifier("n"), LabelSetOp, Collection(Literal("Foo")))).
-             returns()).
-        returns(AllIdentifiers())
+      matches(SingleNode("n")).
+      tail(Query.
+           start().
+           updates(LabelExpressionAction(Identifier("n"), LabelSetOp, Collection(Literal("Foo")))).
+           returns()).
+      returns(AllIdentifiers())
     )
   }
 
@@ -2497,12 +2497,38 @@ class CypherParserTest extends CypherFunSuite {
     expectQuery(
       "MATCH n SET n LABELS ['Foo', 'Bar']",
       Query.
-        matches(SingleNode("n")).
-        tail(Query.
-             start().
-             updates(LabelExpressionAction(Identifier("n"), LabelSetOp, Collection(Literal("Foo"), Literal("Bar")))).
-             returns()).
-        returns(AllIdentifiers())
+      matches(SingleNode("n")).
+      tail(Query.
+           start().
+           updates(LabelExpressionAction(Identifier("n"), LabelSetOp, Collection(Literal("Foo"), Literal("Bar")))).
+           returns()).
+      returns(AllIdentifiers())
+    )
+  }
+
+  test("REMOVE label from expression") {
+    expectQuery(
+      "MATCH n REMOVE n LABEL 'Foo'",
+      Query.
+      matches(SingleNode("n")).
+      tail(Query.
+           start().
+           updates(LabelExpressionAction(Identifier("n"), LabelRemoveOp, Collection(Literal("Foo")))).
+           returns()).
+      returns(AllIdentifiers())
+    )
+  }
+
+  test("REMOVE labels from a collection") {
+    expectQuery(
+      "MATCH n REMOVE n LABELS ['Foo', 'Bar']",
+      Query.
+      matches(SingleNode("n")).
+      tail(Query.
+           start().
+           updates(LabelExpressionAction(Identifier("n"), LabelRemoveOp, Collection(Literal("Foo"), Literal("Bar")))).
+           returns()).
+      returns(AllIdentifiers())
     )
   }
 

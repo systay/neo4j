@@ -37,19 +37,12 @@ case class SetLabelItem(expression: Expression, labels: Seq[LabelName])(val posi
     expression.expectType(CTNode.covariant)
 }
 
-object SetLabelsExpressionItem {
-  def fromSingle(expression: Expression, labelsExpression: Expression)(position: InputPosition) = {
-    val coll = Collection(Seq(labelsExpression))(labelsExpression.position)
-    new SetLabelsExpressionItem(expression, coll)(position)
-  }
-}
-
-case class SetLabelsExpressionItem(expression: Expression, labelsExpression: Expression)(val position: InputPosition) extends SetItem {
+case class SetLabelsExpressionItem(expression: Expression, labelsExpression: Expression, multiple: Boolean)(val position: InputPosition) extends SetItem {
   def semanticCheck =
     expression.semanticCheck(Expression.SemanticContext.Simple) chain
     expression.expectType(CTNode.covariant) chain
     labelsExpression.semanticCheck(Expression.SemanticContext.Simple) chain
-    labelsExpression.expectType(CTCollection(CTString).covariant)
+    labelsExpression.expectType(if(multiple) CTCollection(CTString).covariant else CTString.covariant)
 }
 
 case class SetExactPropertiesFromMapItem(identifier: Identifier, expression: Expression)

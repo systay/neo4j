@@ -284,6 +284,8 @@ object StatementConverters {
         c.items.map {
           case remItem: ast.RemoveLabelItem =>
             commands.LabelAction(remItem.expression.asCommandExpression, commands.LabelRemoveOp, remItem.labels.map(l => commandvalues.KeyToken.Unresolved(l.name, commandvalues.TokenType.Label)))
+          case removeItem: ast.RemoveLabelsExpressionItem =>
+            commands.LabelExpressionAction(removeItem.expression.asCommandExpression, commands.LabelRemoveOp, removeItem.labelsExpression.asCommandExpression)
           case remItem: ast.RemovePropertyItem =>
             mutation.DeletePropertyAction(remItem.property.map.asCommandExpression, commandvalues.KeyToken.Unresolved(remItem.property.propertyKey.name, commandvalues.TokenType.PropertyKey))
         }

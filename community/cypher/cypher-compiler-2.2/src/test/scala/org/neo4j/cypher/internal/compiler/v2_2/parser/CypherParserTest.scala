@@ -2480,6 +2480,32 @@ class CypherParserTest extends CypherFunSuite {
     })
   }
 
+  test("SET label from expression") {
+    expectQuery(
+      "MATCH n SET n LABEL 'Foo'",
+      Query.
+        matches(SingleNode("n")).
+        tail(Query.
+             start().
+             updates(LabelExpressionAction(Identifier("n"), LabelSetOp, Collection(Literal("Foo")))).
+             returns()).
+        returns(AllIdentifiers())
+    )
+  }
+
+  test("SET labels from a collection") {
+    expectQuery(
+      "MATCH n SET n LABELS ['Foo', 'Bar']",
+      Query.
+        matches(SingleNode("n")).
+        tail(Query.
+             start().
+             updates(LabelExpressionAction(Identifier("n"), LabelSetOp, Collection(Literal("Foo"), Literal("Bar")))).
+             returns()).
+        returns(AllIdentifiers())
+    )
+  }
+
   test("remove label") {
     expectQuery(
       "START n=node(0) REMOVE n:LabelName", {
@@ -3000,8 +3026,9 @@ class CypherParserTest extends CypherFunSuite {
     val compacted = q.compact
     var lastQ = compacted
 
-    while (lastQ.tail.nonEmpty)
+    while (lastQ.tail.nonEmpty) {
       lastQ = lastQ.tail.get
+    }
 
     assert(lastQ.returns.columns === List("a1", "a4"), "Lost the tail while compacting")
   }

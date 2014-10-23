@@ -124,6 +124,8 @@ trait Clauses extends Parser
       PropertyExpression ~~ group(operator("=") ~~ Expression) ~~>> (ast.SetPropertyItem(_, _))
     | Identifier ~~ group(operator("=") ~~ Expression) ~~>> (ast.SetExactPropertiesFromMapItem(_, _))
     | Identifier ~~ group(operator("+=") ~~ Expression) ~~>> (ast.SetIncludingPropertiesFromMapItem(_, _))
+    | Identifier ~~ keyword("LABEL") ~~ Expression ~~>> (ast.SetLabelsExpressionItem.fromSingle(_, _))
+    | Identifier ~~ keyword("LABELS") ~~ Expression ~~>> (ast.SetLabelsExpressionItem(_, _))
     | group(Identifier ~~ NodeLabels) ~~>> (ast.SetLabelItem(_, _))
   )
 

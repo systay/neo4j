@@ -37,8 +37,9 @@ sealed trait InternalPlanDescription {
   def map(f: InternalPlanDescription => InternalPlanDescription): InternalPlanDescription
   def find(name: String): Seq[InternalPlanDescription]
   def addArgument(arg: Argument): InternalPlanDescription
-  def andThen(pipe: Pipe, name: String, arguments: Argument*) = PlanDescriptionImpl(pipe, name, SingleChild(this), arguments)
+  def andThen(pipe: Pipe, name: String, identifiers: Set[String], arguments: Argument*) = PlanDescriptionImpl(pipe, name, SingleChild(this), arguments, identifiers)
   def toSeq: Seq[InternalPlanDescription]
+  def identifiers: Set[String]
 
   def totalDbHits: Option[Long] = {
     val allMaybeDbHits: Seq[Option[Long]] = toSeq.map {
@@ -59,7 +60,6 @@ object InternalPlanDescription {
   object Arguments {
     case class Rows(value: Long) extends Argument
     case class DbHits(value: Long) extends Argument
-    case class IntroducedIdentifier(value: String) extends Argument
     case class ColumnsLeft(value: Seq[String]) extends Argument
     case class LegacyExpression(value: commands.expressions.Expression) extends Argument
     case class UpdateActionName(value: String) extends Argument
@@ -114,7 +114,8 @@ final case class TwoChildren(lhs: InternalPlanDescription, rhs: InternalPlanDesc
 final case class PlanDescriptionImpl(pipe: Pipe,
                                      name: String,
                                      children: Children,
-                                     _arguments: Seq[Argument]) extends InternalPlanDescription {
+                                     _arguments: Seq[Argument],
+                                     identifiers: Set[String]) extends InternalPlanDescription {
 
   self =>
 
@@ -150,8 +151,9 @@ final case class PlanDescriptionImpl(pipe: Pipe,
   def render( builder: StringBuilder ) { ??? }
 }
 
-final case class ArgumentPlanDescription(pipe: Pipe, arguments: Seq[Argument] = Seq.empty) extends InternalPlanDescription {
-  override def andThen(pipe: Pipe, name: String, arguments: Argument*) = new PlanDescriptionImpl(pipe, name, NoChildren, arguments)
+final case class ArgumentPlanDescription(pipe: Pipe, arguments: Seq[Argument] = Seq.empty, identifiers: Set[String]) extends InternalPlanDescription {
+  override def andThen(pipe: Pipe, name: String, identifiers: Set[String], newArguments: Argument*) =
+    new PlanDescriptionImpl(pipe = pipe, name = name, children = NoChildren, _arguments = newArguments, identifiers = identifiers)
 
   def children = NoChildren
 

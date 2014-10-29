@@ -19,9 +19,10 @@
  */
 package org.neo4j.cypher.internal.compiler.v2_2.planDescription
 
+import org.neo4j.cypher.internal.compiler.v2_2.helpers.UnNamedNameGenerator._
 import org.neo4j.cypher.internal.compiler.v2_2.planDescription.InternalPlanDescription.Arguments._
-
 import scala.collection.mutable
+
 
 object renderDetails extends (InternalPlanDescription => String) {
 
@@ -40,7 +41,7 @@ object renderDetails extends (InternalPlanDescription => String) {
         val rows = p.arguments.collectFirst { case Rows(count) => count.toString}
         val estimatedRows = p.arguments.collectFirst { case EstimatedRows(count) => count.toString}
         val dbHits = p.arguments.collectFirst { case DbHits(count) => count.toString}
-        val ids = Some(p.arguments.collect { case IntroducedIdentifier(id) => id}.mkString(", "))
+        val ids = Some(p.pipe.symbols.identifiers.keys.filter(_.isNamed).mkString(", "))
         val other = Some(p.arguments.collect {
           case x
             if !x.isInstanceOf[Rows] &&

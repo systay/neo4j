@@ -22,7 +22,12 @@ package org.neo4j.cypher.internal.compiler.v2_2
 import org.mockito.Mockito._
 import org.neo4j.cypher.internal.commons.CypherFunSuite
 
+import scala.collection.mutable
+
 class ClosingIteratorTest extends CypherFunSuite {
+
+  import ExecutionContextHelper._
+
   var taskCloser: TaskCloser = _
   val exceptionDecorator: CypherException => CypherException = identity
 
@@ -33,7 +38,7 @@ class ClosingIteratorTest extends CypherFunSuite {
 
   test("should_cleanup_when_we_reach_the_end") {
     //Given
-    val wrapee   = Iterator(Map("k" -> 42))
+    val wrapee   = Iterator(ExecutionContext("k" -> 42))
     val iterator = new ClosingIterator(wrapee, taskCloser, exceptionDecorator)
     //When
     val result = iterator.next()
@@ -75,7 +80,7 @@ class ClosingIteratorTest extends CypherFunSuite {
 
   test("exception_in_hasNext_should_fail_transaction") {
     //Given
-    val wrapee = mock[Iterator[Map[String, Any]]]
+    val wrapee = mock[Iterator[ExecutionContext]]
     when(wrapee.hasNext).thenThrow(new RuntimeException)
     val iterator = new ClosingIterator(wrapee, taskCloser, exceptionDecorator)
 
@@ -88,7 +93,7 @@ class ClosingIteratorTest extends CypherFunSuite {
 
   test("exception_in_next_should_fail_transaction") {
     //Given
-    val wrapee = mock[Iterator[Map[String, Any]]]
+    val wrapee = mock[Iterator[ExecutionContext]]
     when(wrapee.hasNext).thenReturn(true)
     when(wrapee.next()).thenThrow(new RuntimeException)
 
@@ -103,7 +108,7 @@ class ClosingIteratorTest extends CypherFunSuite {
 
   test("close_runs_cleanup") {
     //Given
-    val wrapee   = Iterator(Map("k" -> 42), Map("k" -> 43))
+    val wrapee   = Iterator(ExecutionContext("k" -> 42), ExecutionContext("k" -> 43))
     val iterator = new ClosingIterator(wrapee, taskCloser, exceptionDecorator)
 
     //When
@@ -114,4 +119,8 @@ class ClosingIteratorTest extends CypherFunSuite {
     verify(taskCloser).close(success = true)
     result should equal(Map[String, Any]("k" -> 42))
   }
+}
+
+object ExecutionContextHelper {
+  implicit def toMap(ctx: ExecutionContext): mutable.Map[String, Any] = ctx.m
 }

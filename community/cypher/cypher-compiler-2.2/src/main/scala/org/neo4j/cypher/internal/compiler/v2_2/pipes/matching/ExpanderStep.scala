@@ -155,7 +155,5 @@ class MiniMap(var relationship: Relationship, var node: Node, myMap: MutableMap[
 
   override def iterator = throw new ThisShouldNotHappenError("Andres", "This method should never be used")
 
-  override def -(key: String) = throw new ThisShouldNotHappenError("Andres", "This method should never be used")
-
   override protected def createWithNewMap(newMap: mutable.Map[String, Any]) = new MiniMap(relationship, node, newMap)
 }

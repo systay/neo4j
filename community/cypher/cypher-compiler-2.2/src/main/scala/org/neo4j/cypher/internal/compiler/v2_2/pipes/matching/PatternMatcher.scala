@@ -226,7 +226,7 @@ class PatternMatcher(bindings: Map[String, MatchingPair],
     """, current, pRel, history, remaining.toList))
   }
 
-  private def debug[U](history: History, resultMap: Map[String, Any]) {
+  private def debug[U](history: History, resultMap: ExecutionContext) {
     if (isDebugging)
       println(String.format("""yield(history=%s) => %s
     """, history, resultMap))

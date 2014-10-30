@@ -29,7 +29,7 @@ class SlicePipeTest extends CypherFunSuite {
 
   test("should_handle_longs") {
     //given
-    val ctx = ExecutionContext.empty
+    val ctx = Map.empty[String,Any]
     val input = new FakePipe(Iterator(ctx, ctx, ctx))
     val pipe = new SlicePipe(input, None, Some(Literal(42l)))
 

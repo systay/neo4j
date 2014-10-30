@@ -20,7 +20,7 @@
 package org.neo4j.cypher.internal.compiler.v2_2.pipes
 
 import org.neo4j.cypher.internal.commons.CypherFunSuite
-import org.neo4j.cypher.internal.compiler.v2_2.PatternException
+import org.neo4j.cypher.internal.compiler.v2_2.{ExecutionContext, PatternException}
 import org.neo4j.cypher.internal.compiler.v2_2.commands.SortItem
 import org.neo4j.cypher.internal.compiler.v2_2.commands.expressions.{Add, Identifier, Literal, RandFunction}
 import org.neo4j.cypher.internal.compiler.v2_2.symbols._
@@ -45,7 +45,7 @@ class LegacySortPipeTest extends CypherFunSuite {
     val sortPipe = new LegacySortPipe(source, List(SortItem(Identifier("x"), true)))
 
     sortPipe.createResults(QueryStateHelper.empty).toList should equal(List(
-      MutableMap("x" -> "A"), MutableMap("x" -> "B")
+      ExecutionContext("x" -> "A"), ExecutionContext("x" -> "B")
     ))
   }
 
@@ -60,9 +60,9 @@ class LegacySortPipeTest extends CypherFunSuite {
       SortItem(Identifier("y"), true)))
 
     sortPipe.createResults(QueryStateHelper.empty).toList should equal(List(
-      MutableMap("x" -> "A", "y" -> 100),
-      MutableMap("x" -> "B", "y" -> 10),
-      MutableMap("x" -> "B", "y" -> 20)
+      ExecutionContext("x" -> "A", "y" -> 100),
+      ExecutionContext("x" -> "B", "y" -> 10),
+      ExecutionContext("x" -> "B", "y" -> 20)
     ))
   }
 
@@ -77,9 +77,9 @@ class LegacySortPipeTest extends CypherFunSuite {
       SortItem(Identifier("y"), false)))
 
     sortPipe.createResults(QueryStateHelper.empty).toList should equal(List(
-      MutableMap("x" -> "A", "y" -> 100),
-      MutableMap("x" -> "B", "y" -> 20),
-      MutableMap("x" -> "B", "y" -> 10)
+      ExecutionContext("x" -> "A", "y" -> 100),
+      ExecutionContext("x" -> "B", "y" -> 20),
+      ExecutionContext("x" -> "B", "y" -> 10)
     ))
   }
 
@@ -93,9 +93,9 @@ class LegacySortPipeTest extends CypherFunSuite {
     val sortPipe = new LegacySortPipe(source, List(SortItem(Identifier("y"), true)))
 
     sortPipe.createResults(QueryStateHelper.empty).toList should equal(List(
-      MutableMap("y" -> 1),
-      MutableMap("y" -> 2),
-      MutableMap("y" -> null)
+      ExecutionContext("y" -> 1),
+      ExecutionContext("y" -> 2),
+      ExecutionContext("y" -> null)
     ))
   }
 
@@ -111,9 +111,9 @@ class LegacySortPipeTest extends CypherFunSuite {
 
     val actualResult = sortPipe.createResults(QueryStateHelper.empty).toList
     val expectedResult =  List(
-      MutableMap("x" -> 1),
-      MutableMap("x" -> 2),
-      MutableMap("x" -> 3))
+      ExecutionContext("x" -> 1),
+      ExecutionContext("x" -> 2),
+      ExecutionContext("x" -> 3))
     actualResult should equal(expectedResult)
   }
 

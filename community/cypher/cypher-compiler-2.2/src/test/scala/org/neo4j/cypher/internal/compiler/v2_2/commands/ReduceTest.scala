@@ -31,7 +31,7 @@ class ReduceTest extends CypherFunSuite {
     val l = Seq("x", "xxx", "xx")
     val expression = Add(Identifier("acc"), LengthFunction(Identifier("n")))
     val collection = Identifier("l")
-    val m = ExecutionContext.from("l" -> l)
+    val m = ExecutionContext("l" -> l)
     val s = QueryStateHelper.empty
 
     val reduce = ReduceFunction(collection, "n", expression, "acc", Literal(0))

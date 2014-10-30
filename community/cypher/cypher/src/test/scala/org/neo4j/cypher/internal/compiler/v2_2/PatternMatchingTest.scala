@@ -42,7 +42,7 @@ class PatternMatchingTest extends ExecutionEngineFunSuite with PatternGraphBuild
 
     // When
     val result = withQueryState { queryState =>
-      matcher.getMatches(ExecutionContext.empty.newWith("a" -> aNode), queryState).toList
+      matcher.getMatches(ExecutionContext("a" -> aNode), queryState).toList
     }
 
     // Then
@@ -59,11 +59,11 @@ class PatternMatchingTest extends ExecutionEngineFunSuite with PatternGraphBuild
 
     // When
     val result = withQueryState { queryState =>
-      matcher.getMatches(ExecutionContext.empty.newWith("a" -> aNode), queryState).toList
+      matcher.getMatches(ExecutionContext("a" -> aNode), queryState).toList
     }
 
     // Then
-    result should equal(List(Map("a" -> aNode, "b" -> bNode, "r" -> relationship)))
+    result should equal(List(ExecutionContext("a" -> aNode, "b" -> bNode, "r" -> relationship)))
   }
 
   test("should_handle_a_mandatory_labeled_node_with_no_matches") {
@@ -76,7 +76,7 @@ class PatternMatchingTest extends ExecutionEngineFunSuite with PatternGraphBuild
 
     // When
     val result = withQueryState { queryState =>
-      matcher.getMatches(ExecutionContext.empty.newWith("a" -> aNode), queryState).toList
+      matcher.getMatches(ExecutionContext("a" -> aNode), queryState).toList
     }
 
     // Then
@@ -93,10 +93,10 @@ class PatternMatchingTest extends ExecutionEngineFunSuite with PatternGraphBuild
 
     // When
     val result = withQueryState { queryState =>
-      matcher.getMatches(ExecutionContext.empty.newWith("a" -> aNode), queryState).toList
+      matcher.getMatches(ExecutionContext("a" -> aNode), queryState).toList
     }
 
     // Then
-    result should equal(List(Map("a" -> aNode, "b" -> bNode, "r" -> relationship)))
+    result should equal(List(ExecutionContext("a" -> aNode, "b" -> bNode, "r" -> relationship)))
   }
 }

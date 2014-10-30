@@ -61,7 +61,7 @@ class SimplePatternMatchingTest extends ExecutionEngineFunSuite with PatternGrap
     val n1 = createNode()
     val rel = relate(n0, n1)
 
-    val startingState = ExecutionContext.empty.newWith(Map("a" -> n0, "b" -> n1, "r" -> rel))
+    val startingState = ExecutionContext("a" -> n0, "b" -> n1, "r" -> rel)
 
     // When
     val result = withQueryState { queryState =>
@@ -84,7 +84,7 @@ class SimplePatternMatchingTest extends ExecutionEngineFunSuite with PatternGrap
     val n1 = createNode()
     val rel = relate(n0, n1)
 
-    val startingState = ExecutionContext.empty.newWith(Map("a" -> n0, "b" -> n1, "r" -> rel))
+    val startingState = ExecutionContext("a" -> n0, "b" -> n1, "r" -> rel)
 
     // When
     val result = withQueryState { queryState =>
@@ -92,6 +92,6 @@ class SimplePatternMatchingTest extends ExecutionEngineFunSuite with PatternGrap
     }
 
     // Then
-    result should equal(List(Map("a" -> n0, "b" -> n1, "r" -> rel, "r2" -> rel, "c" -> n0)))
+    result should equal(List(ExecutionContext("a" -> n0, "b" -> n1, "r" -> rel, "r2" -> rel, "c" -> n0)))
   }
 }

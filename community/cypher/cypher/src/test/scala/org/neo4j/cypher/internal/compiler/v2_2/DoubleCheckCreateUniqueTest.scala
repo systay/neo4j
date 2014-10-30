@@ -60,7 +60,7 @@ class DoubleCheckCreateUniqueTest extends CypherFunSuite {
   val relateAction = CreateUniqueAction(UniqueLink("a", "b", "r", "X", Direction.OUTGOING))
 
   private def createExecutionContext(state:QueryState, a: Node): ExecutionContext = {
-    ExecutionContext().newWith(Map("a" -> a))
+    ExecutionContext("a" -> a)
   }
 
   private def withQueryState(f: QueryState => Unit) {

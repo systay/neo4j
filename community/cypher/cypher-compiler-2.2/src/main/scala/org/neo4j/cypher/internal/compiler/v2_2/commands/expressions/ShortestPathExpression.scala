@@ -41,16 +41,16 @@ case class ShortestPathExpression(ast: ShortestPath) extends Expression with Pat
     }
   }
 
-  private def getMatches(m: Map[String, Any]): Any = {
+  private def getMatches(m: ExecutionContext): Any = {
     val start = getEndPoint(m, ast.left)
     val end = getEndPoint(m, ast.right)
     shortestPathStrategy.findResult(start, end)
   }
 
-  def getEndPoint(m: Map[String, Any], start: SingleNode): Node = m.getOrElse(start.name,
+  def getEndPoint(m: ExecutionContext, start: SingleNode): Node = m.getOrElse(start.name,
     throw new SyntaxException(s"To find a shortest path, both ends of the path need to be provided. Couldn't find `${start}`")).asInstanceOf[Node]
 
-  private def anyStartpointsContainNull(m: Map[String, Any]): Boolean =
+  private def anyStartpointsContainNull(m: ExecutionContext): Boolean =
     m(ast.left.name) == null || m(ast.right.name) == null
 
   override def children = Seq(ast)

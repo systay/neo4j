@@ -48,7 +48,7 @@ class PathExpressionTest extends GraphDatabaseFunSuite with QueryStateTestSuppor
 
     val expression = ShortestPathExpression(pattern)
 
-    val m = ExecutionContext.from("a" -> a, "c" -> c)
+    val m = ExecutionContext("a" -> a, "c" -> c)
 
     val result = withQueryState { state =>
       expression(m)(state).asInstanceOf[Path]
@@ -68,7 +68,7 @@ class PathExpressionTest extends GraphDatabaseFunSuite with QueryStateTestSuppor
 
     val pattern = RelatedTo(SingleNode("a"), SingleNode("  UNNAMED1", Seq(UnresolvedLabel("Foo"))), "  UNNAMED2", Seq.empty, Direction.OUTGOING, Map.empty)
     val expression = NonEmpty(PathExpression(Seq(pattern)))
-    val m = ExecutionContext.from("a" -> a)
+    val m = ExecutionContext("a" -> a)
 
     // WHEN
     val result = withQueryState { state =>
@@ -88,7 +88,7 @@ class PathExpressionTest extends GraphDatabaseFunSuite with QueryStateTestSuppor
 
     val pattern = RelatedTo(SingleNode("a"), SingleNode("  UNNAMED1", Seq(UnresolvedLabel("Foo"))), "  UNNAMED2", Seq.empty, Direction.OUTGOING, Map.empty)
     val expression = NonEmpty(PathExpression(Seq(pattern)))
-    val m = ExecutionContext.from("a" -> a)
+    val m = ExecutionContext("a" -> a)
 
     // WHEN
     val result = withQueryState { state =>

@@ -436,12 +436,12 @@ class MatchingContextTest extends GraphDatabaseFunSuite with PatternGraphBuilder
 
   private var matchingContext: MatchingContext = null
 
-  private def getMatches(params: (String, Any)*) = withQueryState { queryState =>
+  private def getMatches(params: (String, Any)*): List[ExecutionContext] = withQueryState { queryState =>
     val ctx = ExecutionContext().newWith(params.toMap)
     matchingContext.getMatches(ctx, queryState).toList
   }
 
-  private def assertMatches(matches: List[Map[String, Any]], expectedSize: Int, expected: Map[String, Any]*) {
+  private def assertMatches(matches: List[ExecutionContext], expectedSize: Int, expected: Map[String, Any]*) {
     matches should have size expectedSize
     expected.foreach(expectation => {
       withClue("Didn't find the expected row: ") {
@@ -468,7 +468,7 @@ class MatchingContextTest extends GraphDatabaseFunSuite with PatternGraphBuilder
     createMatchingContextWith(patterns, nodes, Seq(), predicates)
   }
 
-  private def compare(matches: Map[String, Any], expectation: Map[String, Any]): Boolean = {
+  private def compare(matches: ExecutionContext, expectation: Map[String, Any]): Boolean = {
     expectation.foreach(kv =>
       matches.get(kv._1) match {
         case None    => return false

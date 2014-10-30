@@ -28,8 +28,8 @@ class ApplyPipeTest extends CypherFunSuite {
   def newMonitor = mock[PipeMonitor]
 
   test("should work by applying the identity operator on the rhs") {
-    val lhsData = List(Map("a" -> 1), Map("a" -> 2))
-    val lhs = new FakePipe(lhsData.iterator, "a" -> CTNumber)
+    val lhsData = Iterator(Map("a" -> 1), Map("a" -> 2))
+    val lhs = new FakePipe(lhsData, "a" -> CTNumber)
 
     val rhs = new Pipe {
       protected def internalCreateResults(state: QueryState) = Iterator(state.initialContext.get)
@@ -44,12 +44,12 @@ class ApplyPipeTest extends CypherFunSuite {
 
     val result = ApplyPipe(lhs, rhs)()(newMonitor).createResults(QueryStateHelper.empty).toList
 
-    result should equal(lhsData)
+    result should equal(lhs.executionContexts)
   }
 
-  test("should work by applying a  on the rhs") {
-    val lhsData = List(Map("a" -> 1, "b" -> 3), Map("a" -> 2, "b" -> 4))
-    val lhs = new FakePipe(lhsData.iterator, "a" -> CTNumber, "b" -> CTNumber)
+  test("should work by applying a on the rhs") {
+    val lhsData = Iterator(Map("a" -> 1, "b" -> 3), Map("a" -> 2, "b" -> 4))
+    val lhs = new FakePipe(lhsData, "a" -> CTNumber, "b" -> CTNumber)
     val rhsData = "c" -> 36
 
     val rhs = new Pipe {
@@ -66,12 +66,12 @@ class ApplyPipeTest extends CypherFunSuite {
 
     val result = ApplyPipe(lhs, rhs)()(newMonitor).createResults(QueryStateHelper.empty).toList
 
-    result should equal(lhsData.map(_ + rhsData))
+    result should equal(lhs.executionContexts.map(_ += rhsData))
   }
 
   test("should work even if inner pipe overwrites values") {
-    val lhsData = List(Map("a" -> 1, "b" -> 3), Map("a" -> 2, "b" -> 4))
-    val lhs = new FakePipe(lhsData.iterator, "a" -> CTNumber, "b" -> CTNumber)
+    val lhsData = Iterator(Map("a" -> 1, "b" -> 3), Map("a" -> 2, "b" -> 4))
+    val lhs = new FakePipe(lhsData, "a" -> CTNumber, "b" -> CTNumber)
 
     val rhs = new Pipe {
       protected def internalCreateResults(state: QueryState) =
@@ -87,6 +87,6 @@ class ApplyPipeTest extends CypherFunSuite {
 
     val result = ApplyPipe(lhs, rhs)()(newMonitor).createResults(QueryStateHelper.empty).toList
 
-    result should equal(lhsData)
+    result should equal(lhs.executionContexts)
   }
 }

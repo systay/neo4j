@@ -31,7 +31,7 @@ class PropertyValueTest extends CypherFunSuite {
 
   test("nullNodeShouldGiveNullProperty") {
     val p = Property(Identifier("identifier"), PropertyKey("property"))
-    val ctx = ExecutionContext.from("identifier" -> null)
+    val ctx = ExecutionContext("identifier" -> null)
     val state = QueryStateHelper.empty
 
     p(ctx)(state) should equal(expectedNull)
@@ -39,7 +39,7 @@ class PropertyValueTest extends CypherFunSuite {
 
   test("nonExistentPropertyShouldEvaluateToNull") {
     val p = Property(Identifier("identifier"), PropertyKey("nonExistent"))
-    val ctx = ExecutionContext.from("identifier" -> Map("property" -> 42))
+    val ctx = ExecutionContext("identifier" -> Map("property" -> 42))
     val state = QueryStateHelper.empty
 
     p(ctx)(state) should equal(expectedNull)

@@ -30,7 +30,7 @@ trait AggregateTest {
     implicit val state = QueryStateHelper.empty
 
     val func: AggregationFunction = createAggregator(Identifier("x"))
-    values.foreach(value => func(ExecutionContext.from("x" -> value)))
+    values.foreach(value => func(ExecutionContext("x" -> value)))
     func.result
   }
 }

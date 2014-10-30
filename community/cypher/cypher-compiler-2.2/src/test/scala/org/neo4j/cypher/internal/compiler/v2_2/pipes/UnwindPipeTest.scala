@@ -45,8 +45,8 @@ class UnwindPipeTest extends CypherFunSuite {
 
   test("should unwind collection of numbers") {
     unwindWithInput(List(Map("x" -> List(1, 2)))) should equal(List(
-      Map("y" -> 1, "x" -> List(1, 2)),
-      Map("y" -> 2, "x" -> List(1, 2))))
+      ExecutionContext("y" -> 1, "x" -> List(1, 2)),
+      ExecutionContext("y" -> 2, "x" -> List(1, 2))))
   }
 
   test("should handle null") {
@@ -63,7 +63,7 @@ class UnwindPipeTest extends CypherFunSuite {
       "x" -> listOfLists))) should equal(
 
       List(
-        Map("y" -> List(1, 2, 3), "x" -> listOfLists),
-        Map("y" -> List(4, 5, 6), "x" -> listOfLists)))
+        ExecutionContext("y" -> List(1, 2, 3), "x" -> listOfLists),
+        ExecutionContext("y" -> List(4, 5, 6), "x" -> listOfLists)))
   }
 }

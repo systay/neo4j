@@ -29,7 +29,7 @@ class ExtractTest extends CypherFunSuite {
     val l = Seq("x", "xxx", "xx")
     val expression = LengthFunction(Identifier("n"))
     val collection = Identifier("l")
-    val m = ExecutionContext.from("l" -> l)
+    val m = ExecutionContext("l" -> l)
 
     val extract = ExtractFunction(collection, "n", expression)
 

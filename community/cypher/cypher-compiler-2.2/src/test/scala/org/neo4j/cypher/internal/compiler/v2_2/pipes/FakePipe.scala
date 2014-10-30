@@ -29,11 +29,33 @@ import scala.collection.Map
 
 class FakePipe(val data: Iterator[Map[String, Any]], newIdentifiers: (String, CypherType)*) extends Pipe with MockitoSugar {
 
+  val _cache: List[Map[String, Any]] = data.toList
+
   def this(data: Traversable[Map[String, Any]], identifiers: (String, CypherType)*) = this(data.toIterator, identifiers:_*)
 
   val symbols: SymbolTable = SymbolTable(newIdentifiers.toMap)
 
-  def internalCreateResults(state: QueryState) = data.map(m => ExecutionContext(collection.mutable.Map(m.toSeq: _*)))
+  def internalCreateResults(state: QueryState) = executionContexts.toIterator
+
+  def planDescription = ArgumentPlanDescription(this)
+
+  def exists(pred: Pipe => Boolean) = ???
+
+  val monitor: PipeMonitor = mock[PipeMonitor]
+
+  def dup(sources: List[Pipe]): Pipe = ???
+
+  def sources: Seq[Pipe] = ???
+
+  override def localEffects = Effects.NONE
+
+  def executionContexts: List[ExecutionContext] = _cache.map(m => ExecutionContext(collection.mutable.Map(m.toSeq: _*)))
+}
+
+class LazyPipe(data: Iterator[Map[String, Any]], identifiers: (String, CypherType)*) extends Pipe with MockitoSugar {
+  val symbols: SymbolTable = SymbolTable(identifiers.toMap)
+
+  def internalCreateResults(state: QueryState) = data.map(m => ExecutionContext.apply(m.toSeq: _*))
 
   def planDescription = SingleRowPlanDescription(this, identifiers = identifiers)
 

@@ -20,6 +20,7 @@
 package org.neo4j.cypher.internal.compiler.v2_2.pipes
 
 import org.neo4j.cypher.internal.commons.CypherFunSuite
+import org.neo4j.cypher.internal.compiler.v2_2.ExecutionContext
 import org.neo4j.cypher.internal.compiler.v2_2.commands.ReturnItem
 import org.neo4j.cypher.internal.compiler.v2_2.commands.expressions.Identifier
 import org.neo4j.cypher.internal.compiler.v2_2.symbols._
@@ -36,6 +37,6 @@ class ColumnFilterPipeTest extends CypherFunSuite {
     val columnPipe = new ColumnFilterPipe(source, returnItems)(mock[PipeMonitor])
 
     columnPipe.symbols.identifiers should equal(Map(col -> CTNode))
-    columnPipe.createResults(QueryStateHelper.empty).toList should equal(List(Map(col -> "bar")))
+    columnPipe.createResults(QueryStateHelper.empty).toList should equal(List(ExecutionContext(col -> "bar")))
   }
 }

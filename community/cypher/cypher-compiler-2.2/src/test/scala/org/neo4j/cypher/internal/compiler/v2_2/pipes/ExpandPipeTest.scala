@@ -112,7 +112,7 @@ class ExpandPipeTest extends CypherFunSuite {
     single.m should equal(Map("a" -> startNode, "r" -> relationship1, "b" -> endNode1))
   }
 
-  private def row(values: (String, Any)*) = ExecutionContext.from(values: _*)
+  private def row(values: (String, Any)*) = ExecutionContext(values: _*)
 
   private def mockRelationships(rels: Relationship*) {
     when(query.getRelationshipsFor(any(), any(), any())).thenAnswer(new Answer[Iterator[Relationship]] {

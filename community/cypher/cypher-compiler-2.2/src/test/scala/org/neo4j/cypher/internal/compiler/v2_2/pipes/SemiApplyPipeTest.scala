@@ -20,6 +20,7 @@
 package org.neo4j.cypher.internal.compiler.v2_2.pipes
 
 import org.neo4j.cypher.internal.commons.CypherFunSuite
+import org.neo4j.cypher.internal.compiler.v2_2.ExecutionContext
 import org.neo4j.cypher.internal.compiler.v2_2.symbols.CTNumber
 
 class SemiApplyPipeTest extends CypherFunSuite with PipeTestSupport {
@@ -35,7 +36,7 @@ class SemiApplyPipeTest extends CypherFunSuite with PipeTestSupport {
 
     val result = SemiApplyPipe(lhs, rhs, negated = false)()(newMonitor).createResults(QueryStateHelper.empty).toList
 
-    result should equal(List(Map("a" -> 1)))
+    result should equal(List(ExecutionContext("a" -> 1)))
   }
 
   test("should only let through the one that not matches when negated") {
@@ -49,7 +50,7 @@ class SemiApplyPipeTest extends CypherFunSuite with PipeTestSupport {
 
     val result = SemiApplyPipe(lhs, rhs, negated = true)()(newMonitor).createResults(QueryStateHelper.empty).toList
 
-    result should equal(List(Map("a" -> 2)))
+    result should equal(List(ExecutionContext("a" -> 2)))
   }
 
   test("should not let anything through if rhs is empty") {
@@ -63,8 +64,8 @@ class SemiApplyPipeTest extends CypherFunSuite with PipeTestSupport {
   }
 
   test("should let everything through if rhs is empty and negated") {
-    val lhsData = List(Map("a" -> 1), Map("a" -> 2))
-    val lhs = new FakePipe(lhsData.iterator, "a" -> CTNumber)
+    val lhsData = List(ExecutionContext("a" -> 1), ExecutionContext("a" -> 2))
+    val lhs = new FakePipe(lhsData.iterator.map(_.toMap), "a" -> CTNumber)
     val rhs = new FakePipe(Iterator.empty)
 
     val result = SemiApplyPipe(lhs, rhs, negated = true)()(newMonitor).createResults(QueryStateHelper.empty).toList
@@ -73,8 +74,8 @@ class SemiApplyPipeTest extends CypherFunSuite with PipeTestSupport {
   }
 
   test("should let everything through if rhs is nonEmpty") {
-    val lhsData = List(Map("a" -> 1), Map("a" -> 2))
-    val lhs = new FakePipe(lhsData.iterator, "a" -> CTNumber)
+    val lhsData = List(ExecutionContext("a" -> 1), ExecutionContext("a" -> 2))
+    val lhs = new FakePipe(lhsData.iterator.map(_.toMap), "a" -> CTNumber)
     val rhs = new FakePipe(Iterator(Map("a" -> 1)))
 
     val result = SemiApplyPipe(lhs, rhs, negated = false)()(newMonitor).createResults(QueryStateHelper.empty).toList

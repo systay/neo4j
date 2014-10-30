@@ -21,14 +21,20 @@ package org.neo4j.cypher.internal.compiler.v2_2.pipes
 
 import org.neo4j.cypher.internal.commons.CypherFunSuite
 import org.neo4j.cypher.internal.compiler.v2_2._
+import org.neo4j.cypher.internal.compiler.v2_2.executionplan.Effects
+import org.neo4j.cypher.internal.compiler.v2_2.planDescription.ArgumentPlanDescription
+import org.neo4j.cypher.internal.compiler.v2_2.symbols.{SymbolTable, CypherType}
+import org.scalatest.mock.MockitoSugar
+
+import scala.collection.Map
 
 class EagerPipeTest extends CypherFunSuite {
   private implicit val monitor = mock[PipeMonitor]
 
   test("shouldMakeLazyEager") {
     // Given a lazy iterator that is not empty
-    val lazyIterator = new LazyIterator[ExecutionContext](10, (_) => ExecutionContext.empty)
-    val src = new FakePipe(lazyIterator)
+    val lazyIterator = new LazyIterator[Map[String,Any]](10, (_) => Map.empty)
+    val src = new LazyPipe(lazyIterator)
     val eager = new EagerPipe(src)
     lazyIterator should not be empty
 

@@ -23,8 +23,8 @@ import org.neo4j.cypher.internal.commons.CypherFunSuite
 import org.neo4j.cypher.internal.compiler.v2_2.ExecutionContext
 
 class IfElseIteratorTest extends CypherFunSuite {
-  val a1 = ExecutionContext.from("a" -> 1)
-  val a2 = ExecutionContext.from("a" -> 2)
+  val a1 = ExecutionContext("a" -> 1)
+  val a2 = ExecutionContext("a" -> 2)
 
   test("should_pass_through_if_ifClause_returns_values") {
     val ifClause = (_: ExecutionContext) => Iterator(a1)

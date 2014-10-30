@@ -26,7 +26,7 @@ import org.mockito.Mockito
 import org.neo4j.cypher.internal.compiler.v2_2.commands.expressions.{Collection, Literal}
 import org.neo4j.cypher.internal.compiler.v2_2.ExecutionContext
 
-class DirectedDirectedRelationshipByIdSeekPipeTest extends CypherFunSuite {
+class DirectedRelationshipByIdSeekPipeTest extends CypherFunSuite {
 
   implicit val monitor = mock[PipeMonitor]
 
@@ -47,7 +47,7 @@ class DirectedDirectedRelationshipByIdSeekPipeTest extends CypherFunSuite {
       DirectedRelationshipByIdSeekPipe("a", EntityByIdExprs(Seq(Literal(17))), to, from)().createResults(queryState)
 
     // then
-    result.toList should equal(List(Map("a" -> rel, "to" -> endNode, "from" -> startNode)))
+    result.toList should equal(List(ExecutionContext("a" -> rel, "to" -> endNode, "from" -> startNode)))
   }
 
   test("should seek relationships by multiple ids") {
@@ -71,8 +71,8 @@ class DirectedDirectedRelationshipByIdSeekPipeTest extends CypherFunSuite {
 
     // then
     result.toList should equal(List(
-      Map(relName -> r1, to -> e1, from -> s1),
-      Map(relName -> r2, to -> e2, from -> s2)
+      ExecutionContext(relName -> r1, to -> e1, from -> s1),
+      ExecutionContext(relName -> r2, to -> e2, from -> s2)
     ))
   }
 

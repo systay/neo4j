@@ -46,7 +46,7 @@ class EagerResultIterator(result: ResultIterator) extends ResultIterator {
   def close() { result.close() }
 }
 
-class ClosingIterator(inner: Iterator[collection.Map[String, Any]],
+class ClosingIterator(inner: Iterator[ExecutionContext],
                       closer: TaskCloser,
                       exceptionDecorator: CypherException => CypherException) extends ResultIterator {
 
@@ -69,7 +69,7 @@ class ClosingIterator(inner: Iterator[collection.Map[String, Any]],
   def next(): Map[String, Any] = failIfThrows {
     if (closer.isClosed) return Iterator.empty.next()
 
-    val input: collection.Map[String, Any] = inner.next()
+    val input: collection.Map[String, Any] = inner.next().toMap
     val result: Map[String, Any] = Eagerly.immutableMapValues(input, materialize)
     if (!inner.hasNext) {
       close(success = true)

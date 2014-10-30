@@ -41,7 +41,7 @@ class CreateRelationshipTest extends GraphDatabaseFunSuite {
     val tx = graph.beginTx()
     try {
       val state = QueryStateHelper.queryStateFrom(graph, tx).copy(params = props)
-      val ctx = ExecutionContext.from("a" -> a, "b" -> b)
+      val ctx = ExecutionContext("a" -> a, "b" -> b)
 
       //when
       relCreator.exec(ctx, state)

@@ -55,8 +55,9 @@ sealed abstract class ExpandPipe[T](source: Pipe,
     }
   }
 
-  def getFromNode(row: ExecutionContext): Any =
+  def getFromNode(row: ExecutionContext): Any = {
     row.getOrElse(from, throw new InternalException(s"Expected to find a node at $from but found nothing"))
+  }
 
   def planDescription = {
     source.planDescription.andThen(this, "Expand", identifiers, ExpandExpression(from, relName, to, dir))

@@ -249,7 +249,7 @@ class LazyTest extends ExecutionEngineFunSuite {
   test("filterpipe is lazy") {
     //Given:
     val limited = new LimitedIterator[Map[String, Any]](4, (x) => Map("val" -> x))
-    val input = new FakePipe(limited, "val" -> CTInteger)
+    val input = new LazyPipe(limited, "val" -> CTInteger)
     val pipe = new FilterPipe(input, GreaterThan(Identifier("val"), Literal(3)))()
 
     //When:

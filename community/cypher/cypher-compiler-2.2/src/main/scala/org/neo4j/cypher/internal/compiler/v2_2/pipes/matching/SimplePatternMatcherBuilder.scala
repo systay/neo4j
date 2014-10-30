@@ -62,7 +62,7 @@ class SimplePatternMatcherBuilder(pattern: PatternGraph,
     }
   }
 
-  def setAssociations(sourceRow: Map[String, Any]): (immutable.Map[String, SimplePatternNode], immutable.Map[String, SimplePatternRelationship]) = {
+  def setAssociations(sourceRow: ExecutionContext): (immutable.Map[String, SimplePatternNode], immutable.Map[String, SimplePatternRelationship]) = {
     val patternNodes = createPatternNodes
     val patternRels = createPatternRels(patternNodes)
     patternNodes.values.foreach(pn => {

@@ -20,6 +20,7 @@
 package org.neo4j.cypher.internal.compiler.v2_2.commands
 
 import org.neo4j.cypher.internal.PathImpl
+import org.neo4j.cypher.internal.compiler.v2_2.ExecutionContext
 import org.neo4j.graphdb.{PropertyContainer, Path}
 import scala.collection.Map
 import collection.JavaConverters._
@@ -27,7 +28,7 @@ import collection.JavaConverters._
 // TODO: This is duplicated with NamedPathPipe
 trait PathExtractor {
   def pathPattern:Seq[Pattern]
-  def getPath(ctx: Map[String, Any]): Path = {
+  def getPath(ctx: ExecutionContext): Path = {
     def get(x: String): PropertyContainer = ctx(x).asInstanceOf[PropertyContainer]
 
     val firstNode: String = getFirstNode
@@ -55,7 +56,7 @@ trait PathExtractor {
       new PathImpl(pieces: _*)
 
   //WARNING: This method can return NULL
-  private def getPath(m: Map[String, Any], key: String, soFar: List[PropertyContainer]): List[PropertyContainer] = {
+  private def getPath(m: ExecutionContext, key: String, soFar: List[PropertyContainer]): List[PropertyContainer] = {
     val m1 = m(key)
 
     if (m1 == null)

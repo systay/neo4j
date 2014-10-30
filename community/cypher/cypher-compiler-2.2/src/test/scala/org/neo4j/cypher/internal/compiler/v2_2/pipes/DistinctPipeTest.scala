@@ -20,6 +20,7 @@
 package org.neo4j.cypher.internal.compiler.v2_2.pipes
 
 import org.neo4j.cypher.internal.commons.CypherFunSuite
+import org.neo4j.cypher.internal.compiler.v2_2.ExecutionContext
 import org.neo4j.cypher.internal.compiler.v2_2.commands.expressions.{Expression, Identifier, Literal, Multiply}
 import org.neo4j.cypher.internal.compiler.v2_2.symbols._
 
@@ -35,7 +36,7 @@ class DistinctPipeTest extends CypherFunSuite {
     val result = pipe.createResults(QueryStateHelper.empty)
 
     //THEN
-    result.toList should equal( List(Map("x" -> 1), Map("x" -> 2)))
+    result.toList should equal( List(ExecutionContext("x" -> 1), ExecutionContext("x" -> 2)))
   }
 
   test("distinct_executes_expressions") {
@@ -47,7 +48,7 @@ class DistinctPipeTest extends CypherFunSuite {
     val result = pipe.createResults(QueryStateHelper.empty)
 
     //THEN
-    result.toList should equal( List(Map("doubled" -> 2), Map("doubled" -> 4)))
+    result.toList should equal( List(ExecutionContext("doubled" -> 2), ExecutionContext("doubled" -> 4)))
   }
 
   test("undistinct_input_passes_through") {
@@ -58,7 +59,7 @@ class DistinctPipeTest extends CypherFunSuite {
     val result = pipe.createResults(QueryStateHelper.empty)
 
     //THEN
-    result.toList should equal( List(Map("x" -> 1)))
+    result.toList should equal( List(ExecutionContext("x" -> 1)))
   }
 
   def createDistinctPipe(input: List[Map[String, Int]], expressions: Map[String, Expression] = Map("x" -> Identifier("x"))) = {

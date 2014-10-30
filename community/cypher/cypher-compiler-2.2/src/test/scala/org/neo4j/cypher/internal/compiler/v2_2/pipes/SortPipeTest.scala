@@ -19,6 +19,7 @@
  */
 package org.neo4j.cypher.internal.compiler.v2_2.pipes
 
+import org.neo4j.cypher.internal.compiler.v2_2.ExecutionContext
 import org.scalatest.mock.MockitoSugar
 import org.junit.Assert._
 import org.neo4j.cypher.internal.compiler.v2_2.symbols._
@@ -41,7 +42,9 @@ class SortPipeTest extends CypherFunSuite with MockitoSugar {
     val source = new FakePipe(list, "x" -> CTString)
     val sortPipe = new SortPipe(source, List(Ascending("x")))()
 
-    assertEquals(List(MutableMap("x" -> "A"), MutableMap("x" -> "B")), sortPipe.createResults(QueryStateHelper.empty).toList)
+    assertEquals(
+      List(ExecutionContext("x" -> "A"), ExecutionContext("x" -> "B")),
+      sortPipe.createResults(QueryStateHelper.empty).toList)
   }
 
   test("sort by two columns") {
@@ -55,9 +58,9 @@ class SortPipeTest extends CypherFunSuite with MockitoSugar {
       Ascending("y")))()
 
     assertEquals(List(
-      MutableMap("x" -> "A", "y" -> 100),
-      MutableMap("x" -> "B", "y" -> 10),
-      MutableMap("x" -> "B", "y" -> 20)), sortPipe.createResults(QueryStateHelper.empty).toList)
+      ExecutionContext("x" -> "A", "y" -> 100),
+      ExecutionContext("x" -> "B", "y" -> 10),
+      ExecutionContext("x" -> "B", "y" -> 20)), sortPipe.createResults(QueryStateHelper.empty).toList)
   }
 
   test("sort by two columns with one descending") {
@@ -71,9 +74,9 @@ class SortPipeTest extends CypherFunSuite with MockitoSugar {
       Descending("y")))()
 
     assertEquals(List(
-      MutableMap("x" -> "A", "y" -> 100),
-      MutableMap("x" -> "B", "y" -> 20),
-      MutableMap("x" -> "B", "y" -> 10)), sortPipe.createResults(QueryStateHelper.empty).toList)
+      ExecutionContext("x" -> "A", "y" -> 100),
+      ExecutionContext("x" -> "B", "y" -> 20),
+      ExecutionContext("x" -> "B", "y" -> 10)), sortPipe.createResults(QueryStateHelper.empty).toList)
   }
 
   test("should handle null values") {
@@ -86,8 +89,8 @@ class SortPipeTest extends CypherFunSuite with MockitoSugar {
     val sortPipe = new SortPipe(source, List(Ascending("y")))()
 
     assertEquals(List(
-      MutableMap("y" -> 1),
-      MutableMap("y" -> 2),
-      MutableMap("y" -> null)), sortPipe.createResults(QueryStateHelper.empty).toList)
+      ExecutionContext("y" -> 1),
+      ExecutionContext("y" -> 2),
+      ExecutionContext("y" -> null)), sortPipe.createResults(QueryStateHelper.empty).toList)
   }
 }

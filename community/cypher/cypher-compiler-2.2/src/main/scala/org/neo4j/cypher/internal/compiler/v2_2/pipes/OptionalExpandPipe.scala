@@ -49,7 +49,7 @@ case class OptionalExpandPipe(source: Pipe, from: String, relName: String, to: S
               Iterator(withNulls(row))
             }
 
-          case value if value == null =>
+          case null =>
             Iterator(withNulls(row))
 
           case value =>

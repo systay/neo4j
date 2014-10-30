@@ -133,11 +133,12 @@ class OptionalExpandPipeTest extends CypherFunSuite {
     })
   }
 
-  private def row(values: (String, Any)*) = ExecutionContext.from(values: _*)
+  private def row(values: (String, Any)*) = ExecutionContext(values: _*)
 
   private def newMockedNode(id: Int) = {
     val node = mock[Node]
     when(node.getId).thenReturn(id)
+    when(node.toString).thenReturn(s"Node($id)")
     node
   }
 
@@ -148,6 +149,7 @@ class OptionalExpandPipeTest extends CypherFunSuite {
     when(relationship.getEndNode).thenReturn(endNode)
     when(relationship.getOtherNode(startNode)).thenReturn(endNode)
     when(relationship.getOtherNode(endNode)).thenReturn(startNode)
+    when(relationship.toString).thenReturn(s"Rel($id)")
     relationship
   }
 

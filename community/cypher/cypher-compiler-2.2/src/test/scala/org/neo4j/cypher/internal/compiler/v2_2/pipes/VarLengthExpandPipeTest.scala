@@ -334,7 +334,7 @@ class VarLengthExpandPipeTest extends CypherFunSuite {
     single("b") should equal(endNode)
   }
 
-  private def row(values: (String, Any)*) = ExecutionContext.from(values: _*)
+  private def row(values: (String, Any)*) = ExecutionContext(values: _*)
 
   private def newMockedNode(id: Int) = {
     val node = mock[Node]

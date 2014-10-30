@@ -49,8 +49,8 @@ class UndirectedDirectedRelationshipByIdSeekPipeTest extends CypherFunSuite {
 
     // then
     result.toList should equal(List(
-      Map("a" -> rel, "to" -> endNode, "from" -> startNode),
-      Map("a" -> rel, "to" -> startNode, "from" -> endNode)))
+      ExecutionContext("a" -> rel, "to" -> endNode, "from" -> startNode),
+      ExecutionContext("a" -> rel, "to" -> startNode, "from" -> endNode)))
   }
 
   test("should seek relationships by multiple ids") {
@@ -75,10 +75,10 @@ class UndirectedDirectedRelationshipByIdSeekPipeTest extends CypherFunSuite {
 
     // then
     result.toSet should equal(Set(
-      Map(relName -> r1, to -> e1, from -> s1),
-      Map(relName -> r2, to -> e2, from -> s2),
-      Map(relName -> r1, to -> s1, from -> e1),
-      Map(relName -> r2, to -> s2, from -> e2)
+      ExecutionContext(relName -> r1, to -> e1, from -> s1),
+      ExecutionContext(relName -> r2, to -> e2, from -> s2),
+      ExecutionContext(relName -> r1, to -> s1, from -> e1),
+      ExecutionContext(relName -> r2, to -> s2, from -> e2)
     ))
   }
 

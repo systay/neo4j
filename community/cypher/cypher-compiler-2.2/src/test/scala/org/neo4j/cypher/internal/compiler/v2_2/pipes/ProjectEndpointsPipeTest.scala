@@ -57,7 +57,7 @@ class ProjectEndpointsPipeTest extends CypherFunSuite {
         createResults(queryState).toList
 
     // then
-    result should equal(List(Map("r" -> rel, "a" -> node1, "b" -> node2)))
+    result should equal(List(ExecutionContext("r" -> rel, "a" -> node1, "b" -> node2)))
   }
 
   test("projects endpoints of an undirected, simple relationship") {
@@ -78,8 +78,8 @@ class ProjectEndpointsPipeTest extends CypherFunSuite {
 
     // then
     result should equal(List(
-      Map("r" -> rel, "a" -> node1, "b" -> node2),
-      Map("r" -> rel, "a" -> node2, "b" -> node1)
+      ExecutionContext("r" -> rel, "a" -> node1, "b" -> node2),
+      ExecutionContext("r" -> rel, "a" -> node2, "b" -> node1)
     ))
   }
 
@@ -109,7 +109,7 @@ class ProjectEndpointsPipeTest extends CypherFunSuite {
 
     // then
     result should equal(List(
-      Map("r" -> rels, "a" -> node1, "b" -> node4)
+      ExecutionContext("r" -> rels, "a" -> node1, "b" -> node4)
     ))
   }
 
@@ -141,8 +141,8 @@ class ProjectEndpointsPipeTest extends CypherFunSuite {
 
     // then
     result should equal(List(
-      Map("r" -> rels, "a" -> node1, "b" -> node4),
-      Map("r" -> reversedRels, "a" -> node4, "b" -> node1)
+      ExecutionContext("r" -> rels, "a" -> node1, "b" -> node4),
+      ExecutionContext("r" -> reversedRels, "a" -> node4, "b" -> node1)
     ))
   }
 
@@ -180,7 +180,7 @@ class ProjectEndpointsPipeTest extends CypherFunSuite {
     result should be('isEmpty)
   }
 
-  private def row(values: (String, Any)*) = ExecutionContext.from(values: _*)
+  private def row(values: (String, Any)*) = ExecutionContext(values: _*)
 
   private def newMockedNode(id: Int) = {
     val node = mock[Node]

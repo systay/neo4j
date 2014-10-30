@@ -89,8 +89,9 @@ sealed abstract class VarLengthExpandPipe[T](source: Pipe,
     }
   }
 
-  def getFromNode(row: ExecutionContext): Any =
+  def getFromNode(row: ExecutionContext): Any = {
     row.getOrElse(fromName, throw new InternalException(s"Expected to find a node at $fromName but found nothing"))
+  }
 
   def planDescription = source.planDescription.
     andThen(this, "Var length expand", identifiers, ExpandExpression(fromName, relName, toName, projectedDir, true))

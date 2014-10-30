@@ -30,7 +30,7 @@ trait StdevTest {
   def getStdev(values: List[Any]): Double = {
     val func = createAggregator(Identifier("x"))
     values.foreach(value => {
-      func(ExecutionContext.from("x" -> value))(QueryStateHelper.empty)
+      func(ExecutionContext("x" -> value))(QueryStateHelper.empty)
     })
     func.result match {
       case x:Double => x

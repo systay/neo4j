@@ -20,6 +20,7 @@
 package org.neo4j.cypher.internal.compiler.v2_2.pipes
 
 import org.neo4j.cypher.internal.commons.CypherFunSuite
+import org.neo4j.cypher.internal.compiler.v2_2.ExecutionContext
 import org.neo4j.cypher.internal.compiler.v2_2.symbols.CTNumber
 
 class OptionalPipeTest extends CypherFunSuite {
@@ -32,7 +33,7 @@ class OptionalPipeTest extends CypherFunSuite {
 
     val result = OptionalPipe(Set("a"), source)().createResults(state).toList
 
-    result should equal(List(Map("a" -> 1)))
+    result should equal(List(ExecutionContext("a" -> 1)))
   }
 
   test("should return nulls if it finds no results") {
@@ -41,6 +42,6 @@ class OptionalPipeTest extends CypherFunSuite {
 
     val result = OptionalPipe(Set("a"), source)().createResults(state).toList
 
-    result should equal(List(Map("a" -> null)))
+    result should equal(List(ExecutionContext("a" -> null)))
   }
 }

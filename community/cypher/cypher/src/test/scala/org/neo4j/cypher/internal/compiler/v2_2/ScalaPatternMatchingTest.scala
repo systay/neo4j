@@ -40,7 +40,7 @@ class ScalaPatternMatchingTest extends ExecutionEngineFunSuite with PatternGraph
 
     // When
     val result = withQueryState { queryState =>
-      matcher.getMatches(ExecutionContext.empty.newWith("a" -> aNode), queryState).toList
+      matcher.getMatches(ExecutionContext("a" -> aNode), queryState).toList
     }
 
     // Then
@@ -57,11 +57,11 @@ class ScalaPatternMatchingTest extends ExecutionEngineFunSuite with PatternGraph
 
     // When
     val result = withQueryState { queryState =>
-      matcher.getMatches(ExecutionContext.empty.newWith("a" -> aNode), queryState).toList
+      matcher.getMatches(ExecutionContext("a" -> aNode), queryState).toList
     }
 
     // Then
-    result should equal(List(Map("a" -> aNode, "b" -> bNode, "r" -> relationship)))
+    result should equal(List(ExecutionContext("a" -> aNode, "b" -> bNode, "r" -> relationship)))
   }
 
   test("should_only_return_matches_that_fulfill_the_uniqueness_constraint") {
@@ -78,7 +78,7 @@ class ScalaPatternMatchingTest extends ExecutionEngineFunSuite with PatternGraph
 
     // When
     val result = withQueryState { queryState =>
-      matcher.getMatches(ExecutionContext.empty.newWith("a" -> n0), queryState).toList
+      matcher.getMatches(ExecutionContext("a" -> n0), queryState).toList
     }
 
     // Then
@@ -98,7 +98,7 @@ class ScalaPatternMatchingTest extends ExecutionEngineFunSuite with PatternGraph
     val n1 = createNode()
     val rel = relate(n0, n1)
 
-    val startingState = ExecutionContext.empty.newWith(Map("a" -> n0, "b" -> n1, "r1" -> rel))
+    val startingState = ExecutionContext("a" -> n0, "b" -> n1, "r1" -> rel)
 
     // When
     val result = withQueryState { queryState =>
@@ -121,7 +121,7 @@ class ScalaPatternMatchingTest extends ExecutionEngineFunSuite with PatternGraph
     val n1 = createNode()
     val rel = relate(n0, n1)
 
-    val startingState = ExecutionContext.empty.newWith(Map("a" -> n0, "b" -> n1, "r1" -> rel))
+    val startingState = ExecutionContext("a" -> n0, "b" -> n1, "r1" -> rel)
 
     // When
     val result = withQueryState { queryState =>
@@ -129,7 +129,7 @@ class ScalaPatternMatchingTest extends ExecutionEngineFunSuite with PatternGraph
     }
 
     // Then
-    result should equal(List(Map("a" -> n0, "b" -> n1, "c" -> n0, "r1" -> rel, "r2" -> rel)))
+    result should equal(List(ExecutionContext("a" -> n0, "b" -> n1, "c" -> n0, "r1" -> rel, "r2" -> rel)))
   }
 
   test("should_handle_a_single_relationship_with_node_with_properties_no_matches") {
@@ -146,7 +146,7 @@ class ScalaPatternMatchingTest extends ExecutionEngineFunSuite with PatternGraph
 
     // When
     val result = withQueryState { queryState =>
-      matcher.getMatches(ExecutionContext.empty.newWith("a" -> aNode), queryState).toList
+      matcher.getMatches(ExecutionContext("a" -> aNode), queryState).toList
     }
 
     // Then
@@ -167,7 +167,7 @@ class ScalaPatternMatchingTest extends ExecutionEngineFunSuite with PatternGraph
 
     // When
     val result = withQueryState { queryState =>
-      matcher.getMatches(ExecutionContext.empty.newWith("a" -> aNode), queryState).toList
+      matcher.getMatches(ExecutionContext("a" -> aNode), queryState).toList
     }
 
     // Then
@@ -188,7 +188,7 @@ class ScalaPatternMatchingTest extends ExecutionEngineFunSuite with PatternGraph
 
     // When
     val result = withQueryState { queryState =>
-      matcher.getMatches(ExecutionContext.empty.newWith("a" -> aNode), queryState).toList
+      matcher.getMatches(ExecutionContext("a" -> aNode), queryState).toList
     }
 
     // Then
@@ -209,10 +209,10 @@ class ScalaPatternMatchingTest extends ExecutionEngineFunSuite with PatternGraph
 
     // When
     val result = withQueryState { queryState =>
-      matcher.getMatches(ExecutionContext.empty.newWith("a" -> aNode), queryState).toList
+      matcher.getMatches(ExecutionContext("a" -> aNode), queryState).toList
     }
 
     // Then
-    result should equal(List(Map("a" -> aNode, "b" -> bNode, "r" -> rel)))
+    result should equal(List(ExecutionContext("a" -> aNode, "b" -> bNode, "r" -> rel)))
   }
 }

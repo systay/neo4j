@@ -79,9 +79,9 @@ class NodeHashJoinPipeTest extends CypherFunSuite {
 
     // then
     result should equal(List(
-      Map("a"->node0, "b"->node1, "c" -> 1, "d" -> 1),
-      Map("a"->node0, "b"->node2, "c" -> 2, "d" -> 2),
-      Map("a"->node0, "b"->node2, "c" -> 3, "d" -> 2)
+      ExecutionContext("a"->node0, "b"->node1, "c" -> 1, "d" -> 1),
+      ExecutionContext("a"->node0, "b"->node2, "c" -> 2, "d" -> 2),
+      ExecutionContext("a"->node0, "b"->node2, "c" -> 3, "d" -> 2)
     ))
   }
 
@@ -102,8 +102,8 @@ class NodeHashJoinPipeTest extends CypherFunSuite {
 
     // then
     result.toList should equal(List(
-      Map("a" -> 20, "b" -> node2, "c" -> 30),
-      Map("a" -> 20, "b" -> node2, "c" -> 40)
+      ExecutionContext("a" -> 20, "b" -> node2, "c" -> 30),
+      ExecutionContext("a" -> 20, "b" -> node2, "c" -> 40)
     ))
   }
 
@@ -124,7 +124,7 @@ class NodeHashJoinPipeTest extends CypherFunSuite {
 
     // then
     result.toList should equal(List(
-      Map("a" -> 20, "b" -> node2, "c" -> 30)
+      ExecutionContext("a" -> 20, "b" -> node2, "c" -> 30)
     ))
   }
 
@@ -145,7 +145,7 @@ class NodeHashJoinPipeTest extends CypherFunSuite {
 
     // then
     result.toList should equal(List(
-      Map("a" -> 10, "b" -> node2, "c" -> 40)
+      ExecutionContext("a" -> 10, "b" -> node2, "c" -> 40)
     ))
   }
 
@@ -207,7 +207,7 @@ class NodeHashJoinPipeTest extends CypherFunSuite {
     lhsIterator.fetched should equal(0)
   }
 
-  private def row(values: (String, Any)*) = ExecutionContext.from(values: _*)
+  private def row(values: (String, Any)*) = ExecutionContext(values: _*)
 
   private def newMockedNode(id: Int) = {
     val node = mock[Node]

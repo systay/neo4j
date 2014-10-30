@@ -71,9 +71,9 @@ class NodeOuterHashJoinPipeTest extends CypherFunSuite {
 
     // then
     result.toSet should equal(Set(
-      Map("a" -> 10, "b" -> node1, "c" -> null),
-      Map("a" -> 20, "b" -> node2, "c" -> 30),
-      Map("a" -> 20, "b" -> node2, "c" -> 40)
+      ExecutionContext("a" -> 10, "b" -> node1, "c" -> null),
+      ExecutionContext("a" -> 20, "b" -> node2, "c" -> 30),
+      ExecutionContext("a" -> 20, "b" -> node2, "c" -> 40)
     ))
   }
 
@@ -113,9 +113,9 @@ class NodeOuterHashJoinPipeTest extends CypherFunSuite {
 
     // then
     result.toSet should equal(Set(
-      Map("a" -> 10, "b" -> node1, "c" -> null),
-      Map("a" -> 20, "b" -> node2, "c" -> null),
-      Map("a" -> 30, "b" -> node3, "c" -> null)
+      ExecutionContext("a" -> 10, "b" -> node1, "c" -> null),
+      ExecutionContext("a" -> 20, "b" -> node2, "c" -> null),
+      ExecutionContext("a" -> 30, "b" -> node3, "c" -> null)
     ))
   }
 
@@ -138,9 +138,9 @@ class NodeOuterHashJoinPipeTest extends CypherFunSuite {
 
     // then
     result.toSet should equal(Set(
-      Map("a" -> 10, "b" -> node1, "c" -> 10),
-      Map("a" -> 20, "b" -> null , "c" -> null),
-      Map("a" -> 30, "b" -> node3, "c" -> 30)
+      ExecutionContext("a" -> 10, "b" -> node1, "c" -> 10),
+      ExecutionContext("a" -> 20, "b" -> null , "c" -> null),
+      ExecutionContext("a" -> 30, "b" -> node3, "c" -> 30)
     ))
   }
 
@@ -163,9 +163,9 @@ class NodeOuterHashJoinPipeTest extends CypherFunSuite {
 
     // then
     result.toSet should equal(Set(
-      Map("a" -> 10, "b" -> node1, "c" -> null),
-      Map("a" -> 20, "b" -> node2, "c" -> 20),
-      Map("a" -> 30, "b" -> node3, "c" -> 30)
+      ExecutionContext("a" -> 10, "b" -> node1, "c" -> null),
+      ExecutionContext("a" -> 20, "b" -> node2, "c" -> 20),
+      ExecutionContext("a" -> 30, "b" -> node3, "c" -> 30)
     ))
   }
 
@@ -184,7 +184,7 @@ class NodeOuterHashJoinPipeTest extends CypherFunSuite {
 
     // then
     result.toSet should equal(Set(
-      Map("a" -> 20, "b" -> null , "c" -> null)
+      ExecutionContext("a" -> 20, "b" -> null , "c" -> null)
     ))
   }
 
@@ -211,15 +211,15 @@ class NodeOuterHashJoinPipeTest extends CypherFunSuite {
 
     // then
     result.toSet should equal(Set(
-      Map("a" -> node1, "b" -> node2, "c" -> 1, "d" -> 1),
-      Map("a" -> node1, "b" -> node3, "c" -> 2, "d" -> 2),
-      Map("a" -> node1, "b" -> node3, "c" -> 3, "d" -> 2),
-      Map("a" -> node2, "b" -> node3, "c" -> 4, "d" -> null),
-      Map("a" -> node1, "b" -> null, "c" -> 5, "d" -> null)
+      ExecutionContext("a" -> node1, "b" -> node2, "c" -> 1, "d" -> 1),
+      ExecutionContext("a" -> node1, "b" -> node3, "c" -> 2, "d" -> 2),
+      ExecutionContext("a" -> node1, "b" -> node3, "c" -> 3, "d" -> 2),
+      ExecutionContext("a" -> node2, "b" -> node3, "c" -> 4, "d" -> null),
+      ExecutionContext("a" -> node1, "b" -> null, "c" -> 5, "d" -> null)
     ))
   }
 
-  private def row(values: (String, Any)*) = ExecutionContext.from(values: _*)
+  private def row(values: (String, Any)*) = ExecutionContext(values: _*)
 
   private def newMockedNode(id: Int) = {
     val node = mock[Node]

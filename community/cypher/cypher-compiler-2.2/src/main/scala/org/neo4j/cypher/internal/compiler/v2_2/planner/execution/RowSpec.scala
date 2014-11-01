@@ -17,27 +17,20 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.internal.compiler.v2_2.pipes
+package org.neo4j.cypher.internal.compiler.v2_2.planner.execution
 
-import org.neo4j.cypher.internal.commons.CypherFunSuite
+import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.plans.LogicalPlan
 
-import scala.collection.Map
-
-class EagerPipeTest extends CypherFunSuite {
-  private implicit val monitor = mock[PipeMonitor]
-
-  test("shouldMakeLazyEager") {
-    // Given a lazy iterator that is not empty
-    val lazyIterator = new LazyIterator[Map[String,Any]](10, (_) => Map.empty)
-    val src = new LazyPipe(lazyIterator)
-    val eager = new EagerPipe(src)
-    lazyIterator should not be empty
-
-    // When
-    val resultIterator = eager.createResults(QueryStateHelper.empty)
-
-    // Then the lazy iterator is emptied, and the returned iterator is not
-    lazyIterator shouldBe empty
-    resultIterator should not be empty
+object RowSpec {
+  def from(plan: LogicalPlan) = {
+    val qg = plan.solved.lastQueryGraph
+    val nodes = qg.patternNodes.map(_.name)
+    val relationships = qg.patternRelationships.map(_.name.name).toSet
+    val other = plan.availableSymbols.map(_.name) -- nodes -- relationships
+    RowSpec(nodes, relationships, other)
   }
+}
+
+case class RowSpec(nodes: Set[String], relationships: Set[String], other: Set[String]) {
+  override def toString: String = s"RowSpec(n=[${nodes.mkString(",")}],r=[${relationships.mkString(",")}],o=[${other.mkString(",")}])"
 }

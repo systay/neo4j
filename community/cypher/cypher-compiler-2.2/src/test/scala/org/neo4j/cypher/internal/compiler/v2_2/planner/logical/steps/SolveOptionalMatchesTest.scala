@@ -109,9 +109,7 @@ class SolveOptionalMatchesTest extends CypherFunSuite with LogicalPlanningTestSu
     val qg = QueryGraph(patternNodes = Set("a")).withAddedOptionalMatch(qgForAtoB)
 
     implicit val context = createLogicalPlanContext()
-    val inputPlan = newMockedLogicalPlanWithSolved(
-      Set("a", "b"),
-      PlannerQuery.empty.withGraph(qg))
+    val inputPlan = newMockedLogicalPlanWithQueryGraph(Set("a", "b"), qg)
 
     val planTable = PlanTable(Map(Set(IdName("a")) -> inputPlan))
 
@@ -130,9 +128,7 @@ class SolveOptionalMatchesTest extends CypherFunSuite with LogicalPlanningTestSu
              withAddedOptionalMatch(qgForAtoC)
 
     implicit val context = createLogicalPlanContext()
-    val inputPlan = newMockedLogicalPlanWithSolved(
-      Set("a", "b"),
-      PlannerQuery.empty.withGraph(qgWithFirstOptionalMatch))
+    val inputPlan = newMockedLogicalPlanWithQueryGraph(Set("a", "b"), qgWithFirstOptionalMatch)
 
     val planTable = PlanTable(Map(Set(IdName("a"), IdName("b")) -> inputPlan))
 
@@ -175,9 +171,7 @@ class SolveOptionalMatchesTest extends CypherFunSuite with LogicalPlanningTestSu
              withAddedOptionalMatch(qgForAtoC)
 
     implicit val context = createLogicalPlanContext()
-    val lhs = newMockedLogicalPlanWithSolved(
-      Set("a", "b", "r1"),
-      PlannerQuery.empty.withGraph(qgWithFirstOptionalMatch))
+    val lhs = newMockedLogicalPlanWithQueryGraph(Set("a", "b", "r1"), qgWithFirstOptionalMatch)
 
     val planForC = newMockedLogicalPlan("c")
 
@@ -201,9 +195,7 @@ class SolveOptionalMatchesTest extends CypherFunSuite with LogicalPlanningTestSu
              withAddedOptionalMatch(qgForAtoC)
 
     implicit val context = createLogicalPlanContext()
-    val lhs = newMockedLogicalPlanWithSolved(
-      Set("a", "b", "r1"),
-      PlannerQuery.empty.withGraph(qgWithFirstOptionalMatch))
+    val lhs = newMockedLogicalPlanWithQueryGraph(Set("a", "b", "r1"), qgWithFirstOptionalMatch)
 
     val planForC = newMockedLogicalPlan("c")
 

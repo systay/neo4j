@@ -37,7 +37,7 @@ class FakePipe(val data: Iterator[Map[String, Any]], newIdentifiers: (String, Cy
 
   def internalCreateResults(state: QueryState) = executionContexts.toIterator
 
-  def planDescription = ArgumentPlanDescription(this)
+  def planDescription = SingleRowPlanDescription(pipe = this, identifiers = Set.empty)
 
   def exists(pred: Pipe => Boolean) = ???
 
@@ -57,7 +57,7 @@ class LazyPipe(data: Iterator[Map[String, Any]], identifiers: (String, CypherTyp
 
   def internalCreateResults(state: QueryState) = data.map(m => ExecutionContext.apply(m.toSeq: _*))
 
-  def planDescription = SingleRowPlanDescription(this, identifiers = identifiers)
+  def planDescription = SingleRowPlanDescription(this, identifiers = identifiers.map(_._1).toSet)
 
   def exists(pred: Pipe => Boolean) = ???
 

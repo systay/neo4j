@@ -32,7 +32,7 @@ class RowSpecTest extends CypherFunSuite with LogicalPlanningTestSupport {
       solved = QueryGraph(patternNodes = nodes)
     )
 
-    RowSpec.from(plan) should equal(RowSpec(nodes = Set("n", "m"), relationships = Set.empty, other = Set.empty))
+    RowSpec.from(plan) should equal(RowSpec(nodes = Seq("n", "m"), relationships = Seq.empty, other = Seq.empty))
   }
 
   test("should handle relationship patterns in row spec") {
@@ -46,6 +46,6 @@ class RowSpecTest extends CypherFunSuite with LogicalPlanningTestSupport {
         PatternRelationship(r2, (IdName("a"), IdName("b")), Direction.OUTGOING, Seq.empty, SimplePatternLength)
       )))
 
-    RowSpec.from(plan) should equal(RowSpec(nodes = Set.empty, relationships = Set("r1", "r2"), other = Set.empty))
+    RowSpec.from(plan) should equal(RowSpec(nodes = Seq.empty, relationships = Seq("r1", "r2"), other = Seq.empty))
   }
 }

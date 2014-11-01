@@ -107,7 +107,7 @@ class SimplePatternMatcherBuilder(pattern: PatternGraph,
       if (alreadyUsed(patternMatch)) {
         None
       } else {
-        val result: ExecutionContext = ctx.clone()
+        val result: ExecutionContext = ctx.copy()
 
         patternNodes.foreach {
           case (key, pn) => val tuple = key -> patternMatch.getNodeFor(pn)

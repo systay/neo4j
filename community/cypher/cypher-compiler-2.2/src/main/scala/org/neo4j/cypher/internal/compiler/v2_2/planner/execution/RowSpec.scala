@@ -27,10 +27,10 @@ object RowSpec {
     val nodes = qg.patternNodes.map(_.name)
     val relationships = qg.patternRelationships.map(_.name.name).toSet
     val other = plan.availableSymbols.map(_.name) -- nodes -- relationships
-    RowSpec(nodes, relationships, other)
+    RowSpec(nodes.toSeq, relationships.toSeq, other.toSeq)
   }
 }
 
-case class RowSpec(nodes: Set[String], relationships: Set[String], other: Set[String]) {
+case class RowSpec(nodes: Seq[String], relationships: Seq[String], other: Seq[String]) {
   override def toString: String = s"RowSpec(n=[${nodes.mkString(",")}],r=[${relationships.mkString(",")}],o=[${other.mkString(",")}])"
 }

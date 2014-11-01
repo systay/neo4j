@@ -82,7 +82,7 @@ case class ExtractPipe(source: Pipe, expressions: Map[String, Expression], hack_
       ctx
     }
     val applyExpressionsWhileKeepingOriginal = (ctx: ExecutionContext, state: QueryState) => {
-      val original = ctx.clone()
+      val original = ctx.copy()
       expressions.foreach {
         case (name, expression) =>
           ctx += name -> expression(original)(state)

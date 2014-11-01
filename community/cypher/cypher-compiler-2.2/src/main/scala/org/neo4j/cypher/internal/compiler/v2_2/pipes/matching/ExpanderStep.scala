@@ -151,7 +151,7 @@ case class RelationshipIdentifier() extends MiniMapIdentifier() {
 }
 
 class MiniMap(var relationship: Relationship, var node: Node, myMap: MutableMap[String, Any] = MutableMaps.empty)
-  extends ExecutionContext(m = myMap) {
+  extends MapExecutionContext(m = myMap) {
 
   override def iterator = throw new ThisShouldNotHappenError("Andres", "This method should never be used")
 

@@ -30,7 +30,7 @@ case class ApplyPipe(source: Pipe, inner: Pipe)(val estimatedCardinality: Option
   protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] =
     input.flatMap {
       (outerContext) =>
-        val original = outerContext.clone()
+        val original = outerContext.copy()
         val innerState = state.copy(initialContext = Some(outerContext))
         val innerResults = inner.createResults(innerState)
         innerResults.map { context => context ++ original }

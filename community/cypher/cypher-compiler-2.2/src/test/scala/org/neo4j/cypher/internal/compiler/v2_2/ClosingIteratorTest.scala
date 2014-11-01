@@ -22,11 +22,7 @@ package org.neo4j.cypher.internal.compiler.v2_2
 import org.mockito.Mockito._
 import org.neo4j.cypher.internal.commons.CypherFunSuite
 
-import scala.collection.mutable
-
 class ClosingIteratorTest extends CypherFunSuite {
-
-  import ExecutionContextHelper._
 
   var taskCloser: TaskCloser = _
   val exceptionDecorator: CypherException => CypherException = identity
@@ -119,8 +115,4 @@ class ClosingIteratorTest extends CypherFunSuite {
     verify(taskCloser).close(success = true)
     result should equal(Map[String, Any]("k" -> 42))
   }
-}
-
-object ExecutionContextHelper {
-  implicit def toMap(ctx: ExecutionContext): mutable.Map[String, Any] = ctx.m
 }

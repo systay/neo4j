@@ -17,27 +17,26 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.doc.cypherdoc;
+package org.neo4j.cypher.javacompat.internal;
 
-class Result
+import org.neo4j.helpers.Service;
+import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.kernel.impl.query.QueryEngineProvider;
+import org.neo4j.kernel.impl.query.QueryExecutionEngine;
+import org.neo4j.kernel.logging.Logging;
+
+@Service.Implementation(QueryEngineProvider.class)
+public class CypherEngineProvider extends QueryEngineProvider
 {
-    final String query;
-    final String text;
-    final String profile;
-
-    public Result( String query, org.neo4j.graphdb.Result result )
+    public CypherEngineProvider()
     {
-        this.query = query;
-        text = result.resultAsString();
-        String profileText;
-        try
-        {
-            profileText = result.getExecutionPlanDescription().toString();
-        }
-        catch ( Exception ex )
-        {
-            profileText = ex.getMessage();
-        }
-        profile = profileText;
+        super( "cypher" );
+    }
+
+    @Override
+    protected QueryExecutionEngine createEngine( GraphDatabaseAPI graphAPI )
+    {
+        Logging logging = graphAPI.getDependencyResolver().resolveDependency( Logging.class );
+        return new ServerExecutionEngine( graphAPI, logging.getMessagesLog( QueryExecutionEngine.class ) );
     }
 }

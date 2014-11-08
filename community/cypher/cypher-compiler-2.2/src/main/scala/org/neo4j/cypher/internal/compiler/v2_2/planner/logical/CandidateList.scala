@@ -28,7 +28,7 @@ case class CandidateList(plans: Seq[LogicalPlan] = Seq.empty) {
 
   def +(plan: LogicalPlan) = copy(plans :+ plan)
 
-  final val VERBOSE = false
+  final val VERBOSE = true
 
   def bestPlan(costs: CostModel): Option[LogicalPlan] = {
     val comparePlans = (c: LogicalPlan) => (-c.solved.numHints, costs(c), -c.availableSymbols.size)
@@ -39,7 +39,7 @@ case class CandidateList(plans: Seq[LogicalPlan] = Seq.empty) {
       if (sortedPlans.size > 1) {
         println("Get best of:")
         for (plan <- sortedPlans) {
-          println("* " + plan.toString + s"\t${costs(plan)}\n")
+          println("* " + plan.toString + s"\n${costs(plan)}\n")
         }
 
         println("Best is:")

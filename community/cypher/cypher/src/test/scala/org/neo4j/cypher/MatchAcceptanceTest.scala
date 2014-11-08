@@ -21,8 +21,26 @@ package org.neo4j.cypher
 
 import org.neo4j.cypher.internal.PathImpl
 import org.neo4j.graphdb._
+import org.neo4j.graphdb.factory.GraphDatabaseFactory
 
 class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with NewPlannerTestSupport {
+
+  test("p") {
+    val db = new GraphDatabaseFactory().newEmbeddedDatabase("/Users/ata/dev/neo/ldbc_snb_workload_interactive_neo4j/target/ldbcdb")
+    try {
+      val engine = new ExecutionEngine(db)
+      val result = engine.execute("""explain MATCH (person:Person {id:1099512949232})-[:KNOWS*1..2]-(friend:Person)<-[membership:HAS_MEMBER]-(forum:Forum)
+                       |WHERE membership.joinDate>1345420800000 AND not(person=friend)
+                       |WITH DISTINCT friend, forum
+                       |OPTIONAL MATCH (friend)<-[:HAS_CREATOR]-(post:Post)<-[:CONTAINER_OF]-(forum)
+                       |RETURN *""".stripMargin)
+      val startTime = System.currentTimeMillis()
+      result.size
+      println(System.currentTimeMillis() - startTime)
+      println(result.executionPlanDescription())
+
+    } finally db.shutdown()
+  }
 
   test("should be able to use multiple MATCH clauses to do a cartesian product") {
     createNode("value" -> 1)

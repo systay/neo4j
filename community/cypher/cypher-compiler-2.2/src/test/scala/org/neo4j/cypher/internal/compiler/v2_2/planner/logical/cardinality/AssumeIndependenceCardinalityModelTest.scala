@@ -24,6 +24,8 @@ import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.Metrics.QueryGrap
 import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.cardinality.assumeIndependence.{AssumeIndependenceQueryGraphCardinalityModel, IndependenceCombiner}
 import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.plans.IdName
 import org.neo4j.cypher.internal.compiler.v2_2.planner.{LogicalPlanningTestSupport, SemanticTable}
+import org.neo4j.cypher.internal.compiler.v2_2.planner.{SemanticTable, LogicalPlanningTestSupport}
+import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.{Cardinality, CardinalityTestHelper}
 import org.neo4j.cypher.internal.compiler.v2_2.spi.GraphStatistics
 import org.neo4j.cypher.internal.helpers.testRandomizer
 
@@ -319,11 +321,12 @@ class AssumeIndependenceCardinalityModelTest extends CypherFunSuite with Logical
   test("honours bound arguments") {
     givenPattern("MATCH (a:FOO)-[:TYPE]->(b:BAR)").
     withQueryGraphArgumentIds(IdName("a")).
+    withInboundCardinality(13.0).
     withGraphNodes(500).
     withLabel('FOO -> 100).
     withLabel('BAR -> 400).
     withRelationshipCardinality('FOO -> 'TYPE -> 'BAR -> 1000).
-    shouldHaveQueryGraphCardinality(1000 / 500)
+    shouldHaveQueryGraphCardinality(1000.0 / 500.0 * 13.0)
   }
 
   test("optional match will in worst case be a cartesian product") {
@@ -379,6 +382,6 @@ class AssumeIndependenceCardinalityModelTest extends CypherFunSuite with Logical
 
   implicit def toLong(d: Double): Long = d.toLong
 
-  def createCardinalityModel(stats: GraphStatistics, semanticTable: SemanticTable): QueryGraphCardinalityModel =
-    AssumeIndependenceQueryGraphCardinalityModel(stats, semanticTable, IndependenceCombiner)
+  def createCardinalityModel(stats: GraphStatistics, inboundCardinality: Cardinality, semanticTable: SemanticTable): QueryGraphCardinalityModel =
+    AssumeIndependenceQueryGraphCardinalityModel(stats, inboundCardinality, semanticTable, IndependenceCombiner)
 }

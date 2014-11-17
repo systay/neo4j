@@ -24,8 +24,6 @@ import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.Metrics.QueryGrap
 import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.cardinality.assumeIndependence.{AssumeIndependenceQueryGraphCardinalityModel, IndependenceCombiner}
 import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.plans.IdName
 import org.neo4j.cypher.internal.compiler.v2_2.planner.{LogicalPlanningTestSupport, SemanticTable}
-import org.neo4j.cypher.internal.compiler.v2_2.planner.{SemanticTable, LogicalPlanningTestSupport}
-import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.{Cardinality, CardinalityTestHelper}
 import org.neo4j.cypher.internal.compiler.v2_2.spi.GraphStatistics
 import org.neo4j.cypher.internal.helpers.testRandomizer
 
@@ -341,25 +339,27 @@ class AssumeIndependenceQueryGraphCardinalityModelTest extends CypherFunSuite wi
   }
 
   test("two levels") {
-    val selA = .1
-    val selB = .2
-    val selC = .3
+    val selA = Asel //.2
+    val selB = Bsel //.1
+    val selC = Csel //.01
     val _A = N * selA
     val _B = N * selB
     val _C = N * selC
-    val selT1 = .01
-    val selT2 = .02
-    givenPattern("MATCH (a:A)-[:T1]->(b:B)-[:T2]->(c:C)").
+    val selT1 = A_T1_B_sel // 0.5
+    val selT2 = B_T1_C_sel // 0.1
+    givenPattern("MATCH (a:A)-[:T1]->(b:B)-[:T1]->(c:C)").
     withGraphNodes(N).
     withLabel('A, _A).
     withLabel('B, _B).
     withLabel('C, _C).
-    withRelationshipCardinality('A -> 'T1 -> 'B, _A * _B * selT1).
-    withRelationshipCardinality('B -> 'T2 -> 'C, _B * _C * selT2).
+    withRelationshipCardinality('A -> 'T1 -> 'B, _A * _B * selT1). // .2 * .1 * .5 = .01
+    withRelationshipCardinality('B -> 'T1 -> 'C, _B * _C * selT2). // .1 * .01 * .1 = .0001
     shouldHaveQueryGraphCardinality(_A * selT1 * _B * selT2 * _C)
   }
 
-  test("three levels") {
+  // TODO: Add a test for a relpatterns where the number of matching nodes is zero
+
+  ignore("three levels") {
     forQuery("MATCH (:A)-[:T1]->(:A)-[:T1]->(:B)-[:T1]->(:B)").
     shouldHaveQueryGraphCardinality(A * A * B * B * A_T1_A_sel * A_T1_B_sel * B_T1_B_sel)
   }
@@ -375,14 +375,14 @@ class AssumeIndependenceQueryGraphCardinalityModelTest extends CypherFunSuite wi
     shouldHaveQueryGraphCardinality(B * B_T1_A_sel * A * A_T1_D_sel * D * D_T1_C_sel * C * C_T3_E_sel * E / 8)
   }
 
-//  test("varlength two steps out") {
-//    forQuery("MATCH (a:A)-[r:T1*1..2]->(b:B)").
-//      shouldHaveQueryGraphCardinality(
-//        A_T1_A + // The result includes all (:A)-[:T1]->(:B)
-//        A * N * B * A_T1_STAR_sel * STAR_T1_A_sel // and all (:A)-[:T1]->()-[:T1]->(:B)
-//      )
-//  }
-//
+  test("varlength two steps out") {
+    forQuery("MATCH (a:A)-[r:T1*1..2]->(b:B)").
+    shouldHaveQueryGraphCardinality(
+        A_T1_A + // The result includes all (:A)-[:T1]->(:B)
+        A * N * B * A_T1_STAR_sel * STAR_T1_A_sel // and all (:A)-[:T1]->()-[:T1]->(:B)
+      )
+  }
+  //
 //  test("varlength three steps out") {
 //    forQuery("MATCH (a:A)-[r:T1*1..3]->(b:B)").
 //      shouldHaveQueryGraphCardinality(

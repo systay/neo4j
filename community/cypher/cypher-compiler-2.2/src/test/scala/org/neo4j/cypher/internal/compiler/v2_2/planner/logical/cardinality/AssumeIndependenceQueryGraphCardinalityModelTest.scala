@@ -360,27 +360,8 @@ class AssumeIndependenceQueryGraphCardinalityModelTest extends CypherFunSuite wi
   }
 
   test("three levels") {
-    val selA = .1
-    val selB = .2
-    val selC = .3
-    val selD = .4
-    val _A = N * selA
-    val _B = N * selB
-    val _C = N * selC
-    val _D = N * selD
-    val selT1 = .01
-    val selT2 = .02
-    val selT3 = .03
-    givenPattern("MATCH (a:A)-[:T1]->(b:B)-[:T2]->(c:C)-[:T3]->(d:D)").
-    withGraphNodes(N).
-    withLabel('A, _A).
-    withLabel('B, _B).
-    withLabel('C, _C).
-    withLabel('D, _D).
-    withRelationshipCardinality('A -> 'T1 -> 'B, _A * _B * selT1).
-    withRelationshipCardinality('B -> 'T2 -> 'C, _B * _C * selT2).
-    withRelationshipCardinality('C -> 'T3 -> 'D, _C * _D * selT3).
-    shouldHaveQueryGraphCardinality(_A * selT1 * _B * selT2 * _C * selT3 * _D)
+    forQuery("MATCH (:A)-[:T1]->(:A)-[:T1]->(:B)-[:T1]->(:B)").
+    shouldHaveQueryGraphCardinality(A * A * B * B * A_T1_A_sel * A_T1_B_sel * B_T1_B_sel)
   }
 
   test("four levels") {
@@ -394,10 +375,22 @@ class AssumeIndependenceQueryGraphCardinalityModelTest extends CypherFunSuite wi
     shouldHaveQueryGraphCardinality(B * B_T1_A_sel * A * A_T1_D_sel * D * D_T1_C_sel * C * C_T3_E_sel * E / 8)
   }
 
-  ignore("varlength two steps out") {
-    forQuery("MATCH (a:A)-[r:T1*1..2]->(b:A)").
-      shouldHaveQueryGraphCardinality(???)
-  }
+//  test("varlength two steps out") {
+//    forQuery("MATCH (a:A)-[r:T1*1..2]->(b:B)").
+//      shouldHaveQueryGraphCardinality(
+//        A_T1_A + // The result includes all (:A)-[:T1]->(:B)
+//        A * N * B * A_T1_STAR_sel * STAR_T1_A_sel // and all (:A)-[:T1]->()-[:T1]->(:B)
+//      )
+//  }
+//
+//  test("varlength three steps out") {
+//    forQuery("MATCH (a:A)-[r:T1*1..3]->(b:B)").
+//      shouldHaveQueryGraphCardinality(
+//        A * B * A_T1_A_sel + // The result includes all (:A)-[:T1]->(:B)
+//        A * N * B * A_T1_STAR_sel * STAR_T1_B_sel + // and all (:A)-[:T1]->()-[:T1]->(:B)
+//        A * N * N * B * A_T1_STAR_sel * STAR_T1_STAR_sel * STAR_T1_B_sel  // and all (:A)-[:T1]->()-[:T1]->()-[:T1]-(:B)
+//      )
+//  }
 
   ignore("two relationships with property") {
     val selectivity = R / (A * B * N)

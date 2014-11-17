@@ -138,5 +138,5 @@ class UnnestEmptyApplyTest extends CypherFunSuite with LogicalPlanningTestSuppor
   }
 
   private def rewrite(p: LogicalPlan): LogicalPlan =
-    iterateUntilConverged((p: LogicalPlan) => p.endoRewrite(unnestApply))(p)
+    iterateUntilConverged((p: LogicalPlan) => p.endoRewrite(simplifyEquality))(p)
 }

@@ -29,7 +29,7 @@ import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.Metrics._
 import org.neo4j.cypher.internal.compiler.v2_2.planner.logical._
 import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.cardinality.QueryGraphCardinalityModel
 import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.plans._
-import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.plans.rewriter.unnestApply
+import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.plans.rewriter.simplifyEquality
 import org.neo4j.cypher.internal.compiler.v2_2.spi.{GraphStatistics, PlanContext}
 import org.neo4j.kernel.api.constraints.UniquenessConstraint
 import org.neo4j.kernel.api.index.IndexDescriptor
@@ -259,7 +259,7 @@ trait LogicalPlanningTestSupport2 extends CypherTestSupport with AstConstruction
           strategy.internalPlan(plannerQuery)(context)
       }
 
-      SemanticPlan(plannerQuery.endoRewrite(unnestApply), semanticTable)
+      SemanticPlan(plannerQuery.endoRewrite(simplifyEquality), semanticTable)
     }
 
     def getLogicalPlanFor(queryString: String): (LogicalPlan, SemanticTable) = {

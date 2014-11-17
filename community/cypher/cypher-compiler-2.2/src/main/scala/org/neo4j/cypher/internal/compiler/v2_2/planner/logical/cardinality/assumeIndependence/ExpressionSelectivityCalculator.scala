@@ -63,6 +63,12 @@ case class ExpressionSelectivityCalculator(stats: GraphStatistics, combiner: Sel
       if func.function == Some(functions.Id) =>
       c.expressions.size / stats.nodesWithLabelCardinality(None)
 
+    // Implicit relation uniqueness predicates
+    case NotEquals(lhs: Identifier, rhs: Identifier)
+      if semanticTable.isRelationship(lhs) && semanticTable.isRelationship(rhs) =>
+        val relationshipCardinality = 100  // TODO: calculate this correctly
+        Selectivity(1.0 - 1 / relationshipCardinality)
+
     case _ => Selectivity(.5)
   }
 

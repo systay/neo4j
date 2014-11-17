@@ -338,7 +338,7 @@ class AssumeIndependenceQueryGraphCardinalityModelTest extends CypherFunSuite wi
     shouldHaveQueryGraphCardinality(A * (3.0 / N))
   }
 
-  test("two levels") {
+  test("two levels with different relationship types") {
     val selA = Asel //.2
     val selB = Bsel //.1
     val selC = Csel //.01
@@ -347,14 +347,31 @@ class AssumeIndependenceQueryGraphCardinalityModelTest extends CypherFunSuite wi
     val _C = N * selC
     val selT1 = A_T1_B_sel // 0.5
     val selT2 = B_T1_C_sel // 0.1
+    givenPattern("MATCH (a:A)-[:T1]->(b:B)-[:T2]->(c:C)").
+      withGraphNodes(N).
+      withLabel('A, _A).
+      withLabel('B, _B).
+      withLabel('C, _C).
+      withRelationshipCardinality('A -> 'T1 -> 'B, _A * _B * selT1). // .2 * .1 * .5 = .01
+      withRelationshipCardinality('B -> 'T2 -> 'C, _B * _C * selT2). // .1 * .01 * .1 = .0001
+      shouldHaveQueryGraphCardinality(N * N * N * selA * selT1 * selB * selT2 * selC)
+  }
+
+  test("two levels with same relationship type and implied") {
+    val selA = Asel //.2
+    val selB = Bsel //.1
+    val selC = Csel //.01
+    val _A = N * selA
+    val _B = N * selB
+    val _C = N * selC
     givenPattern("MATCH (a:A)-[:T1]->(b:B)-[:T1]->(c:C)").
-    withGraphNodes(N).
-    withLabel('A, _A).
-    withLabel('B, _B).
-    withLabel('C, _C).
-    withRelationshipCardinality('A -> 'T1 -> 'B, _A * _B * selT1). // .2 * .1 * .5 = .01
-    withRelationshipCardinality('B -> 'T1 -> 'C, _B * _C * selT2). // .1 * .01 * .1 = .0001
-    shouldHaveQueryGraphCardinality(_A * selT1 * _B * selT2 * _C)
+      withGraphNodes(N).
+      withLabel('A, _A).
+      withLabel('B, _B).
+      withLabel('C, _C).
+      withRelationshipCardinality('A -> 'T1 -> 'B, _A * _B * A_T1_B_sel). // .2 * .1 * .5 = .01
+      withRelationshipCardinality('B -> 'T1 -> 'C, _B * _C * B_T1_C_sel). // .1 * .01 * .1 = .0001
+      shouldHaveQueryGraphCardinality(N * N * N * selA * A_T1_B_sel * selB * B_T1_C_sel * selC * 0.99)
   }
 
   // TODO: Add a test for a relpatterns where the number of matching nodes is zero

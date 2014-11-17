@@ -23,7 +23,7 @@ import org.neo4j.cypher.internal.commons.CypherFunSuite
 import org.neo4j.cypher.internal.compiler.v2_2._
 import org.neo4j.cypher.internal.compiler.v2_2.ast.convert.plannerQuery.StatementConverters._
 import org.neo4j.cypher.internal.compiler.v2_2.ast.rewriters.{normalizeReturnClauses, normalizeWithClauses}
-import org.neo4j.cypher.internal.compiler.v2_2.ast.{Query, Statement}
+import org.neo4j.cypher.internal.compiler.v2_2.ast.{Identifier, Query, Statement}
 import org.neo4j.cypher.internal.compiler.v2_2.planner._
 import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.Metrics.{QueryGraphCardinalityInput, QueryGraphCardinalityModel}
 import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.plans.IdName
@@ -174,7 +174,9 @@ trait CardinalityTestHelper extends QueryGraphProducer {
         }
       }
 
-      val semanticTable: SemanticTable = new SemanticTable()
+      val semanticTable: SemanticTable = new SemanticTable() {
+        override def isRelationship(expr: Identifier): Boolean = true
+      }
       fill(semanticTable.resolvedLabelIds, labelIds, LabelId.apply)
       fill(semanticTable.resolvedPropertyKeyNames, propertyIds, PropertyKeyId.apply)
       fill(semanticTable.resolvedRelTypeNames, relTypeIds, RelTypeId.apply)

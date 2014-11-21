@@ -20,18 +20,20 @@
 package org.neo4j.cypher.internal.compiler.v2_2.pipes
 
 import org.neo4j.cypher.internal.compiler.v2_2.ExecutionContext
+import org.neo4j.cypher.internal.compiler.v2_2.commands.SpecedExecutionContext
 import org.neo4j.cypher.internal.compiler.v2_2.executionplan.Effects
 import org.neo4j.cypher.internal.compiler.v2_2.planDescription.InternalPlanDescription.Arguments._
 import org.neo4j.cypher.internal.compiler.v2_2.planDescription.{NoChildren, PlanDescriptionImpl}
+import org.neo4j.cypher.internal.compiler.v2_2.planner.execution.RowSpec
 import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.Cardinality
 import org.neo4j.cypher.internal.compiler.v2_2.symbols._
 
-case class AllNodesScanPipe(ident: String)(val estimatedCardinality: Option[Long] = None)
+case class AllNodesScanPipe(ident: String, spec: RowSpec, idx: Int)(val estimatedCardinality: Option[Long] = None)
                            (implicit pipeMonitor: PipeMonitor) extends Pipe with RonjaPipe {
 
   protected def internalCreateResults(state: QueryState): Iterator[ExecutionContext] = {
-    val baseContext = state.initialContext.getOrElse(ExecutionContext.empty)
-    state.query.nodeOps.all.map(n => baseContext.newWith1(ident, n))
+    val baseContext = state.initialContext.getOrElse(new SpecedExecutionContext(spec, state.query))
+    state.query.nodeOps.all.map(n => baseContext.copy().setNode(idx, n))
   }
 
   def exists(predicate: Pipe => Boolean): Boolean = predicate(this)

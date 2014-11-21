@@ -23,9 +23,10 @@ import org.mockito.Matchers._
 import org.neo4j.cypher.internal.commons.{TestableIterator, CypherFunSuite}
 import org.neo4j.cypher.internal.compiler.v2_2.ExecutionContext
 import org.neo4j.cypher.internal.compiler.v2_2.symbols._
+import org.neo4j.cypher.internal.helpers.CoreMocker
 import org.neo4j.graphdb.Node
 
-class NodeHashJoinPipeTest extends CypherFunSuite {
+class NodeHashJoinPipeTest extends CypherFunSuite with CoreMocker {
 
   implicit val monitor = mock[PipeMonitor]
   import org.mockito.Mockito._
@@ -208,13 +209,6 @@ class NodeHashJoinPipeTest extends CypherFunSuite {
   }
 
   private def row(values: (String, Any)*) = ExecutionContext(values: _*)
-
-  private def newMockedNode(id: Int) = {
-    val node = mock[Node]
-    when(node.getId).thenReturn(id)
-    when(node.toString).thenReturn("node - " + id.toString)
-    node
-  }
 
   private def newMockedPipe(symbolTable: SymbolTable): Pipe = {
     val pipe = mock[Pipe]

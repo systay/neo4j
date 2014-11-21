@@ -23,13 +23,14 @@ import org.neo4j.cypher.internal.commons.CypherFunSuite
 import org.mockito.Mockito._
 import org.mockito.Matchers._
 import org.neo4j.cypher.internal.compiler.v2_2.ExecutionContext
+import org.neo4j.cypher.internal.helpers.CoreMocker
 import org.neo4j.graphdb.{Relationship, Direction, Node}
 import org.neo4j.cypher.internal.compiler.v2_2.symbols._
 import org.neo4j.cypher.internal.compiler.v2_2.spi.QueryContext
 import org.mockito.stubbing.Answer
 import org.mockito.invocation.InvocationOnMock
 
-class VarLengthExpandPipeTest extends CypherFunSuite {
+class VarLengthExpandPipeTest extends CypherFunSuite with CoreMocker {
 
   implicit val monitor = mock[PipeMonitor]
 
@@ -335,12 +336,6 @@ class VarLengthExpandPipeTest extends CypherFunSuite {
   }
 
   private def row(values: (String, Any)*) = ExecutionContext(values: _*)
-
-  private def newMockedNode(id: Int) = {
-    val node = mock[Node]
-    when(node.getId).thenReturn(id)
-    node
-  }
 
   private def newMockedRealtionship(id: Int, startNode: Node, endNode: Node): Relationship = {
     val relationship = mock[Relationship]

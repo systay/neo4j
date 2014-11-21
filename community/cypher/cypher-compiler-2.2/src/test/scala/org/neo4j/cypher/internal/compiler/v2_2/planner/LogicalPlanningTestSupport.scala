@@ -46,6 +46,14 @@ trait LogicalPlanningTestSupport extends CypherTestSupport with AstConstructionT
   val mockRel = newPatternRelationship("a", "b", "r")
   val tokenResolver = new SimpleTokenResolver()
   val solved = PlannerQuery.empty
+  def solvedWithNodes(nodes: String*) = PlannerQuery(graph = QueryGraph(patternNodes = nodes.map(IdName.apply).toSet))
+  def solvedWithPattern(tuples: ((String, String), String)*) = {
+    val nodes = (tuples.map(t => IdName(t._1._1)) ++ tuples.map(t => IdName(t._2))).toSet
+    val rels = (tuples map {
+      case ((from, rel), to) => PatternRelationship(IdName(rel), (IdName(from), IdName(to)), Direction.OUTGOING, Seq.empty, SimplePatternLength)
+    }).toSet
+    PlannerQuery(graph = QueryGraph(patternNodes = nodes, patternRelationships = rels))
+  }
 
   def newPatternRelationship(start: IdName, end: IdName, rel: IdName, dir: Direction = Direction.OUTGOING, types: Seq[RelTypeName] = Seq.empty, length: PatternLength = SimplePatternLength) = {
     PatternRelationship(rel, (start, end), dir, types, length)
@@ -155,26 +163,6 @@ trait LogicalPlanningTestSupport extends CypherTestSupport with AstConstructionT
                                       (implicit context: LogicalPlanningContext): LogicalPlan = {
     val qg = QueryGraph.empty.addPatternNodes(ids.toSeq: _*).addPatternRels(patterns)
     FakePlan(ids)(PlannerQuery(qg))
-  }
-
-  def newPlanner(metricsFactory: MetricsFactory): Planner =
-    new Planner(monitors, metricsFactory, monitors.newMonitor[PlanningMonitor]())
-
-  def produceLogicalPlan(queryText: String)(implicit planner: Planner, planContext: PlanContext): LogicalPlan = {
-    val parsedStatement = parser.parse(queryText)
-    val semanticState = semanticChecker.check(queryText, parsedStatement)
-    val (rewrittenStatement, _) = astRewriter.rewrite(queryText, parsedStatement, semanticState)
-    Planner.rewriteStatement(rewrittenStatement, semanticState.scopeTree) match {
-      case ast: Query =>
-        val semanticState = semanticChecker.check(queryText, ast)
-        val semanticTable = SemanticTable(types = semanticState.typeTable)
-        tokenResolver.resolve(ast)(semanticTable, planContext)
-        val (logicalPlan, _) = planner.produceLogicalPlan(ast, semanticTable)(planContext)
-        logicalPlan
-
-      case _ =>
-        throw new IllegalArgumentException("produceLogicalPlan only supports ast.Query input")
-    }
   }
 
   implicit def idName(name: String): IdName = IdName(name)

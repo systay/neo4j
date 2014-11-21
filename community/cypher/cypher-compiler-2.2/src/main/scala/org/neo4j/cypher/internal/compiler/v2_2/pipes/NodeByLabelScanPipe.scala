@@ -19,13 +19,15 @@
  */
 package org.neo4j.cypher.internal.compiler.v2_2.pipes
 
+import org.neo4j.cypher.internal.compiler.v2_2.commands.SpecedExecutionContext
 import org.neo4j.cypher.internal.compiler.v2_2.executionplan.Effects
+import org.neo4j.cypher.internal.compiler.v2_2.planner.execution.RowSpec
 import org.neo4j.cypher.internal.compiler.v2_2.{LabelId, _}
 import org.neo4j.cypher.internal.compiler.v2_2.planDescription.InternalPlanDescription.Arguments.LabelName
 import org.neo4j.cypher.internal.compiler.v2_2.planDescription.{NoChildren, PlanDescriptionImpl}
 import org.neo4j.cypher.internal.compiler.v2_2.symbols.{SymbolTable, _}
 
-case class NodeByLabelScanPipe(ident: String, label: Either[String, LabelId])
+case class NodeByLabelScanPipe(ident: String, label: Either[String, LabelId], spec: RowSpec, idx: Int)
                               (val estimatedCardinality: Option[Long] = None)(implicit pipeMonitor: PipeMonitor)
   extends Pipe
   with RonjaPipe {
@@ -39,8 +41,8 @@ case class NodeByLabelScanPipe(ident: String, label: Either[String, LabelId])
     optLabelId match {
       case Some(labelId) =>
         val nodes = state.query.getNodesByLabel(labelId.id)
-        val baseContext = state.initialContext.getOrElse(ExecutionContext.empty)
-        nodes.map(n => baseContext.newWith1(ident, n))
+        val row = state.initialContext.getOrElse(new SpecedExecutionContext(spec, state.query))
+        nodes.map(n => row.copy().setNode(idx, n))
       case None =>
         Iterator.empty
     }

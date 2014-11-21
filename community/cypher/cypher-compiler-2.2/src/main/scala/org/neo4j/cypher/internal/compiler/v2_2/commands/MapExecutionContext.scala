@@ -19,8 +19,9 @@
  */
 package org.neo4j.cypher.internal.compiler.v2_2.commands
 
-import org.neo4j.cypher.internal.compiler.v2_2.ExecutionContext
+import org.neo4j.cypher.internal.compiler.v2_2.{InternalException, ExecutionContext}
 import org.neo4j.cypher.internal.compiler.v2_2.pipes.MutableMaps
+import org.neo4j.graphdb.{Relationship, Node}
 
 import scala.collection.mutable.{Map => MutableMap}
 import scala.collection.{Iterator, Set, immutable}
@@ -70,7 +71,7 @@ case class MapExecutionContext(m: MutableMap[String, Any] = MutableMaps.empty) e
 
   def apply(k: String): Any = m(k)
 
-  def toMap[T, U](implicit ev: (String, Any) <:< (T, U)): immutable.Map[T, U] = m.toMap(ev)
+  def toMap: Map[String, Any] = m.toMap
 
   def newWith(newEntries: Seq[(String, Any)]): ExecutionContext =
     createWithNewMap(m.clone() ++= newEntries)
@@ -121,4 +122,11 @@ case class MapExecutionContext(m: MutableMap[String, Any] = MutableMaps.empty) e
   def copy(m: MutableMap[String, Any]): ExecutionContext = MapExecutionContext(m.clone())
 
   def copy(): ExecutionContext = copy(m.clone())
+
+  def setNode(idx: Int, node: Node): ExecutionContext = !!!
+  def getNode(idx: Int): Node = !!!
+  def setRelationship(idx: Int, rel: Relationship): ExecutionContext = !!!
+  def getRelationship(idx: Int): Relationship = !!!
+
+  def !!! : Nothing = throw new InternalException("Ronja plans should not use MapExecutionContext")
 }

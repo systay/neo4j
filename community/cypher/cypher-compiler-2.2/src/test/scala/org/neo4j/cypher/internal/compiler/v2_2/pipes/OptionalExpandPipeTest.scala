@@ -24,13 +24,14 @@ import org.neo4j.cypher.internal.compiler.v2_2.spi.QueryContext
 import org.mockito.Mockito._
 import org.mockito.Matchers._
 import org.mockito.stubbing.Answer
+import org.neo4j.cypher.internal.helpers.CoreMocker
 import org.neo4j.graphdb.{Node, Direction, Relationship}
 import org.mockito.invocation.InvocationOnMock
 import org.neo4j.cypher.internal.compiler.v2_2.symbols._
 import org.neo4j.cypher.internal.compiler.v2_2.ExecutionContext
 import org.neo4j.cypher.internal.compiler.v2_2.commands.{Predicate, Not, True}
 
-class OptionalExpandPipeTest extends CypherFunSuite {
+class OptionalExpandPipeTest extends CypherFunSuite with CoreMocker {
 
   implicit val monitor = mock[PipeMonitor]
   val startNode = newMockedNode(1)
@@ -134,24 +135,6 @@ class OptionalExpandPipeTest extends CypherFunSuite {
   }
 
   private def row(values: (String, Any)*) = ExecutionContext(values: _*)
-
-  private def newMockedNode(id: Int) = {
-    val node = mock[Node]
-    when(node.getId).thenReturn(id)
-    when(node.toString).thenReturn(s"Node($id)")
-    node
-  }
-
-  private def newMockedRelationship(id: Int, startNode: Node, endNode: Node): Relationship = {
-    val relationship = mock[Relationship]
-    when(relationship.getId).thenReturn(id)
-    when(relationship.getStartNode).thenReturn(startNode)
-    when(relationship.getEndNode).thenReturn(endNode)
-    when(relationship.getOtherNode(startNode)).thenReturn(endNode)
-    when(relationship.getOtherNode(endNode)).thenReturn(startNode)
-    when(relationship.toString).thenReturn(s"Rel($id)")
-    relationship
-  }
 
   private def newMockedPipe(node: String, rows: ExecutionContext*): Pipe = {
     val pipe = mock[Pipe]

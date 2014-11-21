@@ -20,6 +20,7 @@
 package org.neo4j.cypher.internal.compiler.v2_2
 
 import org.neo4j.cypher.internal.compiler.v2_2.commands.MapExecutionContext
+import org.neo4j.graphdb.{Relationship, Node}
 
 import scala.collection.mutable.{Map => MutableMap}
 import scala.collection.{Iterator, Set, immutable, mutable}
@@ -46,7 +47,7 @@ trait ExecutionContext extends (String => Any) {
   def getOrElse(k: String, default: => Any): Any
   def update(k: String, v: Any)
   def apply(k: String): Any
-  def toMap[T, U](implicit ev: (String, Any) <:< (T, U)): immutable.Map[T, U]
+  def toMap: immutable.Map[String, Any]
   def newWith(newEntries: Seq[(String, Any)]): ExecutionContext
   def newWith(newEntries: scala.collection.Map[String, Any]): ExecutionContext
   def newFromMutableMap(newEntries: scala.collection.mutable.Map[String, Any]): ExecutionContext
@@ -57,5 +58,11 @@ trait ExecutionContext extends (String => Any) {
   protected def createWithNewMap(newMap: MutableMap[String, Any]): ExecutionContext
   def copy(m: mutable.Map[String, Any]): ExecutionContext
   def copy(): ExecutionContext
+
+  // New SpecExeContext methods
+  def setNode(idx: Int, id: Node): ExecutionContext
+  def getNode(idx: Int): Node
+  def setRelationship(idx: Int, rel: Relationship): ExecutionContext
+  def getRelationship(idx: Int): Relationship
 }
 

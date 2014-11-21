@@ -112,7 +112,7 @@ class RenderPlanDescriptionDetailsTest extends CypherFunSuite {
     val arguments = Seq(
       Rows(42),
       DbHits(33))
-    val expandPipe = ExpandPipeForStringTypes(pipe, "from", "rel", "to", Direction.INCOMING, Seq.empty)(Some(1L))(mock[PipeMonitor])
+    val expandPipe = ExpandPipeForStringTypes(pipe, 0, "from", 1, 2, "rel", "to", Direction.INCOMING, Seq.empty)(Some(1L))(mock[PipeMonitor])
 
     renderDetails(expandPipe.planDescription) should equal(
       """+----------+---------------+-------------+---------------------+

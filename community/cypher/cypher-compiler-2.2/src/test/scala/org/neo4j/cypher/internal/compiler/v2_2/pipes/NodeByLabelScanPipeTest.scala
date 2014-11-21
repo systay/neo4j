@@ -21,24 +21,33 @@ package org.neo4j.cypher.internal.compiler.v2_2.pipes
 
 import org.neo4j.cypher.internal.commons.CypherFunSuite
 import org.neo4j.cypher.internal.compiler.v2_2.LabelId
-import org.neo4j.cypher.internal.compiler.v2_2.spi.QueryContext
+import org.neo4j.cypher.internal.compiler.v2_2.planner.execution.RowSpec
+import org.neo4j.cypher.internal.compiler.v2_2.spi.{Operations, QueryContext}
+import org.neo4j.cypher.internal.helpers.CoreMocker
 import org.neo4j.graphdb.Node
 import org.mockito.Mockito
 
-class NodeByLabelScanPipeTest extends CypherFunSuite {
+class NodeByLabelScanPipeTest extends CypherFunSuite with CoreMocker {
 
   implicit val monitor = mock[PipeMonitor]
   import Mockito.when
 
   test("should scan labeled nodes") {
+    val n0 = newMockedNode(0)
+    val n1 = newMockedNode(1)
     // given
-    val nodes = List(mock[Node], mock[Node])
-    val queryState = QueryStateHelper.emptyWith(
-      query = when(mock[QueryContext].getNodesByLabel(12)).thenReturn(nodes.iterator).getMock[QueryContext]
-    )
+    val nodes = List(n0, n1)
+    val context = mock[QueryContext]
+    val nodeOps = mock[Operations[Node]]
+    when(context.getNodesByLabel(12)).thenReturn(nodes.iterator)
+    when(context.nodeOps).thenReturn(nodeOps)
+    when(nodeOps.getById(0)).thenReturn(n0)
+    when(nodeOps.getById(1)).thenReturn(n1)
+
+    val queryState = QueryStateHelper.emptyWith(query = context)
 
     // when
-    val result = NodeByLabelScanPipe("a", Right(LabelId(12)))().createResults(queryState)
+    val result = NodeByLabelScanPipe("a", Right(LabelId(12)), RowSpec(nodes = Seq("a")), 0)().createResults(queryState).toList
 
     // then
     result.map(_("a")).toList should equal(nodes)

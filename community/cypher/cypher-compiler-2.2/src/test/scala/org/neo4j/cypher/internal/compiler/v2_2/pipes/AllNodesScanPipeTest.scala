@@ -20,27 +20,24 @@
 package org.neo4j.cypher.internal.compiler.v2_2.pipes
 
 import org.neo4j.cypher.internal.commons.CypherFunSuite
-import org.mockito.Mockito
-import org.neo4j.graphdb.Node
-import org.neo4j.cypher.internal.compiler.v2_2.spi.{Operations, QueryContext}
+import org.neo4j.cypher.internal.compiler.v2_2.planner.execution.RowSpec
+import org.neo4j.cypher.internal.helpers.CoreMocker
 
-class AllNodesScanPipeTest extends CypherFunSuite {
+class AllNodesScanPipeTest extends CypherFunSuite with CoreMocker {
 
   private implicit val monitor = mock[PipeMonitor]
-  import Mockito.when
 
   test("should scan all nodes") {
     // given
-    val nodes = List(mock[Node], mock[Node])
-    val nodeOps = when(mock[Operations[Node]].all).thenReturn(nodes.iterator).getMock[Operations[Node]]
+    val mockedQueryContext = mockedGraphWithNodes(0, 1)
     val queryState = QueryStateHelper.emptyWith(
-      query = when(mock[QueryContext].nodeOps).thenReturn(nodeOps).getMock[QueryContext]
+      query = mockedQueryContext
     )
 
     // when
-    val result = AllNodesScanPipe("a")().createResults(queryState)
+    val result = AllNodesScanPipe("a", RowSpec(nodes = Seq("a")), 0)().createResults(queryState)
 
     // then
-    result.map(_("a")).toList should equal(nodes)
+    result.map(_("a")).toList should equal(mockedQueryContext.nodeOps.all.toList)
   }
 }

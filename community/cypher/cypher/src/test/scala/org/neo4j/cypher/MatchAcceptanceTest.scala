@@ -35,6 +35,19 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     )
   }
 
+  test("simplest possible all nodes scan") {
+    val n1 = createNode()
+    val n2 = createNode()
+    val n3 = createNode()
+
+    val result = executeWithNewPlanner("MATCH n RETURN n")
+
+    result.toList should equal(List(
+      Map("n" -> n1),
+      Map("n" -> n2),
+      Map("n" -> n3)))
+  }
+
   test("should be able to use params in pattern matching predicates") {
     val n1 = createNode()
     val n2 = createNode()

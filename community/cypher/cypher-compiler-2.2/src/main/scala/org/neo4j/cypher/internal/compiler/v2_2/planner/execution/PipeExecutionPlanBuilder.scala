@@ -59,7 +59,7 @@ class PipeExecutionPlanBuilder(monitors: Monitors) {
       implicit val monitor = monitors.newMonitor[PipeMonitor]()
       implicit val c = context.cardinality
 
-      def getOrCreateSpec(p: LogicalPlan) = Some(rowSpec.getOrElse(RowSpec.from(p)))
+      def getOrCreateSpec(p: LogicalPlan) = rowSpec.getOrElse(RowSpec.from(p))
 
       val result: Pipe with RonjaPipe = plan match {
         case Projection(left, expressions) =>
@@ -75,10 +75,12 @@ class PipeExecutionPlanBuilder(monitors: Monitors) {
           ArgumentPipe(new SymbolTable(sr.typeInfo))()
 
         case AllNodesScan(IdName(id), _) =>
-          AllNodesScanPipe(id)()
+          val rowSpec = getOrCreateSpec(plan)
+          AllNodesScanPipe(id, rowSpec, rowSpec.indexToNode(id))()
 
         case NodeByLabelScan(IdName(id), label, _) =>
-          NodeByLabelScanPipe(id, label)()
+          val rowSpec = getOrCreateSpec(plan)
+          NodeByLabelScanPipe(id, label, rowSpec, rowSpec.indexToNode(id))()
 
         case NodeByIdSeek(IdName(id), nodeIdExpr, _) =>
           NodeByIdSeekPipe(id, nodeIdExpr.asEntityByIdRhs)()
@@ -96,24 +98,27 @@ class PipeExecutionPlanBuilder(monitors: Monitors) {
           NodeIndexSeekPipe(id, label, propertyKey, valueExpr.map(buildExpression), unique = true)()
 
         case Selection(predicates, left) =>
-          FilterPipe(buildPipe(left, getOrCreateSpec(left), input), predicates.map(buildPredicate).reduce(_ ++ _))()
+          FilterPipe(buildPipe(left, Some(getOrCreateSpec(left)), input), predicates.map(buildPredicate).reduce(_ ++ _))()
 
         case CartesianProduct(left, right) =>
           CartesianProductPipe(buildPipe(left, Some(RowSpec.from(left)), input), buildPipe(right, Some(RowSpec.from(right)), input))()
 
-        case Expand(left, IdName(fromName), dir, projectedDir, types: Seq[RelTypeName], IdName(toName), IdName(relName), SimplePatternLength, _) =>
+        case expand@Expand(left, IdName(fromName), dir, projectedDir, types: Seq[RelTypeName], IdName(toName), IdName(relName), SimplePatternLength, _) =>
           implicit val table: SemanticTable = context.semanticTable
-          val rowSpec = getOrCreateSpec(left)
+          val rowSpec = getOrCreateSpec(expand)
+          val from = rowSpec.indexToNode(fromName)
+          val rel = rowSpec.indexToRel(relName)
+          val to = rowSpec.indexToNode(toName)
           if (types.exists(_.id == None))
-            ExpandPipeForStringTypes(buildPipe(left, rowSpec, input), fromName, relName, toName, dir, types.map(_.name))()
+            ExpandPipeForStringTypes(buildPipe(left, Some(rowSpec), input), from, fromName, rel, to, relName, toName, dir, types.map(_.name))()
           else {
-            ExpandPipeForIntTypes(buildPipe(left, rowSpec, input), fromName, relName, toName, dir, types.flatMap(_.id).map(_.id))()
+            ExpandPipeForIntTypes(buildPipe(left, Some(rowSpec), input), from, fromName, rel, to, relName, toName, dir, types.flatMap(_.id).map(_.id))()
           }
 
         case Expand(left, IdName(fromName), dir, projectedDir, types, IdName(toName), IdName(relName), VarPatternLength(min, max), predicates) =>
           val (keys, exprs) = predicates.unzip
           val commands = exprs.map(buildPredicate)
-          val rowSpec = getOrCreateSpec(left)
+          val rowSpec = Some(getOrCreateSpec(left))
           val predicate = (context: ExecutionContext, state: QueryState, rel: Relationship) => {
             keys.zip(commands).forall { case (identifier: Identifier, expr: CommandPredicate) =>
               context(identifier.name) = rel
@@ -132,7 +137,7 @@ class PipeExecutionPlanBuilder(monitors: Monitors) {
 
         case OptionalExpand(left, IdName(fromName), dir, types, IdName(toName), IdName(relName), SimplePatternLength, predicates) =>
           val predicate = predicates.map(buildPredicate).reduceOption(_ ++ _).getOrElse(True())
-          OptionalExpandPipe(buildPipe(left, getOrCreateSpec(left), input), fromName, relName, toName, dir, types.map(_.name), predicate)()
+          OptionalExpandPipe(buildPipe(left, Some(getOrCreateSpec(left)), input), fromName, relName, toName, dir, types.map(_.name), predicate)()
 
         case NodeHashJoin(nodes, left, right) =>
           val rightPipe = buildPipe(right, Some(RowSpec.from(right)), input)
@@ -146,7 +151,7 @@ class PipeExecutionPlanBuilder(monitors: Monitors) {
           NodeOuterHashJoinPipe(nodes.map(_.name), leftPipe, rightPipe, nullableIdentifiers)()
 
         case Optional(inner) =>
-          OptionalPipe(inner.availableSymbols.map(_.name), buildPipe(inner, getOrCreateSpec(inner), input))()
+          OptionalPipe(inner.availableSymbols.map(_.name), buildPipe(inner, Some(getOrCreateSpec(inner)), input))()
 
         case Apply(outer, inner) =>
           ApplyPipe(pipeWithCleanRowSpec(outer, input), pipeWithCleanRowSpec(outer, input.recurse(outer)))()
@@ -176,28 +181,28 @@ class PipeExecutionPlanBuilder(monitors: Monitors) {
           LetSelectOrSemiApplyPipe(pipeWithCleanRowSpec(outer, input), pipeWithCleanRowSpec(outer, input.recurse(outer)), idName.name, buildPredicate(predicate), negated = true)()
 
         case Sort(left, sortItems) =>
-          SortPipe(buildPipe(left, getOrCreateSpec(left), input), sortItems)()
+          SortPipe(buildPipe(left, Some(getOrCreateSpec(left)), input), sortItems)()
 
         case Skip(lhs, count) =>
-          SkipPipe(buildPipe(lhs, getOrCreateSpec(lhs), input), buildExpression(count))()
+          SkipPipe(buildPipe(lhs, Some(getOrCreateSpec(lhs)), input), buildExpression(count))()
 
         case Limit(lhs, count) =>
-          LimitPipe(buildPipe(lhs, getOrCreateSpec(lhs), input), buildExpression(count))()
+          LimitPipe(buildPipe(lhs, Some(getOrCreateSpec(lhs)), input), buildExpression(count))()
 
         case SortedLimit(lhs, exp, sortItems) =>
-          TopPipe(buildPipe(lhs, getOrCreateSpec(lhs), input), sortItems.map(_.asCommandSortItem).toList, exp.asCommandExpression)()
+          TopPipe(buildPipe(lhs, Some(getOrCreateSpec(lhs)), input), sortItems.map(_.asCommandSortItem).toList, exp.asCommandExpression)()
 
         // TODO: Maybe we shouldn't encode distinct as an empty aggregation.
         case Aggregation(Projection(source, expressions), groupingExpressions, aggregatingExpressions)
           if aggregatingExpressions.isEmpty && expressions == groupingExpressions =>
-          DistinctPipe(buildPipe(source, getOrCreateSpec(source), input), groupingExpressions.mapValues(_.asCommandExpression))()
+          DistinctPipe(buildPipe(source, Some(getOrCreateSpec(source)), input), groupingExpressions.mapValues(_.asCommandExpression))()
 
         case Aggregation(source, groupingExpressions, aggregatingExpressions) if aggregatingExpressions.isEmpty =>
-          DistinctPipe(buildPipe(source, getOrCreateSpec(source), input), groupingExpressions.mapValues(_.asCommandExpression))()
+          DistinctPipe(buildPipe(source, Some(getOrCreateSpec(source)), input), groupingExpressions.mapValues(_.asCommandExpression))()
 
         case Aggregation(source, groupingExpressions, aggregatingExpressions) =>
           EagerAggregationPipe(
-            buildPipe(source, getOrCreateSpec(source), input),
+            buildPipe(source, Some(getOrCreateSpec(source)), input),
             Eagerly.immutableMapValues[String, ast.Expression, commands.expressions.Expression](groupingExpressions, x => x.asCommandExpression),
             Eagerly.immutableMapValues[String, ast.Expression, AggregationExpression](aggregatingExpressions, x => x.asCommandExpression.asInstanceOf[AggregationExpression])
           )()
@@ -205,13 +210,13 @@ class PipeExecutionPlanBuilder(monitors: Monitors) {
         case FindShortestPaths(source, shortestPath) =>
           val legacyShortestPaths = shortestPath.expr.asLegacyPatterns(shortestPath.name.map(_.name))
           val legacyShortestPath = legacyShortestPaths.head
-          new ShortestPathPipe(buildPipe(source, getOrCreateSpec(source), input), legacyShortestPath)()
+          new ShortestPathPipe(buildPipe(source, Some(getOrCreateSpec(source)), input), legacyShortestPath)()
 
         case Union(lhs, rhs) =>
           NewUnionPipe(pipeWithCleanRowSpec(lhs, input), pipeWithCleanRowSpec(rhs, input))()
 
         case UnwindCollection(lhs, identifier, collection) =>
-          UnwindPipe(buildPipe(lhs, getOrCreateSpec(lhs), input), collection.asCommandExpression, identifier.name)()
+          UnwindPipe(buildPipe(lhs, Some(getOrCreateSpec(lhs)), input), collection.asCommandExpression, identifier.name)()
 
         case LegacyIndexSeek(id, hint: NodeStartItem, _) =>
           val source = new SingleRowPipe()

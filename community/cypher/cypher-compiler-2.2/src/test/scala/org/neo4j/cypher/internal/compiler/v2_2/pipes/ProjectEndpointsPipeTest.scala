@@ -27,9 +27,10 @@ import org.neo4j.cypher.internal.commons.CypherFunSuite
 import org.neo4j.cypher.internal.compiler.v2_2.ExecutionContext
 import org.neo4j.cypher.internal.compiler.v2_2.spi.QueryContext
 import org.neo4j.cypher.internal.compiler.v2_2.symbols._
+import org.neo4j.cypher.internal.helpers.CoreMocker
 import org.neo4j.graphdb.{Node, Relationship}
 
-class ProjectEndpointsPipeTest extends CypherFunSuite {
+class ProjectEndpointsPipeTest extends CypherFunSuite with CoreMocker {
 
   implicit val monitor = mock[PipeMonitor]
   val node1 = newMockedNode(1)
@@ -181,22 +182,6 @@ class ProjectEndpointsPipeTest extends CypherFunSuite {
   }
 
   private def row(values: (String, Any)*) = ExecutionContext(values: _*)
-
-  private def newMockedNode(id: Int) = {
-    val node = mock[Node]
-    when(node.getId).thenReturn(id)
-    node
-  }
-
-  private def newMockedRelationship(id: Int, startNode: Node, endNode: Node): Relationship = {
-    val relationship = mock[Relationship]
-    when(relationship.getId).thenReturn(id)
-    when(relationship.getStartNode).thenReturn(startNode)
-    when(relationship.getEndNode).thenReturn(endNode)
-    when(relationship.getOtherNode(startNode)).thenReturn(endNode)
-    when(relationship.getOtherNode(endNode)).thenReturn(startNode)
-    relationship
-  }
 
   private def newMockedPipe(rel: String, rows: ExecutionContext*): Pipe = {
     val pipe = mock[Pipe]

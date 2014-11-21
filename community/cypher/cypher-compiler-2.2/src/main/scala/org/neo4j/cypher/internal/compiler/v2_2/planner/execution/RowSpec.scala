@@ -31,6 +31,29 @@ object RowSpec {
   }
 }
 
-case class RowSpec(nodes: Seq[String], relationships: Seq[String], other: Seq[String]) {
+case class RowSpec(nodes: Seq[String] = Seq.empty,
+                   relationships: Seq[String] = Seq.empty,
+                   other: Seq[String] = Seq.empty) {
+
+  private lazy val lookup: Map[String, RowIndex] =
+    nodes.zipWithIndex.map { case (k,i) => k -> NodeIndex(i) }.toMap ++
+    relationships.zipWithIndex.map { case (k,i) => k -> RelIndex(i) }.toMap ++
+    other.zipWithIndex.map { case (k,i) => k -> OtherIndex(i) }.toMap
+
+  private def checkIsKnown(i: Int, name: String): Int = if (i == -1) throw new NoSuchElementException(name) else i
+
+  def indexToNode(k: String) = checkIsKnown(nodes.indexOf(k), k)
+  def indexToRel(k: String) = checkIsKnown(relationships.indexOf(k), k)
+  def indexTo(k: String) = lookup(k)
+  def size: Int = lookup.size
+
   override def toString: String = s"RowSpec(n=[${nodes.mkString(",")}],r=[${relationships.mkString(",")}],o=[${other.mkString(",")}])"
+
+  def elements: Seq[(String, RowIndex)] = lookup.toSeq
 }
+
+sealed trait RowIndex
+
+case class NodeIndex(i: Int) extends RowIndex
+case class RelIndex(i: Int) extends RowIndex
+case class OtherIndex(i: Int) extends RowIndex

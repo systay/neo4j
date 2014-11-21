@@ -101,7 +101,7 @@ class MutationTest extends ExecutionEngineFunSuite {
     val createNodePipe = new ExecuteUpdateCommandsPipe(startPipe, Seq(createRel))
 
     val state = createQueryState
-    val results: List[MutableMap[String, Any]] = createNodePipe.createResults(state).map(ctx => ctx.m).toList
+    val results = createNodePipe.createResults(state).map(_.toMap).toList
 
     val r = graph.getRelationshipById(0)
     r.getProperty("I") should equal("was here")

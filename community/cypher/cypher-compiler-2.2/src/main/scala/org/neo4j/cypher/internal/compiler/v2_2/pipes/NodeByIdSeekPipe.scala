@@ -20,10 +20,12 @@
 package org.neo4j.cypher.internal.compiler.v2_2.pipes
 
 import org.neo4j.cypher.internal.compiler.v2_2.ExecutionContext
+import org.neo4j.cypher.internal.compiler.v2_2.commands.SpecedExecutionContext
 import org.neo4j.cypher.internal.compiler.v2_2.commands.expressions.Expression
 import org.neo4j.cypher.internal.compiler.v2_2.commands.expressions.ParameterExpression
 import org.neo4j.cypher.internal.compiler.v2_2.executionplan.Effects
 import org.neo4j.cypher.internal.compiler.v2_2.planDescription.{NoChildren, PlanDescriptionImpl}
+import org.neo4j.cypher.internal.compiler.v2_2.planner.execution.RowSpec
 import org.neo4j.cypher.internal.compiler.v2_2.symbols.{CTNode, SymbolTable}
 import org.neo4j.cypher.internal.helpers.{IsCollection, CollectionSupport}
 
@@ -41,16 +43,16 @@ case class EntityByIdExprs(exprs: Seq[Expression]) extends EntityByIdRhs {
     exprs.map(_.apply(ctx)(state))
 }
 
-case class NodeByIdSeekPipe(ident: String, nodeIdsExpr: EntityByIdRhs)
+case class NodeByIdSeekPipe(ident: String, nodeIdsExpr: EntityByIdRhs, spec: RowSpec, idx: Int)
                            (val estimatedCardinality: Option[Long] = None)(implicit pipeMonitor: PipeMonitor)
   extends Pipe
   with CollectionSupport
   with RonjaPipe {
 
   protected def internalCreateResults(state: QueryState): Iterator[ExecutionContext] = {
-    val ctx = state.initialContext.getOrElse(ExecutionContext.empty)
+    val ctx = state.initialContext.getOrElse(new SpecedExecutionContext(spec, state.query))
     val nodeIds = nodeIdsExpr.expressions(ctx, state)
-    new NodeIdSeekIterator(ident, ctx, state.query.nodeOps, nodeIds.iterator)
+    new NodeIdSeekIterator(idx, ctx, state.query.nodeOps, nodeIds.iterator)
   }
 
   def exists(predicate: Pipe => Boolean): Boolean = predicate(this)

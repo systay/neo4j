@@ -57,7 +57,7 @@ abstract class IdSeekIterator[T <: PropertyContainer]
   }
 }
 
-final class NodeIdSeekIterator(ident: String,
+final class NodeIdSeekIterator(idx: Int,
                                baseContext: ExecutionContext,
                                protected val operations: Operations[Node],
                                protected val entityIds: Iterator[Any])
@@ -66,7 +66,7 @@ final class NodeIdSeekIterator(ident: String,
   def hasNext: Boolean = hasNextEntity
 
   def next(): ExecutionContext =
-    baseContext.newWith1(ident, nextEntity())
+    baseContext.copy().setNode(idx, nextEntity())
 }
 
 final class DirectedRelationshipIdSeekIterator(ident: String,

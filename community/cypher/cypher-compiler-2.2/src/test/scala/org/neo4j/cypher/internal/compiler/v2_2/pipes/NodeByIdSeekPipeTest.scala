@@ -20,49 +20,41 @@
 package org.neo4j.cypher.internal.compiler.v2_2.pipes
 
 import org.neo4j.cypher.internal.commons.CypherFunSuite
-import org.neo4j.cypher.internal.compiler.v2_2.spi.{Operations, QueryContext}
+import org.neo4j.cypher.internal.compiler.v2_2.commands.expressions.Literal
+import org.neo4j.cypher.internal.compiler.v2_2.planner.execution.RowSpec
+import org.neo4j.cypher.internal.helpers.CoreMocker
 import org.neo4j.graphdb.Node
-import org.mockito.Mockito
-import org.neo4j.cypher.internal.compiler.v2_2.commands.expressions.{Collection, Literal}
 
-class NodeByIdSeekPipeTest extends CypherFunSuite {
+class NodeByIdSeekPipeTest extends CypherFunSuite with CoreMocker {
 
   implicit val monitor = mock[PipeMonitor]
-  import Mockito.when
 
   test("should seek node by id") {
+    val id = 17
+    val context = mockedGraphWithNodes(id)
     // given
-    val node = mock[Node]
-    val nodeOps = when(mock[Operations[Node]].getById(17)).thenReturn(node).getMock[Operations[Node]]
     val queryState = QueryStateHelper.emptyWith(
-      query = when(mock[QueryContext].nodeOps).thenReturn(nodeOps).getMock[QueryContext]
+      query = context
     )
 
     // when
-    val result = NodeByIdSeekPipe("a", EntityByIdExprs(Seq(Literal(17))))().createResults(queryState)
+    val result = NodeByIdSeekPipe("a", EntityByIdExprs(Seq(Literal(id))), RowSpec(nodes = Seq("a")), 0)().createResults(queryState)
 
     // then
-    result.map(_("a")).toList should equal(List(node))
+    result.map(_("a").asInstanceOf[Node].getId).toList should equal(List(id))
   }
 
   test("should seek nodes by multiple ids") {
     // given
-    val node1 = mock[Node]
-    val node2 = mock[Node]
-    val node3 = mock[Node]
-    val nodeOps = mock[Operations[Node]]
-
-    when(nodeOps.getById(42)).thenReturn(node1)
-    when(nodeOps.getById(21)).thenReturn(node2)
-    when(nodeOps.getById(11)).thenReturn(node3)
+    val nodeIds = List(42, 21, 11)
     val queryState = QueryStateHelper.emptyWith(
-      query = when(mock[QueryContext].nodeOps).thenReturn(nodeOps).getMock[QueryContext]
+      query = mockedGraphWithNodes(nodeIds:_*)
     )
 
     // whens
-    val result = NodeByIdSeekPipe("a", EntityByIdExprs(Seq(Literal(42), Literal(21), Literal(11))))().createResults(queryState)
+    val result = NodeByIdSeekPipe("a", EntityByIdExprs(Seq(Literal(42), Literal(21), Literal(11))), RowSpec(nodes = Seq("a")), 0)().createResults(queryState)
 
     // then
-    result.map(_("a")).toList should equal(List(node1, node2, node3))
+    result.map(_("a").asInstanceOf[Node].getId).toList should equal(nodeIds)
   }
 }

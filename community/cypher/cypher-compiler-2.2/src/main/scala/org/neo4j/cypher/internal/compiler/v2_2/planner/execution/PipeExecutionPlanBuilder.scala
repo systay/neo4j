@@ -83,7 +83,8 @@ class PipeExecutionPlanBuilder(monitors: Monitors) {
           NodeByLabelScanPipe(id, label, rowSpec, rowSpec.indexToNode(id))()
 
         case NodeByIdSeek(IdName(id), nodeIdExpr, _) =>
-          NodeByIdSeekPipe(id, nodeIdExpr.asEntityByIdRhs)()
+          val rowSpec = getOrCreateSpec(plan)
+          NodeByIdSeekPipe(id, nodeIdExpr.asEntityByIdRhs, rowSpec, rowSpec.indexToNode(id))()
 
         case DirectedRelationshipByIdSeek(IdName(id), relIdExpr, IdName(fromNode), IdName(toNode), _) =>
           DirectedRelationshipByIdSeekPipe(id, relIdExpr.asEntityByIdRhs, toNode, fromNode)()
@@ -103,9 +104,9 @@ class PipeExecutionPlanBuilder(monitors: Monitors) {
         case CartesianProduct(left, right) =>
           CartesianProductPipe(buildPipe(left, Some(RowSpec.from(left)), input), buildPipe(right, Some(RowSpec.from(right)), input))()
 
-        case expand@Expand(left, IdName(fromName), dir, projectedDir, types: Seq[RelTypeName], IdName(toName), IdName(relName), SimplePatternLength, _) =>
+        case Expand(left, IdName(fromName), dir, projectedDir, types: Seq[RelTypeName], IdName(toName), IdName(relName), SimplePatternLength, _) =>
           implicit val table: SemanticTable = context.semanticTable
-          val rowSpec = getOrCreateSpec(expand)
+          val rowSpec = getOrCreateSpec(plan)
           val from = rowSpec.indexToNode(fromName)
           val rel = rowSpec.indexToRel(relName)
           val to = rowSpec.indexToNode(toName)
@@ -118,7 +119,7 @@ class PipeExecutionPlanBuilder(monitors: Monitors) {
         case Expand(left, IdName(fromName), dir, projectedDir, types, IdName(toName), IdName(relName), VarPatternLength(min, max), predicates) =>
           val (keys, exprs) = predicates.unzip
           val commands = exprs.map(buildPredicate)
-          val rowSpec = Some(getOrCreateSpec(left))
+          val rowSpec = Some(getOrCreateSpec(plan))
           val predicate = (context: ExecutionContext, state: QueryState, rel: Relationship) => {
             keys.zip(commands).forall { case (identifier: Identifier, expr: CommandPredicate) =>
               context(identifier.name) = rel

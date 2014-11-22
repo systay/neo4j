@@ -73,24 +73,26 @@ class PipeExecutionPlanBuilderTest extends CypherFunSuite with LogicalPlanningTe
 
   test("simple node by id seek query") {
     val astLiteral: SignedIntegerLiteral = SignedDecimalIntegerLiteral("42")_
-    val logicalPlan = NodeByIdSeek(IdName("n"), PlanEntityByIdExprs(Seq(astLiteral)), Set.empty)_
-    val pipeInfo = build(logicalPlan)
+    val logicalPlan = NodeByIdSeek(IdName("n"), PlanEntityByIdExprs(Seq(astLiteral)), Set.empty)(solvedWithNodes("n"))
+    val pipeInfo = planBuilder.build(logicalPlan)
 
     pipeInfo should not be 'updating
     pipeInfo.periodicCommit should equal(None)
-    pipeInfo.pipe should equal(NodeByIdSeekPipe("n", PipeEntityByIdExprs(Seq(astLiteral.asCommandExpression)))())
+    pipeInfo.pipe should equal(NodeByIdSeekPipe("n", PipeEntityByIdExprs(Seq(astLiteral.asCommandExpression)),
+      RowSpec(nodes = Seq("n")), 0)())
   }
 
   test("simple node by id seek query with multiple values") {
     val astCollection: Collection = Collection(
       Seq(SignedDecimalIntegerLiteral("42")_, SignedDecimalIntegerLiteral("43")_, SignedDecimalIntegerLiteral("43")_)
     )_
-    val logicalPlan = NodeByIdSeek(IdName("n"), PlanEntityByIdExprs(Seq(astCollection)), Set.empty)_
-    val pipeInfo = build(logicalPlan)
+    val logicalPlan = NodeByIdSeek(IdName("n"), PlanEntityByIdExprs(Seq(astCollection)), Set.empty)(solvedWithNodes("n"))
+    val pipeInfo = planBuilder.build(logicalPlan)
 
     pipeInfo should not be 'updating
     pipeInfo.periodicCommit should equal(None)
-    pipeInfo.pipe should equal(NodeByIdSeekPipe("n", PipeEntityByIdExprs(Seq(astCollection.asCommandExpression)))())
+    pipeInfo.pipe should equal(NodeByIdSeekPipe("n", PipeEntityByIdExprs(Seq(astCollection.asCommandExpression)),
+      RowSpec(nodes = Seq("n")), 0)())
   }
 
   test("simple relationship by id seek query") {
@@ -243,8 +245,9 @@ class PipeExecutionPlanBuilderTest extends CypherFunSuite with LogicalPlanningTe
   test("use VarExpandPipeForIntTypes when all tokens are known") {
     val names = Seq("existing1", "existing2", "existing3")
     val relTypeNames = names.map(new RelTypeName(_)(null))
-    val logicalPlan = Expand(AllNodesScan("a", Set.empty)(solved), "a", Direction.INCOMING, Direction.INCOMING, relTypeNames, "b", "r1", new VarPatternLength(2, Some(5))) _
-    val pipeInfo = build(logicalPlan)
+    val logicalPlan = Expand(AllNodesScan("a", Set.empty)(solved), "a", Direction.INCOMING, Direction.INCOMING,
+      relTypeNames, "b", "r1", new VarPatternLength(2, Some(5)))(solvedWithPattern("a" -> "r1" -> "b"))
+    val pipeInfo = planBuilder.build(logicalPlan)
 
     pipeInfo.pipe match {
       case pipe: VarLengthExpandPipeForIntTypes => pipe.copy(filteringStep = null)(pipe.estimatedCardinality) should equal(

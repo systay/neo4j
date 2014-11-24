@@ -49,7 +49,7 @@ abstract class Expression extends Typed with TypeSafe with EffectfulAstNode[Expr
 
   def containsAggregate = exists(_.isInstanceOf[AggregationExpression])
 
-  def apply(ctx: ExecutionContext)(implicit state: QueryState):Any
+  def apply(ctx: ExecutionContext)(implicit state: QueryState): Any
 
   /*When calculating the type of an expression, the expression should also
   make sure to check the types of any downstream expressions*/

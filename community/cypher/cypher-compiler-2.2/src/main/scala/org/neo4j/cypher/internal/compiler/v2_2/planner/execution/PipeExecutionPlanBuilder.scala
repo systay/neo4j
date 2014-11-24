@@ -47,7 +47,7 @@ case class PipeExecutionBuilderContext(cardinality: Metrics.CardinalityModel, se
 class PipeExecutionPlanBuilder(monitors: Monitors) {
 
   val entityProducerFactory = new EntityProducerFactory
-  val resolver = new KeyTokenResolver
+  val tokenResolver = new KeyTokenResolver
 
   def build(plan: LogicalPlan)(implicit context: PipeExecutionBuilderContext, planContext: PlanContext): PipeInfo = {
     val updating = false
@@ -63,7 +63,8 @@ class PipeExecutionPlanBuilder(monitors: Monitors) {
 
       val result: Pipe with RonjaPipe = plan match {
         case Projection(left, expressions) =>
-          ProjectionNewPipe(buildPipe(left, Some(RowSpec.from(left)), input), Eagerly.immutableMapValues(expressions, buildExpression))()
+          val rowSpec = getOrCreateSpec(plan)
+          ProjectionNewPipe(buildPipe(left, Some(RowSpec.from(left)), input), Eagerly.immutableMapValues(expressions, buildExpression(rowSpec)))()
 
         case ProjectEndpoints(left, rel, start, end, directed, length) =>
           ProjectEndpointsPipe(buildPipe(left, Some(RowSpec.from(left)), input), rel.name, start.name, end.name, directed, length.isSimple)()
@@ -93,13 +94,16 @@ class PipeExecutionPlanBuilder(monitors: Monitors) {
           UndirectedRelationshipByIdSeekPipe(id, relIdExpr.asEntityByIdRhs, toNode, fromNode)()
 
         case NodeIndexSeek(IdName(id), label, propertyKey, valueExpr, _) =>
-          NodeIndexSeekPipe(id, label, propertyKey, valueExpr.map(buildExpression), unique = false)()
+          val rowSpec = getOrCreateSpec(plan)
+          NodeIndexSeekPipe(id, label, propertyKey, valueExpr.map(buildExpression(rowSpec)), unique = false)()
 
         case NodeIndexUniqueSeek(IdName(id), label, propertyKey, valueExpr, _) =>
-          NodeIndexSeekPipe(id, label, propertyKey, valueExpr.map(buildExpression), unique = true)()
+          val rowSpec = getOrCreateSpec(plan)
+          NodeIndexSeekPipe(id, label, propertyKey, valueExpr.map(buildExpression(rowSpec)), unique = true)()
 
         case Selection(predicates, left) =>
-          FilterPipe(buildPipe(left, Some(getOrCreateSpec(left)), input), predicates.map(buildPredicate).reduce(_ ++ _))()
+          val rowSpec = getOrCreateSpec(plan)
+          FilterPipe(buildPipe(left, Some(getOrCreateSpec(left)), input), predicates.map(buildPredicate(rowSpec)).reduce(_ ++ _))()
 
         case CartesianProduct(left, right) =>
           CartesianProductPipe(buildPipe(left, Some(RowSpec.from(left)), input), buildPipe(right, Some(RowSpec.from(right)), input))()
@@ -118,8 +122,8 @@ class PipeExecutionPlanBuilder(monitors: Monitors) {
 
         case Expand(left, IdName(fromName), dir, projectedDir, types, IdName(toName), IdName(relName), VarPatternLength(min, max), predicates) =>
           val (keys, exprs) = predicates.unzip
-          val commands = exprs.map(buildPredicate)
-          val rowSpec = Some(getOrCreateSpec(plan))
+          val rowSpec = getOrCreateSpec(plan)
+          val commands = exprs.map(buildPredicate(rowSpec))
           val predicate = (context: ExecutionContext, state: QueryState, rel: Relationship) => {
             keys.zip(commands).forall { case (identifier: Identifier, expr: CommandPredicate) =>
               context(identifier.name) = rel
@@ -132,12 +136,13 @@ class PipeExecutionPlanBuilder(monitors: Monitors) {
           implicit val table: SemanticTable = context.semanticTable
 
           if (types.exists(_.id == None))
-            VarLengthExpandPipeForStringTypes(buildPipe(left, rowSpec, input), fromName, relName, toName, dir, projectedDir, types.map(_.name), min, max, predicate)()
+            VarLengthExpandPipeForStringTypes(buildPipe(left, Some(rowSpec), input), fromName, relName, toName, dir, projectedDir, types.map(_.name), min, max, predicate)()
           else
-            VarLengthExpandPipeForIntTypes(buildPipe(left, rowSpec, input), fromName, relName, toName, dir, projectedDir, types.flatMap(_.id).map(_.id), min, max, predicate)()
+            VarLengthExpandPipeForIntTypes(buildPipe(left, Some(rowSpec), input), fromName, relName, toName, dir, projectedDir, types.flatMap(_.id).map(_.id), min, max, predicate)()
 
         case OptionalExpand(left, IdName(fromName), dir, types, IdName(toName), IdName(relName), SimplePatternLength, predicates) =>
-          val predicate = predicates.map(buildPredicate).reduceOption(_ ++ _).getOrElse(True())
+          val rowSpec = getOrCreateSpec(plan)
+          val predicate = predicates.map(buildPredicate(rowSpec)).reduceOption(_ ++ _).getOrElse(True())
           OptionalExpandPipe(buildPipe(left, Some(getOrCreateSpec(left)), input), fromName, relName, toName, dir, types.map(_.name), predicate)()
 
         case NodeHashJoin(nodes, left, right) =>
@@ -170,25 +175,31 @@ class PipeExecutionPlanBuilder(monitors: Monitors) {
           LetSemiApplyPipe(pipeWithCleanRowSpec(outer, input), pipeWithCleanRowSpec(outer, input.recurse(outer)), idName.name, negated = true)()
 
         case apply@SelectOrSemiApply(outer, inner, predicate) =>
-          SelectOrSemiApplyPipe(pipeWithCleanRowSpec(outer, input), pipeWithCleanRowSpec(outer, input.recurse(outer)), buildPredicate(predicate), negated = false)()
+          val rowSpec = getOrCreateSpec(plan)
+          SelectOrSemiApplyPipe(pipeWithCleanRowSpec(outer, input), pipeWithCleanRowSpec(outer, input.recurse(outer)), buildPredicate(rowSpec)(predicate), negated = false)()
 
         case apply@SelectOrAntiSemiApply(outer, inner, predicate) =>
-          SelectOrSemiApplyPipe(pipeWithCleanRowSpec(outer, input), pipeWithCleanRowSpec(outer, input.recurse(outer)), buildPredicate(predicate), negated = true)()
+          val rowSpec = getOrCreateSpec(plan)
+          SelectOrSemiApplyPipe(pipeWithCleanRowSpec(outer, input), pipeWithCleanRowSpec(outer, input.recurse(outer)), buildPredicate(rowSpec)(predicate), negated = true)()
 
         case apply@LetSelectOrSemiApply(outer, inner, idName, predicate) =>
-          LetSelectOrSemiApplyPipe(pipeWithCleanRowSpec(outer, input), pipeWithCleanRowSpec(outer, input.recurse(outer)), idName.name, buildPredicate(predicate), negated = false)()
+          val rowSpec = getOrCreateSpec(plan)
+          LetSelectOrSemiApplyPipe(pipeWithCleanRowSpec(outer, input), pipeWithCleanRowSpec(outer, input.recurse(outer)), idName.name, buildPredicate(rowSpec)(predicate), negated = false)()
 
         case apply@LetSelectOrAntiSemiApply(outer, inner, idName, predicate) =>
-          LetSelectOrSemiApplyPipe(pipeWithCleanRowSpec(outer, input), pipeWithCleanRowSpec(outer, input.recurse(outer)), idName.name, buildPredicate(predicate), negated = true)()
+          val rowSpec = getOrCreateSpec(plan)
+          LetSelectOrSemiApplyPipe(pipeWithCleanRowSpec(outer, input), pipeWithCleanRowSpec(outer, input.recurse(outer)), idName.name, buildPredicate(rowSpec)(predicate), negated = true)()
 
         case Sort(left, sortItems) =>
           SortPipe(buildPipe(left, Some(getOrCreateSpec(left)), input), sortItems)()
 
         case Skip(lhs, count) =>
-          SkipPipe(buildPipe(lhs, Some(getOrCreateSpec(lhs)), input), buildExpression(count))()
+          val rowSpec = getOrCreateSpec(plan)
+          SkipPipe(buildPipe(lhs, Some(getOrCreateSpec(lhs)), input), buildExpression(rowSpec)(count))()
 
         case Limit(lhs, count) =>
-          LimitPipe(buildPipe(lhs, Some(getOrCreateSpec(lhs)), input), buildExpression(count))()
+          val rowSpec = getOrCreateSpec(plan)
+          LimitPipe(buildPipe(lhs, Some(getOrCreateSpec(lhs)), input), buildExpression(rowSpec)(count))()
 
         case SortedLimit(lhs, exp, sortItems) =>
           TopPipe(buildPipe(lhs, Some(getOrCreateSpec(lhs)), input), sortItems.map(_.asCommandSortItem).toList, exp.asCommandExpression)()
@@ -245,18 +256,21 @@ class PipeExecutionPlanBuilder(monitors: Monitors) {
       def apply(that: AnyRef): AnyRef = bottomUp(instance).apply(that)
     }
 
-    def buildExpression(expr: ast.Expression): CommandExpression = {
+    def rewriteExpressions(exp: CommandExpression, spec: RowSpec): CommandExpression =
+      exp.
+        rewrite(tokenResolver.resolveExpressions(_, planContext)).
+        rewrite(new RowSpecIdentifierRewriter(spec))
+
+
+    def buildExpression(spec: RowSpec)(expr: ast.Expression): CommandExpression = {
       val rewrittenExpr = expr.endoRewrite(buildPipeExpressions)
-
-      rewrittenExpr.asCommandExpression.rewrite(resolver.resolveExpressions(_, planContext))
+      rewriteExpressions(rewrittenExpr.asCommandExpression, spec)
     }
 
-    def buildPredicate(expr: ast.Expression): CommandPredicate = {
+    def buildPredicate(spec: RowSpec)(expr: ast.Expression): CommandPredicate = {
       val rewrittenExpr: Expression = expr.endoRewrite(buildPipeExpressions)
-
-      rewrittenExpr.asCommandPredicate.rewrite(resolver.resolveExpressions(_, planContext)).asInstanceOf[CommandPredicate]
+      rewriteExpressions(rewrittenExpr.asCommandExpression, spec).asInstanceOf[CommandPredicate]
     }
-
 
     val topLevelPipe = buildPipe(plan, None, QueryGraphCardinalityInput.empty)
 

@@ -123,10 +123,12 @@ case class MapExecutionContext(m: MutableMap[String, Any] = MutableMaps.empty) e
 
   def copy(): ExecutionContext = copy(m.clone())
 
-  def setNode(idx: Int, node: Node): ExecutionContext = !!!
-  def getNode(idx: Int): Node = !!!
-  def setRelationship(idx: Int, rel: Relationship): ExecutionContext = !!!
-  def getRelationship(idx: Int): Relationship = !!!
+  def setNode(idx: Int, node: Node) = !!!
+  def getNode(idx: Int) = !!!
+  def setRelationship(idx: Int, rel: Relationship) = !!!
+  def getRelationship(idx: Int) = !!!
+  def setAnyRef(idx: Int, rel: AnyRef) = !!!
+  def getAnyRef(idx: Int) = !!!
 
-  def !!! : Nothing = throw new InternalException("Ronja plans should not use MapExecutionContext")
+  private def !!! : Nothing = throw new InternalException("Ronja plans should not use MapExecutionContext")
 }

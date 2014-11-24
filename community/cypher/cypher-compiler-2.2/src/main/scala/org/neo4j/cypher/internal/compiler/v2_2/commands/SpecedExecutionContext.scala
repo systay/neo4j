@@ -27,13 +27,13 @@ import org.neo4j.graphdb.{Relationship, Node}
 import scala.collection.immutable.HashMap
 import scala.collection.{Set, mutable}
 
-class SpecedExecutionContext(nodes: Array[Long], rels: Array[Long], other: Array[Any], spec: RowSpec, query: QueryContext) extends ExecutionContext {
+class SpecedExecutionContext(nodes: Array[Long], rels: Array[Long], other: Array[AnyRef], spec: RowSpec, query: QueryContext) extends ExecutionContext {
 
   def this(spec: RowSpec, query: QueryContext) =
     this(
       Array.fill[Long](spec.nodes.size)(-1),
       Array.fill[Long](spec.relationships.size)(-1),
-      Array.fill[Any](spec.other.size)(null),
+      Array.fill[AnyRef](spec.other.size)(null),
       spec,
       query)
 
@@ -64,9 +64,16 @@ class SpecedExecutionContext(nodes: Array[Long], rels: Array[Long], other: Array
 
   def collect[B](pf: PartialFunction[(String, Any), B]): Seq[B] = ???
 
-  def get(key: String): Option[Any] = ???
+  def get(key: String): Option[Any] = spec.indexTo(key) map {
+    case NodeIndex(idx)  => nullOr(nodes(idx), query.nodeOps.getById)
+    case RelIndex(idx)   => nullOr(rels(idx), query.relationshipOps.getById)
+    case OtherIndex(idx) => other(idx)
+  }
 
-  def getOrElse(k: String, default: => Any): Any = ???
+  private def nullOr[T >: Null <: AnyRef](idx: Long, f: Long => T): T = if (idx == -1) null else f(idx)
+
+  def getOrElse(k: String, default: => Any): Any =
+    get(k).getOrElse(default)
 
   def newWith1(key1: String, value1: Any): ExecutionContext = ???
 
@@ -80,11 +87,11 @@ class SpecedExecutionContext(nodes: Array[Long], rels: Array[Long], other: Array
 
   def +=(kv: (String, Any)): ExecutionContext = ???
 
-  def apply(k: String): Any = spec.indexTo(k) match {
+  def apply(k: String): Any = (spec.indexTo(k) map {
     case NodeIndex(idx)  => query.nodeOps.getById(nodes(idx))
     case RelIndex(idx)   => query.relationshipOps.getById(nodes(idx))
     case OtherIndex(idx) => query.relationshipOps.getById(nodes(idx))
-  }
+  }).orNull
 
   def contains(k: String): Boolean = ???
 
@@ -111,4 +118,11 @@ class SpecedExecutionContext(nodes: Array[Long], rels: Array[Long], other: Array
   }
 
   def getRelationship(idx: Int): Relationship = query.relationshipOps.getById(rels(idx))
+
+  def setAnyRef(idx: Int, value: AnyRef): ExecutionContext = {
+    other(idx) = value
+    this
+  }
+
+  def getAnyRef(idx: Int): AnyRef = other(idx)
 }

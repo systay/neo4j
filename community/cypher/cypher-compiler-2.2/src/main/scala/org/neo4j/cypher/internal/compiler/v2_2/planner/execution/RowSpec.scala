@@ -44,7 +44,7 @@ case class RowSpec(nodes: Seq[String] = Seq.empty,
 
   def indexToNode(k: String) = checkIsKnown(nodes.indexOf(k), k)
   def indexToRel(k: String) = checkIsKnown(relationships.indexOf(k), k)
-  def indexTo(k: String) = lookup(k)
+  def indexTo(k: String): Option[RowIndex] = lookup.get(k)
   def size: Int = lookup.size
 
   override def toString: String = s"RowSpec(n=[${nodes.mkString(",")}],r=[${relationships.mkString(",")}],o=[${other.mkString(",")}])"
@@ -53,7 +53,6 @@ case class RowSpec(nodes: Seq[String] = Seq.empty,
 }
 
 sealed trait RowIndex
-
 case class NodeIndex(i: Int) extends RowIndex
 case class RelIndex(i: Int) extends RowIndex
 case class OtherIndex(i: Int) extends RowIndex

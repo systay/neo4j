@@ -64,5 +64,7 @@ trait ExecutionContext extends (String => Any) {
   def getNode(idx: Int): Node
   def setRelationship(idx: Int, rel: Relationship): ExecutionContext
   def getRelationship(idx: Int): Relationship
+  def setAnyRef(idx: Int, rel: AnyRef): ExecutionContext
+  def getAnyRef(idx: Int): AnyRef
 }
 

@@ -47,12 +47,11 @@ include::advanced/index.asciidoc[]
 :leveloffset: 0
 :numbered!:
 
+:leveloffset: 0
+include::terminology.asciidoc[]
+
+:leveloffset: 0
+
 include::manpages.asciidoc[]
 
-
-
-////
-:leveloffset: 0
-include::glossary.asciidoc[]
-////
 

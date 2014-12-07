@@ -17,13 +17,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.internal.compiler.v2_2.planner.logical
+package org.neo4j.cypher.internal.compiler.v2_2.planner.logical.plans
 
-import org.neo4j.cypher.internal.compiler.v2_2.planner.QueryGraph
+import org.neo4j.cypher.internal.compiler.v2_2.RelTypeId
+import org.neo4j.cypher.internal.compiler.v2_2.planner.PlannerQuery
 
-case class LeafPlannerList(leafPlanners: LeafPlanner*) {
-  def candidateLists(qg: QueryGraph)(implicit context: LogicalPlanningContext): Iterable[CandidateList] = {
-    val plans = leafPlanners.flatMap(_(qg).plans)
-    plans.groupBy(_.availableSymbols).values.map(context.metrics.candidateListCreator)
-  }
+case class RelationshipByTypeScan(relName: IdName,
+                                  startNode: IdName,
+                                  endNode: IdName,
+                                  label: Either[String, RelTypeId],
+                                  argumentIds: Set[IdName])(val solved: PlannerQuery)
+  extends LogicalLeafPlan {
+  def availableSymbols: Set[IdName] = argumentIds + relName + startNode + endNode
 }

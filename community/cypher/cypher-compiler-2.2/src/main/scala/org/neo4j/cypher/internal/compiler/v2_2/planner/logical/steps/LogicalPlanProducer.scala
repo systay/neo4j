@@ -25,7 +25,7 @@ import org.neo4j.cypher.internal.compiler.v2_2.pipes.SortDescription
 import org.neo4j.cypher.internal.compiler.v2_2.planner._
 import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.plans.{Limit => LimitPlan, Skip => SkipPlan, _}
 import org.neo4j.cypher.internal.compiler.v2_2.symbols._
-import org.neo4j.cypher.internal.compiler.v2_2.{InternalException, LabelId, ast}
+import org.neo4j.cypher.internal.compiler.v2_2.{RelTypeId, InternalException, LabelId, ast}
 import org.neo4j.graphdb.Direction
 
 object LogicalPlanProducer {
@@ -37,6 +37,13 @@ object LogicalPlanProducer {
       left.solved.updateTailOrSelf(_.withHorizon(
         AggregatingQueryProjection(groupingKeys = grouping, aggregationExpressions = aggregation)
       )))
+
+  def planRelationshipsByTypeScan(startNode: IdName, endNode: IdName, pattern: PatternRelationship, typ: Either[String, RelTypeId], argumentIds: Set[IdName]) = {
+    RelationshipByTypeScan(pattern.name, startNode, endNode, typ, argumentIds)(PlannerQuery(graph = QueryGraph(
+      argumentIds = argumentIds,
+      patternNodes = Set(startNode, endNode),
+      patternRelationships = Set(pattern))))
+  }
 
   def planAllNodesScan(idName: IdName, argumentIds: Set[IdName]) =
     AllNodesScan(idName, argumentIds)(

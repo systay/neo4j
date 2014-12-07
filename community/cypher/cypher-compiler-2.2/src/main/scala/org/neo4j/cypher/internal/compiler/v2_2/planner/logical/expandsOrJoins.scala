@@ -20,13 +20,16 @@
 package org.neo4j.cypher.internal.compiler.v2_2.planner.logical
 
 import org.neo4j.cypher.internal.compiler.v2_2.planner.QueryGraph
-import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.steps.{expand, join, projectEndpoints}
+import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.steps.{relationshipsByTypePlanner, expand, join, projectEndpoints}
 
 object expandsOrJoins extends CandidateGenerator[PlanTable] {
   def apply(planTable: PlanTable, queryGraph: QueryGraph)(implicit context: LogicalPlanningContext): CandidateList = {
     val projectedEndpoints = projectEndpoints(planTable, queryGraph)
     val expansions = expand(planTable, queryGraph)
     val joins = join(planTable, queryGraph)
-    projectedEndpoints ++ expansions ++ joins
+    val singleRelStartPoints = relationshipsByTypePlanner(queryGraph)
+
+    val results = projectedEndpoints ++ expansions ++ joins ++ singleRelStartPoints
+    results
   }
 }

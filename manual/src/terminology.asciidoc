@@ -13,15 +13,14 @@ _for a graph or subgraph:_ when there is no way to start at some node `n` and  f
 The opposite of <<term-cyclic,cyclic>>.
 
 [[term-adjacent]]adjacent::
-nodes sharing an incident relationship or edges sharing an incident node.
+nodes sharing an incident relationship or relationships sharing an incident node.
 
 [[term-attribute]]attribute::
 Synonym for <<term-property,property>>.
 
 [[term-arc]]arc::
-_graph theory:_ an ordered pair of nodes.
-Also known as a directed relationship.
-See <<term-relationship,relationship>> and <<term-edge,edge>>.
+_graph theory:_ a synonym for a directed <<term-relationship,relationship>>.
+
 
 [[term-array]]array::
 container that holds a number of elements.
@@ -42,10 +41,10 @@ container that holds a number of values.
 The values can have mixed types.
 
 [[term-command]]command::
-a statement that operates on the database without affecting the data graph or returning content from it.
+a <<term-statement,statement>> that operates on the database without affecting the data graph or returning content from it.
 
 [[term-commit]]commit::
-successful completion of query execution that may result in a commit of the containing transaction, ensuring durability of any changes made and guaranteeing correctness of the result.
+successful completion of a <<term-transaction,transaction>>, ensuring durability of any changes made.
 
 [[term-constraint]]constraint::
 _part of a database schema:_
@@ -72,10 +71,10 @@ loops are counted twice.
 [[term-directed-relationship]]directed relationship::
 a relationship that has a direction; that is the relationship has a source node and a destination node.
 The opposite of an <<term-undirected-relationship, undirected relationship>>.
+All relationships in a Neo4j graph are directed.
 
 [[term-edge]]edge::
-_graph theory:_ an unordered pair of vertices that are adjacent in a graph.
-See <<term-relationship,relationship>> and <<term-arc,arc>>.
+_graph theory:_ a synonym for undirected <<term-relationship,relationship>>.
 
 [[term-execution-result]]execution result::
 all statements return an execution result.
@@ -103,9 +102,6 @@ node or relationship that is part of a graph.
 identifiers are named bindings to values in a statement (scalar values or collections).
 For example, in `MATCH n RETURN n`, `n` is an identifier.
 
-[[term-incident]]incident::
-adjacent relationship attached to a node or a node attached to a relationship.
-
 [[term-incoming-relationship]]incoming relationship::
 _pertaining to a <<term-directed-relationship,directed relationship>>:_ from the point of view of a node `n`, this is any relationship `r` arriving at `n`, exemplified by `()-[:r]->(n)`.
 The opposite of <<term-outgoing-relationship,outgoing>>.
@@ -123,20 +119,23 @@ Labels are written as `:label` in Cypher (the actual label prefixed by a colon).
 Note: _graph theory:_
 This differs from mathematical graphs, where a label applies uniquely to a single vertex.
 
-[[term-null]]null::
-`NULL` is a special marker used to indicate that a data item does not exist in the graph or that the value of an expression is unknown or inapplicable.
+[[term-loop]]loop::
+a node with a relationship pointing back to itself.
 
 [[term-neighbor]]neighbor::
 _of node:_ another node with a relationship to the node;
-_of relationship:_ another relationship connected to a common node.
+Synonym to <<term-incident,incident>>.
 
 [[term-node]]node*::
 data record within a data graph that contains an arbitrary collection of properties.
 Nodes may have zero, one or more labels and are optionally connected by relationships.
 Similar to <<term-vertex,vertex>>.
 
+[[term-null]]null::
+`NULL` is a special marker used to indicate that a data item does not exist in the graph or that the value of an expression is unknown or inapplicable.
+
 [[term-operator]]operator::
-there are three categories of operators:
+in Cypher, there are three categories of operators:
 . _Arithmetic,_ such as `+`, `/`, `%` etc.;
 . _Logical,_ such as `OR`, `AND`, `NOT` etc.; and
 . _Comparison,_ such as `<`, `>`, `=` etc.
@@ -147,6 +146,7 @@ The opposite of <<term-incoming-relationship, incoming relationship>>.
 
 [[term-pattern-graph]]pattern graph::
 graph used to express the shape of the data being searched for in the data graph.
+This is what `MATCH` and `WHERE` describe in a Cypher query.
 
 [[term-path]]path::
 collection of alternating nodes and relationships that corresponds to a walk in the graph.
@@ -154,9 +154,6 @@ collection of alternating nodes and relationships that corresponds to a walk in 
 [[term-parameter]]parameter::
 named value provided when running a statement.
 Parameters allow Cypher to efficiently re-use execution plans without having to parse and recompile every statement when only a literal value changes.
-
-[[term-peer]]peer::
-relationships with the same type or nodes sharing a common label
 
 [[term-predicate]]predicate::
 expression that returns `TRUE`, `FALSE` or `NULL`.
@@ -176,16 +173,14 @@ a graph having directed, typed relationships and where the nodes and relationshi
 [[term-query]]query::
 statement that reads or writes data from the database
 
-[[term-regular-path]]regular path query::
-a query whose path is expressed by a regular expression.
-
 [[term-relationship]]relationship*::
 data record in a property graph that associates an ordered pair of nodes.
 Similar to <<term-edge,edge>> and <<term-arc,arc>>.
 
 [[term-relationship-type]]relationship type::
-name used to qualify a relationship.
-For example in the pattern `(start)-[:TYPE]->(to)`, `TYPE` is the relationship type
+marks a relationship as a member of a named subset.
+Relationship must be assigned one and only one type.
+Relationship types are written as :TYPE in Cypher (the actual type name prefixed by a colon).
 
 [[term-result-row]]result row::
 each query returns an iterator of result rows.

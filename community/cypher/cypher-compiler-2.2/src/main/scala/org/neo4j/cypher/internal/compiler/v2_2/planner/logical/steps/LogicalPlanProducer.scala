@@ -270,11 +270,9 @@ object LogicalPlanProducer {
   def planArgumentRow(patternNodes: Set[IdName], patternRels: Set[PatternRelationship] = Set.empty, other: Set[IdName] = Set.empty): LogicalPlan = {
     val relIds = patternRels.map(_.name)
     val coveredIds = patternNodes ++ relIds ++ other
-    val typeInfoSeq =
-      patternNodes.toSeq.map((x: IdName) => x.name -> CTNode) ++
-        relIds.toSeq.map((x: IdName) => x.name -> CTRelationship) ++
-        other.toSeq.map((x: IdName) => x.name -> CTAny)
-    val typeInfo = typeInfoSeq.toMap
+    val typeInfo = (patternNodes.toSeq.map((x: IdName) => x.name -> CTNode) ++
+      relIds.toSeq.map((x: IdName) => x.name -> CTRelationship) ++
+      other.toSeq.map((x: IdName) => x.name -> CTAny)).toMap
 
     val singleRowPlan =
       Argument(coveredIds)(
@@ -282,7 +280,7 @@ object LogicalPlanProducer {
         QueryGraph(
           argumentIds = coveredIds,
           patternNodes = patternNodes,
-          patternRelationships = Set.empty
+          patternRelationships = patternRels
         ))
       )(typeInfo)
 

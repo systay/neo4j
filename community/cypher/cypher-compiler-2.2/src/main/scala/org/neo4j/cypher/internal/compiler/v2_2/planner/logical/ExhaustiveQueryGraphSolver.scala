@@ -40,11 +40,11 @@ case class ExhaustiveQueryGraphSolver(leafPlanTableGenerator: PlanTableGenerator
 
     (1 to queryGraph.size) foreach { x =>
       queryGraph.combinations(x).foreach {
-          subQG =>
-            val plans = planProducers.flatMap(_(subQG, cache)).map(config.applySelections(_, subQG))
-            val bestPlan = bestPlanFinder(plans)
-            bestPlan.foreach(p => cache(subQG) = p)
-        }
+        subQG =>
+          val plans = planProducers.flatMap(_(subQG, cache)).map(config.applySelections(_, subQG))
+          val bestPlan = bestPlanFinder(plans)
+          bestPlan.foreach(p => cache(subQG) = p)
+      }
     }
 
     cache.get(queryGraph)

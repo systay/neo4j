@@ -155,6 +155,22 @@ class ExhaustiveQueryGraphSolverTest extends CypherFunSuite with LogicalPlanning
     }
   }
 
+  test("querygraph with a single pattern node coming as an argument should be planned using argument operator") {
+    val solver = ExhaustiveQueryGraphSolver.withDefaults(
+      generatePlanTable(AllNodesScan("a", Set.empty)(PlannerQuery(graph = QueryGraph(patternNodes = Set("a"))))),
+      Seq(undefinedPlanProducer))
+
+    new given {
+      qg = QueryGraph(patternNodes = Set("a"), argumentIds = Set("a"))
+      withLogicalPlanningContext { (ctx) =>
+        implicit val x = ctx
+
+        solver.tryPlan(qg).get should equal(
+          Argument(Set("a"))(null)()
+        )
+      }
+    }
+  }
 
   private val undefinedPlanProducer: PlanProducer = new PlanProducer {
     def apply(qg: QueryGraph, cache: Map[QueryGraph, LogicalPlan]): Seq[LogicalPlan] = ???

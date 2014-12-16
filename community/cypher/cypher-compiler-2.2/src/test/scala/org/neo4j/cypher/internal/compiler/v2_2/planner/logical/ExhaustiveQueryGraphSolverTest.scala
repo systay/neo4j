@@ -21,7 +21,8 @@ package org.neo4j.cypher.internal.compiler.v2_2.planner.logical
 
 import org.neo4j.cypher.internal.commons.CypherFunSuite
 import org.neo4j.cypher.internal.compiler.v2_2.ast.{LabelName, HasLabels}
-import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.ExhaustiveQueryGraphSolver.PlanProducer
+import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.ExhaustiveQueryGraphSolver._
+import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.plans
 import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.plans._
 import org.neo4j.cypher.internal.compiler.v2_2.planner.{Selections, LogicalPlanningTestSupport2, PlannerQuery, QueryGraph}
 import org.neo4j.graphdb.Direction
@@ -31,7 +32,7 @@ import scala.collection.{immutable, Map}
 class ExhaustiveQueryGraphSolverTest extends CypherFunSuite with LogicalPlanningTestSupport2 {
 
   test("should plan for a single node pattern") {
-    val solver = ExhaustiveQueryGraphSolver(
+    val solver = ExhaustiveQueryGraphSolver.withDefaults(
       generatePlanTable(AllNodesScan("a", Set.empty)(PlannerQuery(graph = QueryGraph(patternNodes = Set("a"))))),
       Seq(undefinedPlanProducer))
 
@@ -48,9 +49,8 @@ class ExhaustiveQueryGraphSolverTest extends CypherFunSuite with LogicalPlanning
   }
 
   test("should plan for a single relationship pattern") {
-    val solver = ExhaustiveQueryGraphSolver(generatePlanTable(
-      NodeByLabelScan("a", Left("A"), Set.empty)(PlannerQuery(graph = QueryGraph(patternNodes = Set("a"), selections = Selections.from(
-        HasLabels(ident("a"), Seq(LabelName("A")(pos)))(pos))))),
+    val solver = ExhaustiveQueryGraphSolver.withDefaults(generatePlanTable(
+      AllNodesScan("a", Set.empty)(PlannerQuery(graph = QueryGraph(patternNodes = Set("a")))),
       NodeByLabelScan("b", Left("B"), Set.empty)(PlannerQuery(graph = QueryGraph(patternNodes = Set("b"), selections = Selections.from(
         HasLabels(ident("b"), Seq(LabelName("B")(pos)))(pos)))))
     ), Seq(expandOptions))
@@ -59,9 +59,40 @@ class ExhaustiveQueryGraphSolverTest extends CypherFunSuite with LogicalPlanning
       qg = QueryGraph(
         patternNodes = Set("a", "b"),
         patternRelationships = Set(PatternRelationship("r", ("a", "b"), Direction.OUTGOING, Seq.empty, SimplePatternLength)),
+        selections = Selections.from(HasLabels(ident("b"), Seq(LabelName("B")(pos)))(pos))
+      )
+
+      labelCardinality = immutable.Map(
+        "B" -> Cardinality(10)
+      )
+
+      withLogicalPlanningContext { (ctx) =>
+        implicit val x = ctx
+
+        solver.tryPlan(qg).get should equal(
+          Expand(NodeByLabelScan("b", Left("B"), Set.empty)(null), "b", Direction.INCOMING, Seq.empty, "a", "r")(null)
+        )
+      }
+    }
+  }
+
+  test("should plan for a single relationship pattern with labels on both sides") {
+    val planTableGenerator = generatePlanTable(
+      NodeByLabelScan("a", Left("A"), Set.empty)(PlannerQuery(graph = QueryGraph(patternNodes = Set("a"), selections = Selections.from(
+        HasLabels(ident("a"), Seq(LabelName("A")(pos)))(pos))))),
+      NodeByLabelScan("b", Left("B"), Set.empty)(PlannerQuery(graph = QueryGraph(patternNodes = Set("b"), selections = Selections.from(
+        HasLabels(ident("b"), Seq(LabelName("B")(pos)))(pos)))))
+    )
+    val solver = ExhaustiveQueryGraphSolver.withDefaults(leafPlanTableGenerator = planTableGenerator, planProducers = Seq(expandOptions))
+    val labelBPredicate = HasLabels(ident("b"), Seq(LabelName("B")(pos)))(pos)
+
+    new given {
+      qg = QueryGraph(
+        patternNodes = Set("a", "b"),
+        patternRelationships = Set(PatternRelationship("r", ("a", "b"), Direction.OUTGOING, Seq.empty, SimplePatternLength)),
         selections = Selections.from(
           HasLabels(ident("a"), Seq(LabelName("A")(pos)))(pos),
-          HasLabels(ident("b"), Seq(LabelName("B")(pos)))(pos))
+          labelBPredicate)
       )
 
       labelCardinality = immutable.Map(
@@ -73,11 +104,57 @@ class ExhaustiveQueryGraphSolverTest extends CypherFunSuite with LogicalPlanning
         implicit val x = ctx
 
         solver.tryPlan(qg).get should equal(
-          Expand(NodeByLabelScan("a", Left("A"), Set.empty)(null), "a", Direction.OUTGOING, Seq.empty, "b", "r")(null)
-        )
+          Selection(Seq(labelBPredicate),
+          Expand(
+            NodeByLabelScan("a", Left("A"), Set.empty)(null), "a", Direction.OUTGOING, Seq.empty, "b", "r")(null)
+        )(null))
       }
     }
   }
+
+  test("should plan for a join between two pattern relationships") {
+    // MATCH (a:A)-[r1]->(c)-[r2]->(b:B)
+    val planTableGenerator = generatePlanTable(
+      NodeByLabelScan("a", Left("A"), Set.empty)(PlannerQuery(graph = QueryGraph(patternNodes = Set("a"), selections = Selections.from(
+        HasLabels(ident("a"), Seq(LabelName("A")(pos)))(pos))))),
+      NodeByLabelScan("b", Left("B"), Set.empty)(PlannerQuery(graph = QueryGraph(patternNodes = Set("b"), selections = Selections.from(
+        HasLabels(ident("b"), Seq(LabelName("B")(pos)))(pos))))),
+      AllNodesScan("c", Set.empty)(PlannerQuery(graph = QueryGraph(patternNodes = Set("c"))))
+    )
+    val solver = ExhaustiveQueryGraphSolver.withDefaults(leafPlanTableGenerator = planTableGenerator, planProducers =
+      Seq(expandOptions, joinOptions))
+
+    new given {
+      qg = QueryGraph(
+        patternNodes = Set("a", "b", "c"),
+        patternRelationships = Set(
+          PatternRelationship("r1", ("a", "c"), Direction.OUTGOING, Seq.empty, SimplePatternLength),
+          PatternRelationship("r2", ("c", "b"), Direction.OUTGOING, Seq.empty, SimplePatternLength)
+        ),
+        selections = Selections.from(
+          HasLabels(ident("a"), Seq(LabelName("A")(pos)))(pos),
+          HasLabels(ident("b"), Seq(LabelName("B")(pos)))(pos))
+      )
+
+      labelCardinality = immutable.Map(
+        "A" -> Cardinality(10),
+        "B" -> Cardinality(10)
+      )
+
+      withLogicalPlanningContext { (ctx) =>
+        implicit val x = ctx
+
+        solver.tryPlan(qg).get should equal(
+        NodeHashJoin(Set("c"),
+          Expand(
+            NodeByLabelScan("a", Left("A"), Set.empty)(null), "a", Direction.OUTGOING, Seq.empty, "c", "r1")(null),
+          Expand(
+            NodeByLabelScan("b", Left("B"), Set.empty)(null), "b", Direction.INCOMING, Seq.empty, "c", "r2")(null)
+        )(null))
+      }
+    }
+  }
+
 
   private val undefinedPlanProducer: PlanProducer = new PlanProducer {
     def apply(qg: QueryGraph, cache: Map[QueryGraph, LogicalPlan]): Seq[LogicalPlan] = ???

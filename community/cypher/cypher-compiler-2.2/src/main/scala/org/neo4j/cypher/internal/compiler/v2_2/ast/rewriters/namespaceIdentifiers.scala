@@ -63,7 +63,12 @@ case class namespaceIdentifiers(scopeTree: Scope) extends Rewriter {
    Find clusters of symbols that can be proven to point to the same value.
    */
   private def findClusters(symbols: Seq[Symbol]) = {
-    val map = symbols.flatMap(symbol => symbol.positions.map(_ -> symbol)).toMap
+    val all: Seq[(InputPosition, Symbol)] = symbols.flatMap(symbol => symbol.positions.map(_ -> symbol)).toSeq
+    val map: Map[InputPosition, Symbol] = all.toMap
+
+    if (all.size != map.size)
+      throw new InternalException("Kabang!")
+
     val initialStack = map.keys.zip(map.keys).toList
     val (_, clustering) = Stream.iterate(initialStack -> Map.empty[InputPosition, InputPosition]) {
       case (Nil, clusters) =>
@@ -93,11 +98,29 @@ case class namespaceIdentifiers(scopeTree: Scope) extends Rewriter {
       .toSeq
   }
 
-  private def namespacedIdentifierNames(scope: Scope): IdentifierNames =
-    findShadowedIdentifiers(scope).flatMap { symbol =>
+  private def namespacedIdentifierNames(scope: Scope): IdentifierNames = {
+    val symbols: Seq[Symbol] = findShadowedIdentifiers(scope)
+    symbols.flatMap { symbol =>
       val firstPosition = symbol.positions.head
       symbol.positions.map { position =>
         (symbol.name, position) -> s"  ${symbol.name}@${firstPosition.offset}"
       }
     }.toMap
+  }
 }
+
+
+/*
+
+ identifier definition = (identifier.name, identifier.scope.symbol.positions.first)
+
+ walk ast
+  for each identifier
+  find identifier scope (via semantic table)
+  construct identifier definition
+  add to map: identifier name -> set(identifier definition)
+
+ find set of identifier names with multiple definitions
+
+ rename those identifiers using their definition
+*/

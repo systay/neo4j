@@ -64,6 +64,23 @@ case class Scope(symbolTable: Map[String, Symbol], children: Seq[Scope]) extends
 
   def updateIdentifier(identifier: String, types: TypeSpec, positions: Set[InputPosition]) =
     copy(symbolTable = symbolTable.updated(identifier, Symbol(identifier, positions, types)))
+
+  override def toString: String = {
+    val builder = new StringBuilder("XXX\n")
+    dump("- ", builder)
+    builder.toString()
+  }
+
+  private def dump(indent: String, builder: StringBuilder): Unit = {
+    symbolTable.keys.toSeq.sorted.foreach { key =>
+      val symbol = symbolTable(key)
+      val symbolText = s"${symbol.name} ${symbol.positions.map(_.toString).mkString("|")}"
+      builder.append(s"$indent $key: $symbolText\n")
+    }
+    children.foreach { child =>
+      child.dump(s"  $indent", builder)
+    }
+  }
 }
 
 

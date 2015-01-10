@@ -225,6 +225,41 @@ class ScopeTreeTest extends CypherFunSuite {
     ))
   }
 
+  test("Should retrieve local symbol definitions") {
+    val given = scope(
+      intSymbol("a", 9, 45),
+      intSymbol("b", 28, 49)
+    )()
+
+    given.symbolDefinitions should equal(Set(symDef("a", 9), symDef("b", 28)))
+  }
+
+  test("Should find all scopes") {
+    val child11 = scope(stringSymbol("name", 31, 93), nodeSymbol("root", 6, 69), nodeSymbol("tag", 83), nodeSymbol("book", 18, 111))()
+    val child1 = scope(nodeSymbol("root", 6), nodeSymbol("book", 18, 124))(child11)
+    val child2 = scope(nodeSymbol("book", 18, 124))()
+    val given = scope()(child1, child2)
+
+    given.allScopes should equal(Seq(given, child1, child11, child2))
+  }
+
+  test("Should find all definitions") {
+    val child11 = scope(stringSymbol("name", 31, 93), nodeSymbol("root", 6, 69), nodeSymbol("tag", 83), nodeSymbol("book", 18, 111))()
+    val child1 = scope(nodeSymbol("root", 6), nodeSymbol("book", 24, 124))(child11)
+    val child2 = scope(nodeSymbol("book", 18, 124))()
+    val given = scope()(child1, child2)
+
+    given.allSymbolDefinitions should equal(Map(
+      "name" -> Set(symDef("name", 31)),
+      "root" -> Set(symDef("root", 6)),
+      "tag" -> Set(symDef("tag", 83)),
+      "book" -> Set(symDef("book", 18), symDef("book", 24))
+    ))
+  }
+
+  def symDef(name: String, offset: Int) =
+    SymbolDefinition(name, pos(offset))
+
   def scope(entries: Symbol*)(children: Scope*): Scope =
     Scope(entries.map { symbol => symbol.name -> symbol }.toMap, asSeq(children))
 
@@ -250,7 +285,11 @@ class ScopeTreeTest extends CypherFunSuite {
     typedSymbol(name, TypeSpec.exact(CTCollection(CTCollection(CTInteger))), offsets: _*)
 
   def typedSymbol(name: String, typeSpec: TypeSpec, offsets: Int*) =
-    Symbol(name, offsets.map(offset => new InputPosition(offset, 1, offset + 1)).toSet, typeSpec)
+    Symbol(name, offsets.map(offset => pos(offset)).toSet, typeSpec)
+
+  def pos(offset: Int): InputPosition = {
+    new InputPosition(offset, 1, offset + 1)
+  }
 
   def asSeq[T](input: TraversableOnce[T]) = if (input.isEmpty) Vector() else input.toList
 }

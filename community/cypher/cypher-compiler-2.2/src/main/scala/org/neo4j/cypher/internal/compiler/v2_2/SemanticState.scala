@@ -24,6 +24,10 @@ import helpers.{TreeZipper, TreeElem}
 import symbols._
 import scala.collection.immutable.HashMap
 
+// A symbol definition represents the first occurrence of a symbol
+case class SymbolDefinition(name: String, position: InputPosition)
+
+
 // A symbol collects all uses of a position within the current scope and
 // up to the originally defining scope together with type information
 //
@@ -33,7 +37,12 @@ import scala.collection.immutable.HashMap
 // s3.localSymbol(n) = Symbol(n, Seq(1, 2), type(n))
 // s4.localSymbol(n) = Symbol(n, Seq(1, 2, 3), type(n))
 //
-case class Symbol(name: String, positions: Set[InputPosition], types: TypeSpec)
+case class Symbol(name: String, positions: Set[InputPosition], types: TypeSpec) {
+  if (positions.isEmpty)
+    throw new InternalException(s"Cannot create empty symbol with name '$name'")
+
+  val definition = SymbolDefinition(name, positions.toSeq.min(InputPosition.byOffset))
+}
 
 case class ExpressionTypeInfo(specified: TypeSpec, expected: Option[TypeSpec] = None) {
   lazy val actualUnCoerced = expected.fold(specified)(specified intersect)
@@ -49,6 +58,12 @@ object Scope {
 }
 
 case class Scope(symbolTable: Map[String, Symbol], children: Seq[Scope]) extends TreeElem[Scope] {
+
+  symbolTable.collect {
+    case (k, v) if k != v.name =>
+      throw new InternalException(s"Malformed symbol table entry $k -> $v")
+  }
+
   override def updateChildren(newChildren: Seq[Scope]): Scope = copy(children = newChildren)
 
   def isEmpty: Boolean = symbolTable.isEmpty
@@ -65,22 +80,39 @@ case class Scope(symbolTable: Map[String, Symbol], children: Seq[Scope]) extends
   def updateIdentifier(identifier: String, types: TypeSpec, positions: Set[InputPosition]) =
     copy(symbolTable = symbolTable.updated(identifier, Symbol(identifier, positions, types)))
 
-  override def toString: String = {
-    val builder = new StringBuilder("XXX\n")
-    dump("- ", builder)
-    builder.toString()
-  }
+  def allSymbolDefinitions: Map[String, Set[SymbolDefinition]] =
+    allScopes.foldLeft(Map.empty[String, Set[SymbolDefinition]]) {
+      case (acc0, scope) =>
+        scope.symbolDefinitions.foldLeft(acc0) {
+          case (acc, symDef) if acc.contains(symDef.name) =>
+            acc.updated(symDef.name, acc(symDef.name) + symDef)
+          case (acc, symDef) =>
+            acc.updated(symDef.name, Set(symDef))
+        }
+    }
 
-  private def dump(indent: String, builder: StringBuilder): Unit = {
-    symbolTable.keys.toSeq.sorted.foreach { key =>
-      val symbol = symbolTable(key)
-      val symbolText = s"${symbol.name} ${symbol.positions.map(_.toString).mkString("|")}"
-      builder.append(s"$indent $key: $symbolText\n")
-    }
-    children.foreach { child =>
-      child.dump(s"  $indent", builder)
-    }
-  }
+  def allScopes: Seq[Scope] =
+    Seq(this) ++ children.flatMap(_.allScopes)
+
+  def symbolDefinitions: Set[SymbolDefinition] =
+    symbolTable.values.map(_.definition).toSet
+
+//  override def toString: String = {
+//    val builder = new StringBuilder("XXX\n")
+//    dump("- ", builder)
+//    builder.toString()
+//  }
+//
+//  private def dump(indent: String, builder: StringBuilder): Unit = {
+//    symbolTable.keys.toSeq.sorted.foreach { key =>
+//      val symbol = symbolTable(key)
+//      val symbolText = s"${symbol.name} ${symbol.positions.map(_.toString).mkString("|")}"
+//      builder.append(s"$indent $key: $symbolText\n")
+//    }
+//    children.foreach { child =>
+//      child.dump(s"  $indent", builder)
+//    }
+//  }
 }
 
 

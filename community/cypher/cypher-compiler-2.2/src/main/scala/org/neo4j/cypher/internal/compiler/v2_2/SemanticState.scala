@@ -24,8 +24,12 @@ import helpers.{TreeZipper, TreeElem}
 import symbols._
 import scala.collection.immutable.HashMap
 
-// A symbol definition represents the first occurrence of a symbol
-case class SymbolDefinition(name: String, position: InputPosition)
+// A symbol use represents the occurrence of a symbol at a position
+case class SymbolUse(name: String, position: InputPosition) {
+  override def toString = s"SymbolUse($nameWithPosition)"
+
+  def nameWithPosition = s"$name@${position.offset}"
+}
 
 
 // A symbol collects all uses of a position within the current scope and
@@ -41,7 +45,7 @@ case class Symbol(name: String, positions: Set[InputPosition], types: TypeSpec) 
   if (positions.isEmpty)
     throw new InternalException(s"Cannot create empty symbol with name '$name'")
 
-  val definition = SymbolDefinition(name, positions.toSeq.min(InputPosition.byOffset))
+  val definition = SymbolUse(name, positions.toSeq.min(InputPosition.byOffset))
 }
 
 case class ExpressionTypeInfo(specified: TypeSpec, expected: Option[TypeSpec] = None) {
@@ -80,8 +84,8 @@ case class Scope(symbolTable: Map[String, Symbol], children: Seq[Scope]) extends
   def updateIdentifier(identifier: String, types: TypeSpec, positions: Set[InputPosition]) =
     copy(symbolTable = symbolTable.updated(identifier, Symbol(identifier, positions, types)))
 
-  def allSymbolDefinitions: Map[String, Set[SymbolDefinition]] =
-    allScopes.foldLeft(Map.empty[String, Set[SymbolDefinition]]) {
+  def allSymbolDefinitions: Map[String, Set[SymbolUse]] =
+    allScopes.foldLeft(Map.empty[String, Set[SymbolUse]]) {
       case (acc0, scope) =>
         scope.symbolDefinitions.foldLeft(acc0) {
           case (acc, symDef) if acc.contains(symDef.name) =>
@@ -94,7 +98,7 @@ case class Scope(symbolTable: Map[String, Symbol], children: Seq[Scope]) extends
   def allScopes: Seq[Scope] =
     Seq(this) ++ children.flatMap(_.allScopes)
 
-  def symbolDefinitions: Set[SymbolDefinition] =
+  def symbolDefinitions: Set[SymbolUse] =
     symbolTable.values.map(_.definition).toSet
 
 //  override def toString: String = {
@@ -143,7 +147,9 @@ object SemanticState {
 }
 import SemanticState.ScopeLocation
 
-case class SemanticState(currentScope: ScopeLocation, typeTable: ASTAnnotationMap[ast.Expression, ExpressionTypeInfo], recordedScopes: ASTAnnotationMap[ast.ASTNode, Scope]) {
+case class SemanticState(currentScope: ScopeLocation,
+                         typeTable: ASTAnnotationMap[ast.Expression, ExpressionTypeInfo],
+                         recordedScopes: ASTAnnotationMap[ast.ASTNode, Scope]) {
   def scopeTree = currentScope.rootScope
 
   def newChildScope = copy(currentScope = currentScope.newChildScope)
@@ -208,14 +214,11 @@ case class SemanticState(currentScope: ScopeLocation, typeTable: ASTAnnotationMa
     copy(
       currentScope = currentScope.updateIdentifier(identifier.name, types, locations),
       typeTable = typeTable.updated(identifier, ExpressionTypeInfo(types))
-    )
+    ).noteCurrentScope(identifier)
 
   def noteCurrentScope(astNode: ast.ASTNode): SemanticState =
     copy(recordedScopes = recordedScopes.updated(astNode, currentScope.scope))
 
   def scope(astNode: ast.ASTNode): Option[Scope] =
     recordedScopes.get(astNode)
-
-  def scopeSymbolsTable: ASTAnnotationMap[ASTNode, Set[String]] =
-    recordedScopes.mapValues(_.symbolNames)
 }

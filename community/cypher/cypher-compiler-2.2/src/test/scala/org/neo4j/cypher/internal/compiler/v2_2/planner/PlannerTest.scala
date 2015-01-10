@@ -26,36 +26,37 @@ import org.neo4j.cypher.internal.compiler.v2_2.{ExpressionTypeInfo, InputPositio
 class PlannerTest extends CypherFunSuite {
 
   test("Renames identifiers in semantic table") {
-    val idA1 = Identifier("a")(InputPosition(1, 0, 1))
-    val idA2 = Identifier("a")(InputPosition(2, 0, 2))
-    val idA3 = Identifier("a")(InputPosition(3, 0, 3))
-    val idB5 = Identifier("b")(InputPosition(5, 0, 5))
-
-    val infoA1 = mock[ExpressionTypeInfo]
-    val infoA2 = mock[ExpressionTypeInfo]
-    val infoA3 = mock[ExpressionTypeInfo]
-    val infoA4 = mock[ExpressionTypeInfo]
-    val infoB5 = mock[ExpressionTypeInfo]
-
-    val table = SemanticTable(ASTAnnotationMap(
-      idA1 -> infoA1,
-      idA2 -> infoA2,
-      idA3 -> infoA3,
-      idB5 -> infoB5
-    ))
-
-    val identifierNames = Map(
-      ("a", InputPosition(1, 0 ,1)) -> "a@1",
-      ("a", InputPosition(2, 0, 2)) -> "a@2"
-    )
-
-    val newTable = Planner.rewriteSemanticTable(identifierNames, table)
-
-    newTable.types should equal(ASTAnnotationMap(
-      Identifier("a@1")(InputPosition(1, 0, 1)) -> infoA1,
-      Identifier("a@2")(InputPosition(2, 0, 2)) -> infoA2,
-      idA3 -> infoA3,
-      idB5 -> infoB5
-    ))
+    fail("redo this test")
+//    val idA1 = Identifier("a")(InputPosition(1, 0, 1))
+//    val idA2 = Identifier("a")(InputPosition(2, 0, 2))
+//    val idA3 = Identifier("a")(InputPosition(3, 0, 3))
+//    val idB5 = Identifier("b")(InputPosition(5, 0, 5))
+//
+//    val infoA1 = mock[ExpressionTypeInfo]
+//    val infoA2 = mock[ExpressionTypeInfo]
+//    val infoA3 = mock[ExpressionTypeInfo]
+//    val infoA4 = mock[ExpressionTypeInfo]
+//    val infoB5 = mock[ExpressionTypeInfo]
+//
+//    val table = SemanticTable(ASTAnnotationMap(
+//      idA1 -> infoA1,
+//      idA2 -> infoA2,
+//      idA3 -> infoA3,
+//      idB5 -> infoB5
+//    ))
+//
+//    val identifierNames = Map(
+//      ("a", InputPosition(1, 0 ,1)) -> "a@1",
+//      ("a", InputPosition(2, 0, 2)) -> "a@2"
+//    )
+//
+//    val newTable = Planner.rewriteSemanticTable(identifierNames, table)
+//
+//    newTable.types should equal(ASTAnnotationMap(
+//      Identifier("a@1")(InputPosition(1, 0, 1)) -> infoA1,
+//      Identifier("a@2")(InputPosition(2, 0, 2)) -> infoA2,
+//      idA3 -> infoA3,
+//      idB5 -> infoB5
+//    ))
   }
 }

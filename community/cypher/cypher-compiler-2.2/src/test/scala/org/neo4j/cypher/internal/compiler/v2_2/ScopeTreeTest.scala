@@ -258,7 +258,7 @@ class ScopeTreeTest extends CypherFunSuite {
   }
 
   def symDef(name: String, offset: Int) =
-    SymbolDefinition(name, pos(offset))
+    SymbolUse(name, pos(offset))
 
   def scope(entries: Symbol*)(children: Scope*): Scope =
     Scope(entries.map { symbol => symbol.name -> symbol }.toMap, asSeq(children))

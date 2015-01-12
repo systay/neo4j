@@ -95,6 +95,12 @@ case class Scope(symbolTable: Map[String, Symbol], children: Seq[Scope]) extends
         }
     }
 
+  def symbolDefinitions: Set[SymbolUse] =
+    symbolTable.values.map(_.definition).toSet
+
+  def allIdentifierDefinitions: Map[SymbolUse, SymbolUse] =
+    allScopes.map(_.identifierDefinitions).reduce(_ ++ _)
+
   def identifierDefinitions: Map[SymbolUse, SymbolUse] =
     symbolTable.values.flatMap { symbol =>
       val name = symbol.name
@@ -102,16 +108,10 @@ case class Scope(symbolTable: Map[String, Symbol], children: Seq[Scope]) extends
       symbol.positions.map { pos => SymbolUse(name, pos) -> definition }
     }.toMap
 
-  def allIdentifierDefinitions: Map[SymbolUse, SymbolUse] =
-    allScopes.map(_.identifierDefinitions).reduce(_ ++ _)
-
   def allScopes: Seq[Scope] =
     Seq(this) ++ children.flatMap(_.allScopes)
 
-  def symbolDefinitions: Set[SymbolUse] =
-    symbolTable.values.map(_.definition).toSet
-
-//  override def toString: String = {
+  //  override def toString: String = {
 //    val builder = new StringBuilder("XXX\n")
 //    dump("- ", builder)
 //    builder.toString()
@@ -224,7 +224,7 @@ case class SemanticState(currentScope: ScopeLocation,
     copy(
       currentScope = currentScope.updateIdentifier(identifier.name, types, locations),
       typeTable = typeTable.updated(identifier, ExpressionTypeInfo(types))
-    ).noteCurrentScope(identifier)
+    )
 
   def noteCurrentScope(astNode: ast.ASTNode): SemanticState =
     copy(recordedScopes = recordedScopes.updated(astNode, currentScope.scope))

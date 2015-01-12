@@ -21,7 +21,7 @@ package org.neo4j.cypher.internal.compiler.v2_2.ast.rewriters
 
 import org.neo4j.cypher.internal.compiler.v2_2.ast._
 import org.neo4j.cypher.internal.compiler.v2_2.helpers.UnNamedNameGenerator
-import org.neo4j.cypher.internal.compiler.v2_2.{SemanticState, Rewriter, bottomUp}
+import org.neo4j.cypher.internal.compiler.v2_2.{InputPosition, SemanticState, Rewriter, bottomUp}
 import org.neo4j.helpers.ThisShouldNotHappenError
 
 case class expandStar(state: SemanticState) extends Rewriter {
@@ -44,13 +44,15 @@ case class expandStar(state: SemanticState) extends Rewriter {
       throw new ThisShouldNotHappenError("cleishm", s"${clause.name} should note its Scope in the SemanticState")
     }
 
+    val clausePos = clause.position
     val symbolNames = scope.symbolNames -- excludedNames
     val expandedItems = symbolNames.toSeq.sorted.map { id =>
-      val expr = Identifier(id)(clause.position)
-      val alias = Identifier(id)(clause.position)
-      AliasedReturnItem(expr, alias)(clause.position)
+      val idPos = scope.symbolTable(id).definition.position
+      val expr = Identifier(id)(idPos)
+      val alias = Identifier(id)(clausePos)
+      AliasedReturnItem(expr, alias)(clausePos)
     }
 
-    ReturnItems(includeExisting = false, expandedItems ++ listedItems)(clause.position)
+    ReturnItems(includeExisting = false, expandedItems ++ listedItems)(clausePos)
   }
 }

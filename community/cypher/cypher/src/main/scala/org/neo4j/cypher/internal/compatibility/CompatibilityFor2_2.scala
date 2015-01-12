@@ -104,6 +104,7 @@ object exceptionHandlerFor2_2 extends MapToPublicExceptions[CypherException] {
       body
     } catch {
       case e: CypherException_v2_2 =>
+        e.printStackTrace(System.out)
         f(e)
         throw e.mapToPublic(exceptionHandlerFor2_2)
       case e: Throwable =>

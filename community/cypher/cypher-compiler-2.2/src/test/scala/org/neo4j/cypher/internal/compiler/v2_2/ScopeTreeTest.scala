@@ -231,7 +231,7 @@ class ScopeTreeTest extends CypherFunSuite {
       intSymbol("b", 28, 49)
     )()
 
-    given.symbolDefinitions should equal(Set(symDef("a", 9), symDef("b", 28)))
+    given.symbolDefinitions should equal(Set(symUse("a", 9), symUse("b", 28)))
   }
 
   test("Should find all scopes") {
@@ -250,14 +250,50 @@ class ScopeTreeTest extends CypherFunSuite {
     val given = scope()(child1, child2)
 
     given.allSymbolDefinitions should equal(Map(
-      "name" -> Set(symDef("name", 31)),
-      "root" -> Set(symDef("root", 6)),
-      "tag" -> Set(symDef("tag", 83)),
-      "book" -> Set(symDef("book", 18), symDef("book", 24))
+      "name" -> Set(symUse("name", 31)),
+      "root" -> Set(symUse("root", 6)),
+      "tag" -> Set(symUse("tag", 83)),
+      "book" -> Set(symUse("book", 18), symUse("book", 24))
     ))
   }
 
-  def symDef(name: String, offset: Int) =
+  test("Should build identifier map for simple scope tree") {
+    val given = scope(nodeSymbol("a", 1, 2), nodeSymbol("b", 2))()
+
+    val actual = given.identifierDefinitions
+
+    actual should equal(Map(
+      symUse("a", 1) -> symUse("a", 1),
+      symUse("a", 2) -> symUse("a", 1),
+      symUse("b", 2) -> symUse("b", 2)
+    ))
+  }
+
+  test("Should build identifier map for complex scope tree with shadowing") {
+    val given = scope()(
+      scope(nodeSymbol("root", 6), nodeSymbol("book", 18, 111))(
+        scope(stringSymbol("name", 31, 93), nodeSymbol("root", 6, 69), nodeSymbol("tag", 83), nodeSymbol("book", 18, 124))()
+      ),
+      scope(nodeSymbol("book", 200, 300))()
+    )
+
+    val actual = given.allIdentifierDefinitions
+
+    actual should equal(Map(
+      symUse("root", 6) -> symUse("root", 6),
+      symUse("root", 69) -> symUse("root", 6),
+      symUse("book", 18) -> symUse("book", 18),
+      symUse("book", 111) -> symUse("book", 18),
+      symUse("book", 124) -> symUse("book", 18),
+      symUse("book", 200) -> symUse("book", 200),
+      symUse("book", 300) -> symUse("book", 200),
+      symUse("name", 31) -> symUse("name", 31),
+      symUse("name", 93) -> symUse("name", 31),
+      symUse("tag", 83) -> symUse("tag", 83)
+    ))
+  }
+
+  def symUse(name: String, offset: Int) =
     SymbolUse(name, pos(offset))
 
   def scope(entries: Symbol*)(children: Scope*): Scope =

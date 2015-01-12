@@ -64,3 +64,4 @@ class SemanticTable(
   ) =
     new SemanticTable(types, recordedScopes, resolvedLabelIds.clone(), resolvedPropertyKeyNames.clone(), resolvedRelTypeNames.clone())
 }
+

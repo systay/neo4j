@@ -32,8 +32,9 @@ object Namespacer {
 
   def apply(statement: Statement, table: SemanticTable, scopeTree: Scope): Namespacer = {
     val ambiguousNames = shadowedNames(scopeTree)
+    val identifierDefinitions = scopeTree.allIdentifierDefinitions
     val protectedIdentifiers = returnAliases(statement)
-    val renamings = identifierRenamings(statement, table, ambiguousNames, protectedIdentifiers)
+    val renamings = identifierRenamings(statement, identifierDefinitions, ambiguousNames, protectedIdentifiers)
     val result = Namespacer(renamings)
     result
   }
@@ -50,11 +51,11 @@ object Namespacer {
         (acc, children) => children(acc ++ identifiers)
     }.toSet
 
-  def identifierRenamings(statement: Statement, table: SemanticTable,
+  def identifierRenamings(statement: Statement, identifierDefinitions: Map[SymbolUse, SymbolUse],
                           ambiguousNames: Set[String], protectedIdentifiers: Set[Ref[Identifier]]): IdentifierRenamings =
     statement.treeFold(Map.empty[Ref[Identifier], Identifier]) {
       case i: Identifier if ambiguousNames.contains(i.name) && !protectedIdentifiers.contains(Ref(i)) =>
-        val symbolDefinition = table.symbolDefinition(i)
+        val symbolDefinition = identifierDefinitions(i.toSymbolUse)
         val newIdentifier = i.renamed(s"  ${symbolDefinition.nameWithPosition}")
         val renaming = Ref(i) -> newIdentifier
         (acc, children) => children(acc + renaming)

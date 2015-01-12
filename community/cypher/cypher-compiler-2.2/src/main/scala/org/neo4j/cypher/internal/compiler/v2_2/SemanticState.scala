@@ -95,6 +95,16 @@ case class Scope(symbolTable: Map[String, Symbol], children: Seq[Scope]) extends
         }
     }
 
+  def identifierDefinitions: Map[SymbolUse, SymbolUse] =
+    symbolTable.values.flatMap { symbol =>
+      val name = symbol.name
+      val definition = symbol.definition
+      symbol.positions.map { pos => SymbolUse(name, pos) -> definition }
+    }.toMap
+
+  def allIdentifierDefinitions: Map[SymbolUse, SymbolUse] =
+    allScopes.map(_.identifierDefinitions).reduce(_ ++ _)
+
   def allScopes: Seq[Scope] =
     Seq(this) ++ children.flatMap(_.allScopes)
 

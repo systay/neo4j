@@ -114,7 +114,7 @@ class EagerAggregationPipeTest extends CypherFunSuite {
     val aggregationPipe = new EagerAggregationPipe(source, returnItems, grouping)()
 
     getResults(aggregationPipe).toSet should equal(Set(
-      Map("name" -> 5, "count(*)" -> 1),
+      Map("name" -> 6, "count(*)" -> 1),
       Map("name" -> null, "count(*)" -> 1),
       Map("name" -> 7, "count(*)" -> 2))
     )

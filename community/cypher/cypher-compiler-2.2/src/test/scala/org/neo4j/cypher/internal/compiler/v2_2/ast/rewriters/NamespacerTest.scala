@@ -29,8 +29,8 @@ import org.neo4j.cypher.internal.compiler.v2_2.planner.SemanticTable
 class NamespacerTest extends CypherFunSuite {
 
   val tests = Seq(
-//    "match n return n as n" ->
-//    "match n return n as n"
+    "match n return n as n" ->
+    "match n return n as n"
 //    ,
 //    "match n, x with n as n match x return n as n, x as x" ->
 //    "match n, `  x@9` with n as n match `  x@29` return n as n, `  x@29` as x"

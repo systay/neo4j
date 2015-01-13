@@ -20,7 +20,8 @@
 package org.neo4j.cypher.internal.compiler.v2_2.ast.rewriters
 
 import org.neo4j.cypher.internal.commons.CypherFunSuite
-import org.neo4j.cypher.internal.compiler.v2_2.ScopeHelper._
+import org.neo4j.cypher.internal.compiler.v2_2.helpers.StatementHelper
+import StatementHelper._
 import org.neo4j.cypher.internal.compiler.v2_2._
 import org.neo4j.cypher.internal.compiler.v2_2.ast.{ASTAnnotationMap, Identifier, Statement}
 import org.neo4j.cypher.internal.compiler.v2_2.parser.ParserFixture.parser

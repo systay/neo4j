@@ -21,13 +21,15 @@ package org.neo4j.cypher.internal.compiler.v2_2
 
 import org.neo4j.cypher.internal.commons.CypherFunSuite
 import org.neo4j.cypher.internal.compiler.v2_2.ast.Statement
+import org.neo4j.cypher.internal.compiler.v2_2.helpers.{ScopeTestHelper, StatementHelper}
 import org.neo4j.cypher.internal.compiler.v2_2.symbols._
 import org.scalatest.Assertions
 
 class ScopeTreeTest extends CypherFunSuite {
 
   import org.neo4j.cypher.internal.compiler.v2_2.parser.ParserFixture.parser
-  import ScopeHelper._
+  import StatementHelper._
+  import ScopeTestHelper._
 
   //////00000000001111111111222222222233333333334444444444555555555566666666667777777777888888888899999999990000000000111111111122222222223333333333444444444455555555556666666666
   //////01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
@@ -224,123 +226,5 @@ class ScopeTreeTest extends CypherFunSuite {
       scope(pathCollectionSymbol("isNew", 54, 74, 65, 142, 133))()
     ))
   }
-
-  test("Should retrieve local symbol definitions") {
-    val given = scope(
-      intSymbol("a", 9, 45),
-      intSymbol("b", 28, 49)
-    )()
-
-    given.symbolDefinitions should equal(Set(symUse("a", 9), symUse("b", 28)))
-  }
-
-  test("Should find all scopes") {
-    val child11 = scope(stringSymbol("name", 31, 93), nodeSymbol("root", 6, 69), nodeSymbol("tag", 83), nodeSymbol("book", 18, 111))()
-    val child1 = scope(nodeSymbol("root", 6), nodeSymbol("book", 18, 124))(child11)
-    val child2 = scope(nodeSymbol("book", 18, 124))()
-    val given = scope()(child1, child2)
-
-    given.allScopes should equal(Seq(given, child1, child11, child2))
-  }
-
-  test("Should find all definitions") {
-    val child11 = scope(stringSymbol("name", 31, 93), nodeSymbol("root", 6, 69), nodeSymbol("tag", 83), nodeSymbol("book", 18, 111))()
-    val child1 = scope(nodeSymbol("root", 6), nodeSymbol("book", 24, 124))(child11)
-    val child2 = scope(nodeSymbol("book", 18, 124))()
-    val given = scope()(child1, child2)
-
-    given.allSymbolDefinitions should equal(Map(
-      "name" -> Set(symUse("name", 31)),
-      "root" -> Set(symUse("root", 6)),
-      "tag" -> Set(symUse("tag", 83)),
-      "book" -> Set(symUse("book", 18), symUse("book", 24))
-    ))
-  }
-
-  test("Should build identifier map for simple scope tree") {
-    val given = scope(nodeSymbol("a", 1, 2), nodeSymbol("b", 2))()
-
-    val actual = given.identifierDefinitions
-
-    actual should equal(Map(
-      symUse("a", 1) -> symUse("a", 1),
-      symUse("a", 2) -> symUse("a", 1),
-      symUse("b", 2) -> symUse("b", 2)
-    ))
-  }
-
-  test("Should build identifier map for complex scope tree with shadowing") {
-    val given = scope()(
-      scope(nodeSymbol("root", 6), nodeSymbol("book", 18, 111))(
-        scope(stringSymbol("name", 31, 93), nodeSymbol("root", 6, 69), nodeSymbol("tag", 83), nodeSymbol("book", 18, 124))()
-      ),
-      scope(nodeSymbol("book", 200, 300))()
-    )
-
-    val actual = given.allIdentifierDefinitions
-
-    actual should equal(Map(
-      symUse("root", 6) -> symUse("root", 6),
-      symUse("root", 69) -> symUse("root", 6),
-      symUse("book", 18) -> symUse("book", 18),
-      symUse("book", 111) -> symUse("book", 18),
-      symUse("book", 124) -> symUse("book", 18),
-      symUse("book", 200) -> symUse("book", 200),
-      symUse("book", 300) -> symUse("book", 200),
-      symUse("name", 31) -> symUse("name", 31),
-      symUse("name", 93) -> symUse("name", 31),
-      symUse("tag", 83) -> symUse("tag", 83)
-    ))
-  }
-
-  def symUse(name: String, offset: Int) =
-    SymbolUse(name, pos(offset))
-
-  def scope(entries: Symbol*)(children: Scope*): Scope =
-    Scope(entries.map { symbol => symbol.name -> symbol }.toMap, asSeq(children))
-
-  def nodeSymbol(name: String, offsets: Int*): Symbol =
-    typedSymbol(name, TypeSpec.exact(CTNode), offsets: _*)
-
-  def allSymbol(name: String, offsets: Int*): Symbol =
-    typedSymbol(name, TypeSpec.all, offsets: _*)
-
-  def intSymbol(name: String, offsets: Int*): Symbol =
-    typedSymbol(name, TypeSpec.exact(CTInteger), offsets: _*)
-
-  def stringSymbol(name: String, offsets: Int*): Symbol =
-    typedSymbol(name, TypeSpec.exact(CTString), offsets: _*)
-
-  def intCollectionSymbol(name: String, offsets: Int*): Symbol =
-    typedSymbol(name, TypeSpec.exact(CTCollection(CTInteger)), offsets: _*)
-
-  def pathCollectionSymbol(name: String, offsets: Int*): Symbol =
-    typedSymbol(name, TypeSpec.exact(CTCollection(CTPath)), offsets: _*)
-
-  def intCollectionCollectionSymbol(name: String, offsets: Int*): Symbol =
-    typedSymbol(name, TypeSpec.exact(CTCollection(CTCollection(CTInteger))), offsets: _*)
-
-  def typedSymbol(name: String, typeSpec: TypeSpec, offsets: Int*) =
-    Symbol(name, offsets.map(offset => pos(offset)).toSet, typeSpec)
-
-  def pos(offset: Int): InputPosition = {
-    new InputPosition(offset, 1, offset + 1)
-  }
-
-  def asSeq[T](input: TraversableOnce[T]) = if (input.isEmpty) Vector() else input.toList
 }
 
-object ScopeHelper extends Assertions {
-
-  implicit class RichStatement(ast: Statement) {
-    def semanticState: SemanticState = ast.semanticCheck(SemanticState.clean) match {
-      case SemanticCheckResult(state, errors) =>
-        if (errors.isEmpty) {
-          state
-        } else
-          fail(s"Failure during semantic checking of $ast with errors $errors")
-    }
-
-    def scope: Scope = semanticState.scopeTree
-  }
-}

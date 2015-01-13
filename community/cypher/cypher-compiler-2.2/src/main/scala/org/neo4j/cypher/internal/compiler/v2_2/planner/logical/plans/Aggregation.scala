@@ -24,8 +24,8 @@ import org.neo4j.cypher.internal.compiler.v2_2.planner.PlannerQuery
 import org.neo4j.cypher.internal.helpers.Eagerly
 
 case class Aggregation(left: LogicalPlan,
-                       groupingExpressions: Map[String, Expression],
-                       aggregationExpression: Map[String, Expression])(val solved: PlannerQuery) extends LogicalPlan {
+                       keyNames: Set[String],
+                       aggregations: Map[String, Expression])(val solved: PlannerQuery) extends LogicalPlan {
 
   def ap(newSolve: PlannerQuery) = copy()(newSolve)
 
@@ -33,14 +33,13 @@ case class Aggregation(left: LogicalPlan,
 
   def rhs = None
 
-  val groupingKeys = groupingExpressions.keySet.map(IdName(_))
+  val groupingKeys = keyNames.map(IdName(_))
 
-  val availableSymbols = groupingKeys ++ aggregationExpression.keySet.map(IdName(_))
+  val availableSymbols = keyNames ++ aggregations.keySet.map(IdName(_))
 
 
   override def mapExpressions(f: (Set[IdName], Expression) => Expression): LogicalPlan =
     copy(
-      groupingExpressions = Eagerly.immutableMapValues[String, Expression, Expression](groupingExpressions, f(left.availableSymbols, _)),
-      aggregationExpression = Eagerly.immutableMapValues[String, Expression, Expression](aggregationExpression, f(left.availableSymbols ++ groupingKeys, _))
+      aggregations = Eagerly.immutableMapValues[String, Expression, Expression](aggregations, f(left.availableSymbols ++ groupingKeys, _))
     )(solved)
 }

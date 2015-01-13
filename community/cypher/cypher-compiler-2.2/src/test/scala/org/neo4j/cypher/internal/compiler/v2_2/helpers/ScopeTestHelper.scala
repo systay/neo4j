@@ -28,7 +28,7 @@ object ScopeTestHelper {
     SymbolUse(name, pos(offset))
 
   def scope(entries: Symbol*)(children: Scope*): Scope =
-    Scope(entries.map { symbol => symbol.name -> symbol }.toMap, children.toSeq)
+    Scope(entries.toSet, children.toSeq)
 
   def nodeSymbol(name: String, offsets: Int*): Symbol =
     typedSymbol(name, TypeSpec.exact(CTNode), offsets: _*)

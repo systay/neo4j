@@ -235,8 +235,10 @@ sealed trait ProjectionClause extends HorizonClause with SemanticChecking {
     returnItems.semanticCheck
 
   def semanticCheckContinuation(previousScope: Scope): SemanticCheck =
-    returnItems.declareIdentifiers(previousScope) chain
-      orderBy.semanticCheck chain
+    returnItems.declareIdentifiers(previousScope) chain semanticCheckParticles
+
+  def semanticCheckParticles: SemanticCheck =
+    orderBy.semanticCheck chain
       checkSkip chain
       checkLimit
 
@@ -266,7 +268,7 @@ case class With(
 
   private def checkAliasedReturnItems: SemanticState => Seq[SemanticError] = state => returnItems match {
     case li: ReturnItems => li.items.filter(!_.alias.isDefined).map(i => SemanticError("Expression in WITH must be aliased (use AS)", i.position))
-    case _                     => Seq()
+    case _               => Seq()
   }
 }
 
@@ -280,6 +282,13 @@ case class Return(
   def name = "RETURN"
 
   override def semanticCheck = super.semanticCheck chain checkIdentifiersInScope
+
+  override def semanticCheckContinuation(previousScope: Scope): SemanticCheck =
+    (s0: SemanticState) => {
+      val result = super.semanticCheckContinuation(previousScope)(s0)
+      SemanticCheckResult(s0, result.errors)
+    }
+
 
   protected def checkIdentifiersInScope: SemanticState => Seq[SemanticError] = s =>
     if (returnItems.includeExisting && s.currentScope.isEmpty)

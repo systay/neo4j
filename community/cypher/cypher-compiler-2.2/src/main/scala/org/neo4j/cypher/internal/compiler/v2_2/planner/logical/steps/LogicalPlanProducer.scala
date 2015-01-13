@@ -32,10 +32,10 @@ object LogicalPlanProducer {
   def solvePredicate(plan: LogicalPlan, solved: Expression) =
      plan.updateSolved(_.updateGraph(_.addPredicates(solved)))
 
-  def planAggregation(left: LogicalPlan, grouping: Map[String, Expression], aggregation: Map[String, Expression]) =
-    Aggregation(left, grouping, aggregation)(
+  def planAggregation(left: LogicalPlan, grouping: Map[String, Expression], aggregations: Map[String, Expression]) =
+    Aggregation(left, grouping, aggregations)(
       left.solved.updateTailOrSelf(_.withHorizon(
-        AggregatingQueryProjection(groupingKeys = grouping, aggregationExpressions = aggregation)
+        AggregatingQueryProjection(groupingKeys = grouping, aggregationExpressions = aggregations)
       )))
 
   def planAllNodesScan(idName: IdName, argumentIds: Set[IdName]) =

@@ -41,8 +41,8 @@ class NormalizeReturnClausesTest extends CypherFunSuite with RewriteTest {
         |RETURN n.foo AS foo, n.bar ORDER BY foo SKIP 2 LIMIT 5
       """.stripMargin,
       """MATCH n
-        |WITH n.foo AS foo, n.bar AS `  FRESHID31` ORDER BY foo SKIP 2 LIMIT 5
-        |RETURN foo AS foo, `  FRESHID31` AS `n.bar`
+        |WITH n.foo AS `  FRESHID17`, n.bar AS `  FRESHID31` ORDER BY `  FRESHID17` SKIP 2 LIMIT 5
+        |RETURN `  FRESHID17` AS foo, `  FRESHID31` AS `n.bar`
       """.stripMargin)
   }
 
@@ -60,12 +60,21 @@ class NormalizeReturnClausesTest extends CypherFunSuite with RewriteTest {
   test("introduce WITH clause for ORDER BY where returning all IDs and additional columns") {
     assertRewrite(
       """MATCH n
-        |RETURN *, n.foo AS bar ORDER BY n.foo SKIP 2 LIMIT 5
-      """.stripMargin,
+        |RETURN *, n.foo AS bar ORDER BY n.foo SKIP 2 LIMIT 5""".stripMargin,
       """MATCH n
-        |WITH *, n.foo AS bar ORDER BY n.foo SKIP 2 LIMIT 5
-        |RETURN *, bar AS bar
-      """.stripMargin)
+        |WITH *, n.foo AS `  FRESHID20` ORDER BY `  FRESHID20` SKIP 2 LIMIT 5
+        |RETURN *, `  FRESHID20` AS bar""".stripMargin
+    )
+  }
+
+  test("introduce WITH clause for ORDER BY where returning all IDs and additional columns 2") {
+    assertRewrite(
+      """MATCH n
+        |RETURN *, n.foo AS bar ORDER BY n.foo + bar SKIP 2 LIMIT 5""".stripMargin,
+      """MATCH n
+        |WITH *, n.foo AS `  FRESHID20` ORDER BY `  FRESHID20` + `  FRESHID20` SKIP 2 LIMIT 5
+        |RETURN *, `  FRESHID20` AS bar""".stripMargin
+    )
   }
 
   protected override def assertRewrite(originalQuery: String, expectedQuery: String) {

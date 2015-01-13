@@ -183,7 +183,7 @@ class PipeExecutionPlanBuilder(clock: Clock, monitors: Monitors) {
         case Aggregation(source, groupingExpressions, aggregatingExpressions) =>
           val p = EagerAggregationPipe(
             buildPipe(source, input),
-            Eagerly.immutableMapValues[String, ast.Expression, commands.expressions.Expression](groupingExpressions, x => x.asCommandExpression),
+            ???,
             Eagerly.immutableMapValues[String, ast.Expression, AggregationExpression](aggregatingExpressions, x => x.asCommandExpression.asInstanceOf[AggregationExpression])
           )()
           p

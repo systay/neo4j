@@ -70,6 +70,7 @@ case object normalizeReturnClauses extends Rewriter {
           val newIdentifier = Identifier(FreshIdNameGenerator.name(i.expression.position))(i.position)
 
           rewrites = rewrites + (returnColumn -> newIdentifier)
+          rewrites = rewrites + (i.expression -> newIdentifier)
 
           (AliasedReturnItem(i.expression, newIdentifier)(i.position), AliasedReturnItem(newIdentifier, returnColumn)(i.position))
       }.unzip

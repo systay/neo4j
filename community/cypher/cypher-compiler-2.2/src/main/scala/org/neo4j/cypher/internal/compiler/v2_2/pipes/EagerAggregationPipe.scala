@@ -32,7 +32,7 @@ import scala.collection.mutable.{Map => MutableMap}
 // Eager aggregation means that this pipe will eagerly load the whole resulting sub graphs before starting
 // to emit aggregated results.
 // Cypher is lazy until it can't - this pipe will eagerly load the full match
-case class EagerAggregationPipe(source: Pipe, keyExpressions: Map[String, Expression], aggregations: Map[String, AggregationExpression])
+case class EagerAggregationPipe(source: Pipe, keyNames: Seq[String], aggregations: Map[String, AggregationExpression])
                                (val estimatedCardinality: Option[Long] = None)
                                (implicit pipeMonitor: PipeMonitor) extends PipeWithSource(source, pipeMonitor) with RonjaPipe {
 
@@ -43,16 +43,15 @@ case class EagerAggregationPipe(source: Pipe, keyExpressions: Map[String, Expres
       case (id, exp) => id -> exp.getType(source.symbols)
     }
 
-    val keyIdentifiers = keyExpressions.map(typeExtractor)
-    val aggrIdentifiers = aggregations.map(typeExtractor)
+    val identifierKeyType = keyNames.map(id => id -> source.symbols.identifiers(id)).toMap
+    val aggregationKeyTypeInfo = aggregations.map(typeExtractor)
 
-    SymbolTable(keyIdentifiers ++ aggrIdentifiers)
+    SymbolTable(identifierKeyType ++ aggregationKeyTypeInfo)
   }
 
   protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState) = {
     // This is the temporary storage used while the aggregation is going on
     val result = MutableMap[NiceHasher, (ExecutionContext, Seq[AggregationFunction])]()
-    val keyNames: Seq[String] = keyExpressions.map(_._1).toSeq
     val aggregationNames: Seq[String] = aggregations.map(_._1).toSeq
     val mapSize = keyNames.size + aggregationNames.size
 
@@ -78,7 +77,7 @@ case class EagerAggregationPipe(source: Pipe, keyExpressions: Map[String, Expres
     }
 
     input.foreach(ctx => {
-      val groupValues: NiceHasher = new NiceHasher(keyNames.map { keyName => keyExpressions(keyName)(ctx)(state) })
+      val groupValues: NiceHasher = new NiceHasher(keyNames.map(ctx))
       val aggregateFunctions: Seq[AggregationFunction] = aggregations.map(_._2.createAggregationFunction).toSeq
       val (_, functions) = result.getOrElseUpdate(groupValues, (ctx, aggregateFunctions))
       functions.foreach(func => func(ctx)(state))
@@ -93,7 +92,7 @@ case class EagerAggregationPipe(source: Pipe, keyExpressions: Map[String, Expres
     }
   }
 
-  def planDescription = source.planDescription.andThen(this, "EagerAggregation", identifiers, Arguments.KeyNames(keyExpressions.keys.toSeq))
+  def planDescription = source.planDescription.andThen(this, "EagerAggregation", identifiers, Arguments.KeyNames(keyNames))
 
   override def effects = Effects.NONE
 
@@ -102,7 +101,7 @@ case class EagerAggregationPipe(source: Pipe, keyExpressions: Map[String, Expres
     copy(source = source)(estimatedCardinality)
   }
 
-  override def localEffects = keyExpressions.effects
+  override def localEffects = aggregations.effects
 
   def withEstimatedCardinality(estimated: Long) = copy()(Some(estimated))
 }

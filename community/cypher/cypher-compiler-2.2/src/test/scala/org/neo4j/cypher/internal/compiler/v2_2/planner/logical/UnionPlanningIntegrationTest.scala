@@ -65,7 +65,7 @@ class UnionPlanningIntegrationTest extends CypherFunSuite with LogicalPlanningTe
           )(PlannerQuery.empty)
         )(PlannerQuery.empty),
         groupingExpressions = Map("a" -> ident("a")),
-        aggregationExpression = Map.empty
+        aggregations = Map.empty
       )(PlannerQuery.empty)
     )
   }

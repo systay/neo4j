@@ -33,11 +33,18 @@ case class Query(periodicCommitHint: Option[PeriodicCommitHint], part: QueryPart
 }
 
 sealed trait QueryPart extends ASTNode with ASTPhrase with SemanticCheckable {
+  def returnColumns: Option[Seq[String]]
   def containsUpdates: Boolean
 }
 
 case class SingleQuery(clauses: Seq[Clause])(val position: InputPosition) extends QueryPart {
   assert(clauses.nonEmpty)
+
+  def returnColumns: Option[Seq[String]] = clauses.last match {
+    case Return(_, ReturnItems(false, items), _, _, _) => Some(items.map(_.name))
+    case Return(_, ReturnItems(true, _), _, _, _)      => None
+    case _                                             => Some(Seq.empty)
+  }
 
   def containsUpdates:Boolean =
     clauses.exists {
@@ -118,6 +125,12 @@ sealed trait Union extends QueryPart with SemanticChecking {
   def part: QueryPart
   def query: SingleQuery
 
+  def returnColumns: Option[Seq[String]] = {
+    val lhs = query.returnColumns
+    val rhs = part.returnColumns
+    if (lhs.isDefined && rhs.isDefined) lhs else None
+  }
+
   def containsUpdates:Boolean = part.containsUpdates || query.containsUpdates
 
   def semanticCheck: SemanticCheck =
@@ -127,23 +140,15 @@ sealed trait Union extends QueryPart with SemanticChecking {
     checkColumnNamesAgree
 
   private def checkColumnNamesAgree: SemanticCheck = (state: SemanticState) => {
-    val rootScope: Scope = state.currentScope.scope
+    val lhs = query.returnColumns
+    val rhs = part.returnColumns
 
-    // UNION queries form a chain in the shape of a reversed linked list.
-    // Therefore, the second scope is always a shallow scope, where the last one corresponds to the RETURN clause.
-    // The first one may either be another UNION query part or a single query.
-    val first :: second :: Nil = rootScope.children
-    val newFirst = part match {
-      case _: Union => // Union query parts always have two child scopes.
-        val _ :: newFirst :: Nil = first.children
-        newFirst
-      case _ => first
-    }
-    val errors = if (newFirst.children.last.symbolNames == second.children.last.symbolNames) {
-      Seq.empty
-    } else {
-      Seq(SemanticError("All sub queries in an UNION must have the same column names", position))
-    }
+    val errors =
+      if (lhs.isDefined && rhs.isDefined && lhs != rhs)
+        Seq(SemanticError("All sub queries in an UNION must have the same column names", position))
+      else
+        Seq.empty
+
     SemanticCheckResult(state, errors)
   }
 

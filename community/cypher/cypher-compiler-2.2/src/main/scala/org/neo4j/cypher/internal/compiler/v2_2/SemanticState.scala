@@ -58,15 +58,12 @@ case class ExpressionTypeInfo(specified: TypeSpec, expected: Option[TypeSpec] = 
 
 
 object Scope {
-  val empty = Scope(symbolTable = HashMap.empty, children = Vector())
+  val empty = new Scope(symbols = Set.empty, children = Vector())
 }
 
-case class Scope(symbolTable: Map[String, Symbol], children: Seq[Scope]) extends TreeElem[Scope] {
+case class Scope(symbols: Set[Symbol], children: Seq[Scope]) extends TreeElem[Scope] {
 
-  symbolTable.collect {
-    case (k, v) if k != v.name =>
-      throw new InternalException(s"Malformed symbol table entry $k -> $v")
-  }
+  val symbolTable = symbols.map { case symbol => symbol.name -> symbol }.toMap
 
   override def updateChildren(newChildren: Seq[Scope]): Scope = copy(children = newChildren)
 
@@ -77,12 +74,15 @@ case class Scope(symbolTable: Map[String, Symbol], children: Seq[Scope]) extends
   def symbolNames: Set[String] = symbolTable.keySet
 
   def importScope(other: Scope, exclude: Set[String] = Set.empty) = {
-    val otherSymbols = other.symbolTable -- exclude
-    copy(symbolTable = symbolTable ++ otherSymbols)
+    val otherSymbols = other.symbols.filterNot( sym => exclude(sym.name) )
+    copy(symbols = symbols ++ otherSymbols)
   }
 
-  def updateIdentifier(identifier: String, types: TypeSpec, positions: Set[InputPosition]) =
-    copy(symbolTable = symbolTable.updated(identifier, Symbol(identifier, positions, types)))
+  def updateIdentifier(identifierName: String, types: TypeSpec, positions: Set[InputPosition]) = {
+    val newSymbol = Symbol(identifierName, positions, types)
+    val newSymbols = symbolTable.updated(identifierName, newSymbol).values.toSet
+    copy(symbols = newSymbols)
+  }
 
   def allSymbolDefinitions: Map[String, Set[SymbolUse]] =
     allScopes.foldLeft(Map.empty[String, Set[SymbolUse]]) {
@@ -96,13 +96,13 @@ case class Scope(symbolTable: Map[String, Symbol], children: Seq[Scope]) extends
     }
 
   def symbolDefinitions: Set[SymbolUse] =
-    symbolTable.values.map(_.definition).toSet
+    symbols.map(_.definition).toSet
 
   def allIdentifierDefinitions: Map[SymbolUse, SymbolUse] =
     allScopes.map(_.identifierDefinitions).reduce(_ ++ _)
 
   def identifierDefinitions: Map[SymbolUse, SymbolUse] =
-    symbolTable.values.flatMap { symbol =>
+    symbols.flatMap { symbol =>
       val name = symbol.name
       val definition = symbol.definition
       symbol.positions.map { pos => SymbolUse(name, pos) -> definition }

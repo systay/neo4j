@@ -31,6 +31,9 @@ object Namespacer {
   type IdentifierRenamings = Map[Ref[Identifier], Identifier]
 
   def apply(statement: Statement, table: SemanticTable, scopeTree: Scope): Namespacer = {
+    // TODO: Make sure no two symbols with the same name and different definitions contain the same input position
+    // (i.e. no identifier is mapped to different definitions by separate symbols)
+    //
     val ambiguousNames = shadowedNames(scopeTree)
     val identifierDefinitions = scopeTree.allIdentifierDefinitions
     val protectedIdentifiers = returnAliases(statement)
@@ -40,10 +43,7 @@ object Namespacer {
   }
 
   def shadowedNames(scopeTree: Scope): Set[String] = {
-    val cleanScopeTree =
-      scopeTree.copy(children = scopeTree.children.dropRight(1)) // HACK! This is the last RETURN clause, and should not be used to find shadowed identifiers
-
-    val definitions = cleanScopeTree.allSymbolDefinitions
+    val definitions = scopeTree.allSymbolDefinitions
 
     definitions.collect {
       case (name, symbolDefinitions) if symbolDefinitions.size > 1 => name

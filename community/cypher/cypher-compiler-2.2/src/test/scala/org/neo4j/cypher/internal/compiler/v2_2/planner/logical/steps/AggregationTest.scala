@@ -99,7 +99,7 @@ class AggregationTest extends CypherFunSuite with LogicalPlanningTestSupport {
       planAggregation(
         left = projectionPlan,
         grouping = groupingKeyMap,
-        aggregation = aggregatingMap)
+        aggregations = aggregatingMap)
     )
   }
 }

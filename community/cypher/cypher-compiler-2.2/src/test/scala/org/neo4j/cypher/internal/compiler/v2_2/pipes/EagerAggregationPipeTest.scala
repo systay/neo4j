@@ -102,6 +102,24 @@ class EagerAggregationPipeTest extends CypherFunSuite {
     getResults(aggregationPipe) should equal(List(Map("count(name)" -> 3)))
   }
 
+  test("should handle renamed key columns") {
+    val source = new FakePipe(List(
+      Map("name" -> "Andres", "age" -> 36),
+      Map("name" -> null, "age" -> 38),
+      Map("name" -> "Michael", "age" -> 36),
+      Map("name" -> "Michael", "age" -> 31)), createSymbolTableFor("name"))
+
+    val returnItems = Map("name" -> LengthFunction(Identifier("name")))
+    val grouping = Map("count(*)" -> CountStar())
+    val aggregationPipe = new EagerAggregationPipe(source, returnItems, grouping)()
+
+    getResults(aggregationPipe).toSet should equal(Set(
+      Map("name" -> 5, "count(*)" -> 1),
+      Map("name" -> null, "count(*)" -> 1),
+      Map("name" -> 7, "count(*)" -> 2))
+    )
+  }
+
   private def createSymbolTableFor(name: String) = name -> CTNode
 
   private def getResults(p: Pipe) = p.createResults(QueryStateHelper.empty).map(_.m.toMap).toList

@@ -25,10 +25,6 @@ import org.neo4j.cypher.internal.compiler.v2_2.symbols._
 
 case class Identifier(name: String)(val position: InputPosition) extends Expression {
 
-  if (name == "1") {
-    println("")
-  }
-
   def renamed(newName: String) = copy(name = newName)(position)
 
   def toSymbolUse = SymbolUse(name, position)

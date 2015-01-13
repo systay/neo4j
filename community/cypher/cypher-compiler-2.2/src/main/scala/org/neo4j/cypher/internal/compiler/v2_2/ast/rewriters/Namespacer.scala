@@ -39,10 +39,16 @@ object Namespacer {
     result
   }
 
-  def shadowedNames(scopeTree: Scope): Set[String] =
-    scopeTree.allSymbolDefinitions.collect {
+  def shadowedNames(scopeTree: Scope): Set[String] = {
+    val cleanScopeTree =
+      scopeTree.copy(children = scopeTree.children.dropRight(1)) // HACK! This is the last RETURN clause, and should not be used to find shadowed identifiers
+
+    val definitions = cleanScopeTree.allSymbolDefinitions
+
+    definitions.collect {
       case (name, symbolDefinitions) if symbolDefinitions.size > 1 => name
     }.toSet
+  }
 
   def returnAliases(statement: Statement): Set[Ref[Identifier]] =
     statement.treeFold(Set.empty[Ref[Identifier]]) {

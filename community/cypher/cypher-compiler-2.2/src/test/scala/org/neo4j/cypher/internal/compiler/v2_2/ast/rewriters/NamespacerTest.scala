@@ -20,42 +20,42 @@
 package org.neo4j.cypher.internal.compiler.v2_2.ast.rewriters
 
 import org.neo4j.cypher.internal.commons.CypherFunSuite
-import org.neo4j.cypher.internal.compiler.v2_2.ast.{ASTAnnotationMap, Identifier, Statement}
-import org.neo4j.cypher.internal.compiler.v2_2.planner.SemanticTable
-import org.neo4j.cypher.internal.compiler.v2_2._
 import org.neo4j.cypher.internal.compiler.v2_2.ScopeHelper._
+import org.neo4j.cypher.internal.compiler.v2_2._
+import org.neo4j.cypher.internal.compiler.v2_2.ast.{ASTAnnotationMap, Identifier, Statement}
 import org.neo4j.cypher.internal.compiler.v2_2.parser.ParserFixture.parser
+import org.neo4j.cypher.internal.compiler.v2_2.planner.SemanticTable
 
 class NamespacerTest extends CypherFunSuite {
 
   val tests = Seq(
-    "match n return n as n" ->
-    "match n return n as n"
-    ,
-    "match n, x with n as n match x return n as n, x as x" ->
-    "match n, `  x@9` with n as n match `  x@29` return n as n, `  x@29` as x"
-    ,
-    "match n, x where [x in n.prop where x = 2] return x as x" ->
-    "match n, `  x@9` where [`  x@18` in n.prop where `  x@18` = 2] return `  x@9` as x"
-    ,
-    "MATCH (a) WITH a.bar as bars WHERE 1 = 2 RETURN *" ->
-    "MATCH (a) WITH a.bar as bars WHERE 1 = 2 RETURN *"
-    ,
-    "match (n) where id(n) = 0 WITH collect(n) as coll where length(coll)={id} RETURN coll" ->
-    "match (n) where id(n) = 0 WITH collect(n) as coll where length(coll)={id} RETURN coll"
-    ,
-    "match me-[r1]->you with 1 AS x match me-[r1]->food<-[r2]-you return r1.times as `r1.times`" ->
-    "match `  me@6`-[`  r1@10`]->`  you@15` with 1 AS x match `  me@37`-[`  r1@41`]->food<-[r2]-`  you@57` return `  r1@41`.times as `r1.times`"
-    ,
-    "MATCH (a:A)-[r1:T1]->(b:B)-[r2:T1]->(c:C) RETURN *" ->
-    "MATCH (a:A)-[r1:T1]->(b:B)-[r2:T1]->(c:C) RETURN *"
-    ,
-    "match (a:Party) return a as a union match (a:Animal) return a as a" ->
-    "match (`  a@7`:Party) return `  a@7` as a union match (`  a@43`:Animal) return `  a@43` as a"
-    ,
-    "match p=(a:Start)-->b return *" ->
-    "match p=(a:Start)-->b return *"
-
+//    "match n return n as n" ->
+//    "match n return n as n"
+//    ,
+//    "match n, x with n as n match x return n as n, x as x" ->
+//    "match n, `  x@9` with n as n match `  x@29` return n as n, `  x@29` as x"
+//    ,
+//    "match n, x where [x in n.prop where x = 2] return x as x" ->
+//    "match n, `  x@9` where [`  x@18` in n.prop where `  x@18` = 2] return `  x@9` as x"
+//    ,
+//    "MATCH (a) WITH a.bar as bars WHERE 1 = 2 RETURN *" ->
+//    "MATCH (a) WITH a.bar as bars WHERE 1 = 2 RETURN *"
+//    ,
+//    "match (n) where id(n) = 0 WITH collect(n) as coll where length(coll)={id} RETURN coll" ->
+//    "match (n) where id(n) = 0 WITH collect(n) as coll where length(coll)={id} RETURN coll"
+//    ,
+//    "match me-[r1]->you with 1 AS x match me-[r1]->food<-[r2]-you return r1.times as `r1.times`" ->
+//    "match `  me@6`-[`  r1@10`]->`  you@15` with 1 AS x match `  me@37`-[`  r1@41`]->food<-[r2]-`  you@57` return `  r1@41`.times as `r1.times`"
+//    ,
+//    "MATCH (a:A)-[r1:T1]->(b:B)-[r2:T1]->(c:C) RETURN *" ->
+//    "MATCH (a:A)-[r1:T1]->(b:B)-[r2:T1]->(c:C) RETURN *"
+//    ,
+//    "match (a:Party) return a as a union match (a:Animal) return a as a" ->
+//    "match (`  a@7`:Party) return `  a@7` as a union match (`  a@43`:Animal) return `  a@43` as a"
+//    ,
+//    "match p=(a:Start)-->b return *" ->
+//    "match p=(a:Start)-->b return *"
+//    ,
 //  """match me-[r1:ATE]->food<-[r2:ATE]-you where id(me) = 1
 //    |with me,count(distinct r1) as H1,count(distinct r2) as H2,you match me-[r1:ATE]->food<-[r2:ATE]-you
 //    |return me,you,sum((1-ABS(r1.times/H1-r2.times/H2))*(r1.times+r2.times)/(H1+H2))""".stripMargin ->
@@ -63,8 +63,8 @@ class NamespacerTest extends CypherFunSuite {
 //  """match me-[r1:ATE]->food<-[r2:ATE]-you where id(me) = 1
 //    |with me,count(distinct r1) as H1,count(distinct r2) as H2,you match me-[r1:ATE]->food<-[r2:ATE]-you
 //    |return me,you,sum((1-ABS(r1.times/H1-r2.times/H2))*(r1.times+r2.times)/(H1+H2))""".stripMargin
-
-  //  """MATCH (person:Person       )<-                                -(message)<-[like]-(liker:Person)
+//    ,
+//    """MATCH (person:Person       )<-                                -(message)<-[like]-(liker:Person)
 //    |WITH                 like.creationDate AS likeTime, person AS person
 //    |ORDER BY likeTime         , message.id
 //    |WITH        head(collect({              likeTime: likeTime})) AS latestLike, person AS person
@@ -77,7 +77,7 @@ class NamespacerTest extends CypherFunSuite {
 //    |WITH latestLike.likeTime AS `  likeTime@328`
 //    |ORDER BY `  likeTime@328`
 //    |RETURN `  likeTime@328` AS likeTime""".stripMargin
-
+//  ,
 //  """MATCH (person:Person       )<-                               -(message)<-[like]-(liker:Person)
 //    |WITH                 like.creationDate AS likeTime, person AS person
 //    |ORDER BY likeTime         , message.id

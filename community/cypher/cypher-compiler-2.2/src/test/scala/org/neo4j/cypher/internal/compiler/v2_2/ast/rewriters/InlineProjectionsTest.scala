@@ -382,6 +382,31 @@ class InlineProjectionsTest extends CypherFunSuite with AstRewritingTestSupport 
       """.stripMargin))
   }
 
+  test("should not inline expressions used many times: WITH 1 as a MATCH (a) RETURN a => WITH 1 as a MATCH (a) RETURN a AS a") {
+    val result = projectionInlinedAst(
+      """WITH 1 as x
+        |MATCH (a) WHERE a.prop = x OR a.bar > x
+        |RETURN a, x""".stripMargin)
+
+    result should equal(ast(
+      """WITH 1 as x
+        |MATCH (a) WHERE a.prop = x OR a.bar > x
+        |RETURN a, x""".stripMargin))
+  }
+
+  test("apa") {
+   val result = projectionInlinedAst("MATCH (u)-[r1]->(v) WITH r1 AS r2 MATCH (a)-[r2]->(b) RETURN r2 AS rel")
+
+    result should equal(ast("MATCH (u)-[r1]->(v) WITH r1 AS r2 MATCH (a)-[r2]->(b) RETURN r2 AS rel"))
+  }
+
+  test("apa2") {
+   val result = projectionInlinedAst("MATCH (u)-[r1]->(v) WITH r1 AS r2, rand() AS c ORDER BY c MATCH (a)-[r2]->(b) RETURN r2 AS rel")
+
+    result should equal(ast("MATCH (u)-[r1]->(v) WITH r1 AS r2, rand() AS c ORDER BY c MATCH (a)-[r2]->(b) RETURN r2 AS rel"))
+  }
+
+
   private def projectionInlinedAst(queryText: String) = ast(queryText).endoRewrite(inlineProjections)
 
   private def ast(queryText: String) = {

@@ -23,7 +23,12 @@ import org.neo4j.cypher.internal.compiler.v2_2._
 import org.neo4j.cypher.internal.compiler.v2_2.ast._
 import org.neo4j.cypher.internal.compiler.v2_2.bottomUp.BottomUpRewriter
 
-case class InliningContext(projections: Map[Identifier, Expression] = Map.empty, seenIdentifiers: Set[Identifier] = Set.empty) {
+case class InliningContext(projections: Map[Identifier, Expression] = Map.empty,
+                           seenIdentifiers: Set[Identifier] = Set.empty,
+                           usageCount: Map[Identifier, Int] = Map.empty) {
+
+  def seenIdentifier(id: Identifier) =
+    copy(usageCount = usageCount + (id -> (usageCount.getOrElse(id, -1) + 1)))
 
   def enterQueryPart(newProjections: Map[Identifier, Expression]): InliningContext = {
     val inlineExpressions = TypedRewriter[Expression](identifierRewriter)
@@ -47,9 +52,16 @@ case class InliningContext(projections: Map[Identifier, Expression] = Map.empty,
     copy(projections = projections - identifier)
 
   def identifierRewriter: BottomUpRewriter = bottomUp(Rewriter.lift {
-    case identifier: Identifier =>
+    case identifier: Identifier if okToRewrite(identifier) =>
       projections.getOrElse(identifier, identifier)
   })
+
+  def okToRewrite(i: Identifier) = {
+    val a = projections.contains(i)
+    val b = usageCount.getOrElse(i, 0) < 2
+
+    a && b
+  }
 
   def patternRewriter: BottomUpRewriter = bottomUp(Rewriter.lift {
     case node @ NodePattern(Some(ident), _, _, _) =>

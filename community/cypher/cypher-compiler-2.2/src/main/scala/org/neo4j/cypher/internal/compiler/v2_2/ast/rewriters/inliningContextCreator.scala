@@ -27,18 +27,34 @@ object inliningContextCreator extends (ast.Statement => InliningContext) {
   def apply(input: ast.Statement): InliningContext = {
     input.treeFold(InliningContext()) {
       case withClause: With if !withClause.distinct =>
-        (context, children) => children(context.enterQueryPart(aliasedReturnItems(withClause.returnItems.items)))
+        (context, children) =>
+          children(context.enterQueryPart(aliasedReturnItems(withClause.returnItems.items)))
+
+      case AliasedReturnItem(Identifier(n1), alias@Identifier(n2)) if n1 == n2 =>
+        (context, children) =>
+          context
+
+      case identifier: Identifier =>
+        (context, children) =>
+          children(context.seenIdentifier(identifier))
 
       case sortItem: SortItem =>
-        (context, children) => children(context.spoilIdentifier(sortItem.expression.asInstanceOf[Identifier]))
+        (context, children) =>
+          children(context.spoilIdentifier(sortItem.expression.asInstanceOf[Identifier]))
 
       case NodePattern(Some(identifier), _, _, _) =>
         (context, children) =>
-          if (context.alias(identifier).isEmpty) children(context.spoilIdentifier(identifier)) else children(context)
+          if (context.alias(identifier).isEmpty)
+            children(context.spoilIdentifier(identifier))
+          else
+            children(context)
 
       case RelationshipPattern(Some(identifier), _, _, _, _, _) =>
         (context, children) =>
-          if (context.alias(identifier).isEmpty) children(context.spoilIdentifier(identifier)) else children(context)
+          if (context.alias(identifier).isEmpty)
+            children(context.spoilIdentifier(identifier))
+          else
+            children(context)
     }
   }
 

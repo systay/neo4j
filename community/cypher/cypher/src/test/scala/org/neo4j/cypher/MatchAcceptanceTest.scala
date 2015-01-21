@@ -1778,4 +1778,123 @@ return b
     //THEN
     result.toList should equal (List(Map("host" -> host), Map("host" -> null)))
   }
+
+  test("apa") {
+    val r = execute("""  MATCH
+              |    (u:user { id: { p01 } }), (p:project { id: { p02 } })
+              |  WITH u, p
+              |
+              |  MATCH
+              |    (u)-[:CONTACT]->(c:contact)
+              |  WITH c, p
+              |
+              |  OPTIONAL MATCH
+              |    (c)-[:CONTACT*1..3]->(r:projectrole)-[:CONTACT*0..2]->(:projectcontacts)-->(p)
+              |  WITH p, COLLECT({accessedby: c.id, accessedrole: r.name}) AS rs
+              |  WITH p, (
+              |    CASE
+              |    WHEN ANY(r IN rs WHERE r.accessedrole = "ProjectAdmins")
+              |      THEN HEAD(FILTER(r IN rs WHERE r.accessedrole = "ProjectAdmins"))
+              |    WHEN ANY(r IN rs WHERE r.accessedrole = "ProjectClients")
+              |      THEN HEAD(FILTER(r IN rs WHERE r.accessedrole = "ProjectClients"))
+              |    WHEN ANY(r IN rs WHERE r.accessedrole = "ProjectContacts")
+              |      THEN HEAD(FILTER(r IN rs WHERE r.accessedrole = "ProjectContacts"))
+              |    ELSE HEAD(rs)
+              |    END
+              |    ) AS r
+              |
+              |  OPTIONAL MATCH (p)-[:CREATED]->(a:activity)
+              |  WITH p, {
+              |    accessedrole: r.accessedrole,
+              |    accessedby: r.accessedby,
+              |    createdat: a.createdat,
+              |    createdby: {id: a.contactid, object: "contact"}
+              |    } AS r
+              |
+              |  OPTIONAL MATCH (p)-[:HISTORY]->(a:activity)
+              |  WITH p, {
+              |    accessedrole: r.accessedrole,
+              |    accessedby: r.accessedby,
+              |    createdat: r.createdat,
+              |    createdby: r.createdby,
+              |    updatedat: a.createdat,
+              |    updatedby: {id: a.contactid, object: "contact"}
+              |    } AS r
+              |
+              |  WITH DISTINCT p, r
+              |
+              |  OPTIONAL MATCH (c:contact)-[:CONTACT]->(:projectadmins)-[:CONTACT*1..3]->p
+              |  WITH p, COLLECT(c) AS cs, r
+              |  WITH p, {
+              |    accessedrole: r.accessedrole, accessedby: r.accessedby,
+              |    createdat: r.createdat, createdby: r.createdby,
+              |    updatedat: r.updatedat, updatedby: r.updatedby,
+              |    admins: [c in cs | {id: c.id, object: c.object}]
+              |    } AS r
+              |
+              |  OPTIONAL MATCH (c:contact)-[:CONTACT]->(:projectclients)-[:CONTACT*1..3]->p
+              |  WITH p, COLLECT(c) AS cs, r
+              |  WITH p, {
+              |    accessedrole: r.accessedrole, accessedby: r.accessedby,
+              |    createdat: r.createdat, createdby: r.createdby,
+              |    updatedat: r.updatedat, updatedby: r.updatedby,
+              |    admins: r.admins,
+              |    clients: [c in cs | {id: c.id, object: c.object}]
+              |    } AS r
+              |
+              |  OPTIONAL MATCH (c:contact)-[:CONTACT]->(:projectcontacts)-[:CONTACT*1..3]->p
+              |  WITH p, COLLECT(c) AS cs, r
+              |  WITH p, {
+              |    accessedrole: r.accessedrole, accessedby: r.accessedby,
+              |    createdat: r.createdat, createdby: r.createdby,
+              |    updatedat: r.updatedat, updatedby: r.updatedby,
+              |    admins: r.admins, clients: r.clients,
+              |    contacts: [c in cs | {id: c.id, object: c.object}]
+              |    } AS r
+              |
+              |  OPTIONAL MATCH (p)-[:AREA]->(:areas)-[:AREA]->(x:area)
+              |  WITH p, COLLECT(x) AS xs, r
+              |  WITH p, {
+              |    accessedrole: r.accessedrole, accessedby: r.accessedby,
+              |    createdat: r.createdat, createdby: r.createdby,
+              |    updatedat: r.updatedat, updatedby: r.updatedby,
+              |    admins: r.admins, clients: r.clients, contacts: r.contacts,
+              |    areas: [a IN xs | {id: a.id, object: a.object, name: a.name,
+              |      description: a.description, abbr: a.abbr }]
+              |    } AS r
+              |
+              |  OPTIONAL MATCH p-[:PROJECTPHASE|TAG]->(x)
+              |  WITH p, COLLECT(x) AS xs, r
+              |  WITH p, {
+              |    accessedrole: r.accessedrole, accessedby: r.accessedby,
+              |    createdat: r.createdat, createdby: r.createdby,
+              |    updatedat: r.updatedat, updatedby: r.updatedby,
+              |    admins: r.admins, clients: r.clients, contacts: r.contacts,
+              |    areas: r.areas,
+              |    projectphase: HEAD([x in xs WHERE x.object = "projectphase" | {id: x.id,
+              |      object: x.object, teamid: x.teamid, name: x.name,
+              |      description: x.description, color: x.color }]),
+              |    tags: [x in xs WHERE x.object = "tag" | {id: x.id, object: x.object, name: x.name}]
+              |    } AS r
+              |
+              |  RETURN COLLECT({
+              |    id: p.id, object: p.object, status: p.status,
+              |    teamid: p.teamid, no: p.no, name: p.name, description: p.description,
+              |    street: p.street, locality: p.locality, region: p.region,
+              |    postcode: p.postcode, country: p.country, neighborhood: p.neighborhood,
+              |    latlnglocation: p.latlnglocation,
+              |    imageurl: p.imageurl, workhours: p.workhours, startat: p.startat,
+              |    endat: p.endat, budget: p.budget, isfixedcost: p.isfixedcost,
+              |    deposit: p.deposit, depositreceivedat: p.depositreceivedat,
+              |    depositnote: p.depositnote, timezone: p.timezone,
+              |    materialmarkup: p.materialmarkup, isbid: p.isbid, salestax: p.salestax,
+              |    notes: p.notes, terms: p.terms,
+              |    accessedrole: r.accessedrole, accessedby: r.accessedby,
+              |    createdat: r.createdat, createdby: r.createdby,
+              |    updatedat: r.updatedat, updatedby: r.updatedby,
+              |    admins: r.admins, clients: r.clients, contacts: r.contacts,
+              |    areas: r.areas, projectphase: r.projectphase, tags: r.tags
+              |    }) AS r""".stripMargin)
+    println(r.executionPlanDescription())
+  }
 }

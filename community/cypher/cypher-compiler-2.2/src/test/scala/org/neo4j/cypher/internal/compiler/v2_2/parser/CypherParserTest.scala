@@ -317,6 +317,24 @@ class CypherParserTest extends CypherFunSuite {
     )
   }
 
+  test("should translate ILIKE to a regular expression") {
+    expectQuery(
+      "RETURN 'Pontus' ILIKE 'Pont%' as result",
+      Query.
+        matches().
+        returns(ReturnItem(LiteralRegularExpression(Literal("Pontus"), Literal("""(?i)\QPont\E.*""")), "result"))
+    )
+  }
+
+  test("should translate NOT ILIKE to a negated regular expression") {
+    expectQuery(
+      "RETURN 'Pontus' NOT ILIKE 'Pont%' as result",
+      Query.
+        matches().
+        returns(ReturnItem(Not(LiteralRegularExpression(Literal("Pontus"), Literal("""(?i)\QPont\E.*"""))), "result"))
+    )
+  }
+
   test("shouldHandleMultipleRegularComparison") {
     expectQuery(
       """start a = node(1) where a.name =~ 'And.*' AnD a.name =~ 'And.*' return a""",

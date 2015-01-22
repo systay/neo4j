@@ -27,7 +27,8 @@ import java.util.regex.Pattern.quote
 case object convertLikeToRegex {
   private val QUOTE_PATTERN = """^\\Q.*\\E$""".r.pattern
 
-  def apply(in: ParsedLike): String = in.ops.map(convert).mkString
+  def apply(in: ParsedLike, caseInsensitive: Boolean = false): String =
+    in.ops.map(convert).mkString(if (caseInsensitive) "(?i)" else "", "", "")
 
   private def convert(in: LikeOp): String = in match {
     case StringSegment(s) => if (isQuoted(s)) s else quote(s)

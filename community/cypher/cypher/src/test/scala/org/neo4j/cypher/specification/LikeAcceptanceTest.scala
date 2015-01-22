@@ -49,6 +49,12 @@ class LikeAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTes
     result.toList should equal(Seq(Map("a" -> aNode)))
   }
 
+  test("finds case insensitive matches") {
+    val result = executeWithNewPlanner("MATCH (a) WHERE a.name ILIKE 'ABCDEF' RETURN a")
+
+    result.toList should equal(Seq(Map("a" -> aNode), Map("a" -> cNode)))
+  }
+
   test("start of string") {
     val result = executeWithNewPlanner("MATCH (a) WHERE a.name LIKE 'ABC%' RETURN a")
 
@@ -59,6 +65,18 @@ class LikeAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTes
     val result = executeWithNewPlanner("MATCH (a) WHERE a.name LIKE '%DEF' RETURN a")
 
     result.toList should equal(Seq(Map("a" -> aNode)))
+  }
+
+  test("case insensitive start of string") {
+    val result = executeWithNewPlanner("MATCH (a) WHERE a.name ILIKE 'ABC%' RETURN a")
+
+    result.toList should equal(Seq(Map("a" -> aNode), Map("a" -> cNode)))
+  }
+
+  test("case insensitive end of string1") {
+    val result = executeWithNewPlanner("MATCH (a) WHERE a.name ILIKE '%DEF' RETURN a")
+
+    result.toList should equal(Seq(Map("a" -> aNode), Map("a" -> cNode)))
   }
 
   test("end of string2") {
@@ -101,6 +119,18 @@ class LikeAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTes
 
   test("NOT LIKE against a null value returns no matches") {
     val result = executeWithNewPlanner("MATCH (a) WHERE a.name NOT LIKE NULL RETURN a")
+
+    result.toList shouldBe empty
+  }
+
+  test("ILIKE against a null value returns no matches") {
+    val result = executeWithNewPlanner("MATCH (a) WHERE a.name ILIKE NULL RETURN a")
+
+    result.toList shouldBe empty
+  }
+
+  test("NOT ILIKE against a null value returns no matches") {
+    val result = executeWithNewPlanner("MATCH (a) WHERE a.name NOT ILIKE NULL RETURN a")
 
     result.toList shouldBe empty
   }
@@ -190,5 +220,11 @@ class LikeAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTes
     val result = executeWithNewPlanner("MATCH (a) WHERE a.name NOT LIKE '%b%' RETURN a")
 
     result.toList should equal(Seq(Map("a" -> aNode), Map("a" -> bNode), Map("a" -> eNode)))
+  }
+
+  test("NOT can be used infix for ILIKE") {
+    val result = executeWithNewPlanner("MATCH (a) WHERE a.name NOT ILIKE '%b%' RETURN a")
+
+    result.toList should equal(Seq(Map("a" -> eNode)))
   }
 }

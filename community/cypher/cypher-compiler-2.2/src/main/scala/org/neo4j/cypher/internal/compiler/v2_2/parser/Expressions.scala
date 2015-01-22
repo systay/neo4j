@@ -108,6 +108,8 @@ trait Expressions extends Parser
       | group(keyword("IN") ~~ Expression2) ~~>> (ast.In(_: ast.Expression, _))
       | group(keyword("LIKE") ~~ Expression2) ~~>> (ast.Like(_: ast.Expression, _))
       | group(keyword("NOT LIKE") ~~ Expression2) ~~>> (ast.NotLike(_: ast.Expression, _))
+      | group(keyword("ILIKE") ~~ Expression2) ~~>> (ast.Like(_: ast.Expression, _, true))
+      | group(keyword("NOT ILIKE") ~~ Expression2) ~~>> (ast.NotLike(_: ast.Expression, _, true))
       | keyword("IS NULL") ~~>> (ast.IsNull(_: ast.Expression))
       | keyword("IS NOT NULL") ~~>> (ast.IsNotNull(_: ast.Expression))
     ): ReductionRule1[ast.Expression, ast.Expression])

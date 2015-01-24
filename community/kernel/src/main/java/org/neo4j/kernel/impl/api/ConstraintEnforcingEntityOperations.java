@@ -25,6 +25,8 @@ import org.neo4j.collection.primitive.PrimitiveIntIterator;
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
 import org.neo4j.cursor.Cursor;
 import org.neo4j.graphdb.Direction;
+import org.neo4j.graphdb.Lookup;
+import org.neo4j.kernel.api.Specialization;
 import org.neo4j.kernel.api.constraints.UniquenessConstraint;
 import org.neo4j.kernel.api.exceptions.EntityNotFoundException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
@@ -400,5 +402,29 @@ public class ConstraintEnforcingEntityOperations implements EntityOperations
     {
         return entityReadOperations.expand( statement, inputCursor, nodeId, types, expandDirection,
                 relId, relType, direction, startNodeId, neighborNodeId );
+    }
+
+    @Override
+    public Cursor nodeGetRelationships( KernelStatement statement, long nodeId, Direction direction,
+                                        RelationshipVisitor<? extends RuntimeException> visitor )
+            throws EntityNotFoundException
+    {
+        return entityReadOperations.nodeGetRelationships( statement, nodeId, direction, visitor );
+    }
+
+    @Override
+    public Cursor nodeGetRelationships( KernelStatement statement, long nodeId, Direction direction, int[] types,
+                                        RelationshipVisitor<? extends RuntimeException> visitor )
+            throws EntityNotFoundException
+    {
+        return entityReadOperations.nodeGetRelationships( statement, nodeId, direction, types, visitor );
+    }
+
+    @Override
+    public PrimitiveLongIterator nodesGetFromIndexQuery( KernelStatement statement, IndexDescriptor descriptor,
+                                                         Specialization<Lookup> query )
+            throws IndexNotFoundKernelException
+    {
+        return entityReadOperations.nodesGetFromIndexQuery( statement, descriptor, query );
     }
 }

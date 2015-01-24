@@ -17,36 +17,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.core;
+package org.neo4j.unsafe.impl.batchimport.input;
 
-import org.neo4j.kernel.impl.api.RelationshipVisitor;
-
-public class RelationshipData implements RelationshipVisitor<RuntimeException>
+public class DataException extends InputException
 {
-    private long startNode;
-    private long endNode;
-    private int type;
-
-    public long getStartNode()
+    public DataException( String message )
     {
-        return startNode;
-    }
-
-    public long getEndNode()
-    {
-        return endNode;
-    }
-
-    public int getType()
-    {
-        return type;
-    }
-
-    @Override
-    public void visit( long relIdIgnored, int type, long startNode, long endNode )
-    {
-        this.startNode = startNode;
-        this.endNode = endNode;
-        this.type = type;
+        super( message );
     }
 }

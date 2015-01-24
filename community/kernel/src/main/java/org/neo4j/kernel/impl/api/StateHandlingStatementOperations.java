@@ -32,11 +32,13 @@ import org.neo4j.collection.primitive.PrimitiveLongIterator;
 import org.neo4j.cursor.Cursor;
 import org.neo4j.function.primitive.PrimitiveLongPredicate;
 import org.neo4j.graphdb.Direction;
+import org.neo4j.graphdb.Lookup;
 import org.neo4j.helpers.Predicate;
 import org.neo4j.helpers.ThisShouldNotHappenError;
 import org.neo4j.kernel.api.EntityType;
 import org.neo4j.kernel.api.LegacyIndex;
 import org.neo4j.kernel.api.LegacyIndexHits;
+import org.neo4j.kernel.api.Specialization;
 import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.constraints.UniquenessConstraint;
 import org.neo4j.kernel.api.exceptions.EntityNotFoundException;
@@ -58,6 +60,7 @@ import org.neo4j.kernel.api.index.InternalIndexState;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.api.properties.Property;
 import org.neo4j.kernel.api.properties.PropertyKeyIdIterator;
+import org.neo4j.kernel.api.properties.PropertyPredicate;
 import org.neo4j.kernel.api.txstate.ReadableTxState;
 import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.kernel.impl.api.operations.CountsOperations;
@@ -706,7 +709,7 @@ public class StateHandlingStatementOperations implements
         if ( existingProperty.isDefined() )
         {
             legacyPropertyTrackers.nodeRemoveStoreProperty( nodeId, (DefinedProperty) existingProperty );
-            state.txState().nodeDoRemoveProperty( nodeId, (DefinedProperty)existingProperty );
+            state.txState().nodeDoRemoveProperty( nodeId, (DefinedProperty) existingProperty );
             indexesUpdateProperty( state, nodeId, propertyKeyId, (DefinedProperty) existingProperty, null );
         }
         return existingProperty;
@@ -948,6 +951,14 @@ public class StateHandlingStatementOperations implements
     }
 
     @Override
+    public Cursor nodeGetRelationships( KernelStatement state, long nodeId, Direction direction, int[] types,
+                                        RelationshipVisitor<? extends RuntimeException> visitor )
+            throws EntityNotFoundException
+    {
+        return new RelationshipCursor( state, nodeGetRelationships( state, nodeId, direction, types ), visitor );
+    }
+
+    @Override
     public PrimitiveLongIterator nodeGetRelationships( KernelStatement state, long nodeId, Direction direction ) throws EntityNotFoundException
     {
         if ( state.hasTxStateWithChanges() )
@@ -965,6 +976,58 @@ public class StateHandlingStatementOperations implements
             return txState.augmentRelationships( nodeId, direction, stored );
         }
         return storeLayer.nodeListRelationships( nodeId, direction );
+    }
+
+    @Override
+    public Cursor nodeGetRelationships( KernelStatement state, long nodeId, Direction direction,
+                                        RelationshipVisitor<? extends RuntimeException> visitor )
+            throws EntityNotFoundException
+    {
+        return new RelationshipCursor( state, nodeGetRelationships( state, nodeId, direction ), visitor );
+    }
+
+    private class RelationshipCursor implements Cursor
+    {
+        private final PrimitiveLongIterator relationships;
+        private final KernelStatement state;
+        private final RelationshipVisitor<? extends RuntimeException> visitor;
+
+        public RelationshipCursor( KernelStatement state, PrimitiveLongIterator relationships,
+                                   RelationshipVisitor<? extends RuntimeException> visitor )
+        {
+            this.relationships = relationships;
+            this.state = state;
+            this.visitor = visitor;
+        }
+
+        @Override
+        public boolean next()
+        {
+            while ( relationships.hasNext() )
+            {
+                try
+                {
+                    relationshipVisit( state, relationships.next(), visitor );
+                }
+                catch ( EntityNotFoundException e )
+                {
+                    continue;
+                }
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public void reset()
+        {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void close()
+        {
+        }
     }
 
     @Override
@@ -1077,6 +1140,13 @@ public class StateHandlingStatementOperations implements
             throws SchemaRuleNotFoundException
     {
         return storeLayer.indexGetCommittedId( index, kind );
+    }
+
+    @Override
+    public Lookup.Transformation<Specialization<Lookup>> indexQueryTransformation(
+            KernelStatement state, IndexDescriptor index ) throws IndexNotFoundKernelException
+    {
+        return storeLayer.indexQueryTransformation( index );
     }
 
     @Override
@@ -1229,7 +1299,22 @@ public class StateHandlingStatementOperations implements
                     inputCursor, nodeId, types, expandDirection, relId, relType, direction, startNodeId, neighborNodeId );
         }
         return storeLayer.expand( inputCursor, nodeId, types, expandDirection,
-                relId, relType, direction, startNodeId, neighborNodeId );
+                                  relId, relType, direction, startNodeId, neighborNodeId );
+    }
+
+    @Override
+    public PrimitiveLongIterator nodesGetFromIndexQuery( KernelStatement statement, IndexDescriptor descriptor,
+                                                         Specialization<Lookup> query )
+            throws IndexNotFoundKernelException
+    {
+        PrimitiveLongIterator result = storeLayer.nodesGetFromIndexQuery( statement, descriptor, query );
+        if ( statement.hasTxStateWithChanges() )
+        {
+            PropertyPredicate predicate = query.genericForm().transform( PropertyPredicate.TRANSFORMATION );
+            throw new UnsupportedOperationException( "Query on transaction with state not implemented yet... " +
+                                                     "Should be done using the generic form: " + query.genericForm() );
+        }
+        return result;
     }
 
     @Override

@@ -27,7 +27,9 @@ final class Ref[T <: AnyRef](val value: T) {
   if (value == null)
     throw new InternalException("Attempt to instantiate Ref(null)")
 
-  override def toString = s"Ref($value)"
+  def toIdString = Integer.toHexString(java.lang.System.identityHashCode(value))
+
+  override def toString = s"Ref@$toIdString($value)"
 
   override def hashCode = java.lang.System.identityHashCode(value)
 

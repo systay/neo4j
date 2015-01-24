@@ -25,6 +25,8 @@ import org.neo4j.collection.primitive.PrimitiveIntIterator;
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
 import org.neo4j.cursor.Cursor;
 import org.neo4j.graphdb.Direction;
+import org.neo4j.graphdb.Lookup;
+import org.neo4j.kernel.api.Specialization;
 import org.neo4j.kernel.api.exceptions.EntityNotFoundException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.schema.ConstraintValidationKernelException;
@@ -337,5 +339,53 @@ public class GuardingStatementOperations implements
         guard.check();
         return entityReadDelegate.expand( statement, inputCursor, nodeId, types, expandDirection,
                 relId, relType, direction, startNodeId, neighborNodeId );
+    }
+
+    @Override
+    public Cursor nodeGetRelationships( KernelStatement statement, long nodeId, Direction direction,
+                                        final RelationshipVisitor<? extends RuntimeException> visitor )
+            throws EntityNotFoundException
+    {
+        guard.check();
+        return entityReadDelegate.nodeGetRelationships( statement, nodeId, direction,
+                                                        new GuardedRelationshipVisitor<>( guard, visitor ) );
+    }
+
+    @Override
+    public Cursor nodeGetRelationships( KernelStatement statement, long nodeId, Direction direction, int[] types,
+                                        RelationshipVisitor<? extends RuntimeException> visitor )
+            throws EntityNotFoundException
+    {
+        guard.check();
+        return entityReadDelegate.nodeGetRelationships( statement, nodeId, direction, types,
+                                                        new GuardedRelationshipVisitor<>( guard, visitor ) );
+    }
+
+    @Override
+    public PrimitiveLongIterator nodesGetFromIndexQuery( KernelStatement statement, IndexDescriptor descriptor,
+                                                         Specialization<Lookup> query )
+            throws IndexNotFoundKernelException
+    {
+        guard.check();
+        return entityReadDelegate.nodesGetFromIndexQuery( statement, descriptor, query );
+    }
+
+    private static class GuardedRelationshipVisitor<EX extends Exception> implements RelationshipVisitor<EX>
+    {
+        private final Guard guard;
+        private final RelationshipVisitor<EX> visitor;
+
+        public GuardedRelationshipVisitor( Guard guard, RelationshipVisitor<EX> visitor )
+        {
+            this.guard = guard;
+            this.visitor = visitor;
+        }
+
+        @Override
+        public void visit( long relId, int type, long startNode, long endNode ) throws EX
+        {
+            guard.check();
+            visitor.visit( relId, type, startNode, endNode );
+        }
     }
 }

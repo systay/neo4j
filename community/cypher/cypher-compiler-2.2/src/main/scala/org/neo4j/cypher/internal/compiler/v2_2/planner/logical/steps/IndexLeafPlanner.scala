@@ -28,7 +28,10 @@ import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.steps.LogicalPlan
 import org.neo4j.kernel.api.index.IndexDescriptor
 
 
-abstract class IndexLeafPlanner extends LeafPlanner {
+case class IndexLeafPlanner(
+  constructPlan: (IdName, LabelToken, PropertyKeyToken, QueryExpression[Expression], Option[UsingIndexHint], Set[IdName], LogicalPlanningContext, Seq[Expression]) => LogicalPlan,
+  findIndexesFor: (String, String, LogicalPlanningContext) => Option[IndexDescriptor]
+  ) extends LeafPlanner {
   def apply(qg: QueryGraph)(implicit context: LogicalPlanningContext) = {
     implicit val semanticTable = context.semanticTable
     val predicates: Seq[Expression] = qg.selections.flatPredicates
@@ -37,71 +40,66 @@ abstract class IndexLeafPlanner extends LeafPlanner {
     def producePlanFor(name: String, propertyKeyName: PropertyKeyName, propertyPredicate: Expression, queryExpression: QueryExpression[Expression]) = {
       val idName = IdName(name)
       for (labelPredicate <- labelPredicateMap.getOrElse(idName, Set.empty);
-           labelName <- labelPredicate.labels;
-           indexDescriptor <- findIndexesFor(labelName.name, propertyKeyName.name);
-           labelId <- labelName.id)
+        labelName <- labelPredicate.labels;
+        indexDescriptor <- findIndexesFor(labelName.name, propertyKeyName.name, context);
+        labelId <- labelName.id)
       yield {
         val propertyName = propertyKeyName.name
         val hint = qg.hints.collectFirst {
-          case hint @ UsingIndexHint(Identifier(`name`), `labelName`, Identifier(`propertyName`)) => hint
+          case hint@UsingIndexHint(Identifier(`name`), `labelName`, Identifier(`propertyName`)) => hint
         }
-        val entryConstructor: (Seq[Expression]) => LogicalPlan =
-          constructPlan(idName, LabelToken(labelName, labelId), PropertyKeyToken(propertyKeyName, propertyKeyName.id.head),
-                        queryExpression, hint, qg.argumentIds)
-        entryConstructor(Seq(propertyPredicate, labelPredicate))
+        constructPlan(idName, LabelToken(labelName, labelId), PropertyKeyToken(propertyKeyName, propertyKeyName.id.head),
+          queryExpression, hint, qg.argumentIds, context, Seq(propertyPredicate, labelPredicate))
       }
     }
 
     predicates.collect {
-      case inPredicate@In(Property(identifier@Identifier(name), propertyKeyName), ConstantExpression(valueExpr)) if !qg.argumentIds.contains(IdName(name)) =>
+      case inPredicate@In(Property(identifier@Identifier(name), propertyKeyName), ConstantExpression(valueExpr))
+        if !qg.argumentIds.contains(IdName(name)) =>
         producePlanFor(name, propertyKeyName, inPredicate, ManyQueryExpression(valueExpr))
     }.flatten
   }
-
-  protected def constructPlan(idName: IdName,
-                              label: LabelToken,
-                              propertyKey: PropertyKeyToken,
-                              valueExpr: QueryExpression[Expression],
-                              hint: Option[UsingIndexHint],
-                              argumentIds: Set[IdName])
-                             (implicit context: LogicalPlanningContext): (Seq[Expression]) => LogicalPlan
-
-
-
-  protected def findIndexesFor(label: String, property: String)(implicit context: LogicalPlanningContext): Option[IndexDescriptor]
 }
 
-object uniqueIndexSeekLeafPlanner extends IndexLeafPlanner {
-  protected def constructPlan(idName: IdName,
-                              label: LabelToken,
-                              propertyKey: PropertyKeyToken,
-                              valueExpr: QueryExpression[Expression],
-                              hint: Option[UsingIndexHint],
-                              argumentIds: Set[IdName])
-                             (implicit context: LogicalPlanningContext): (Seq[Expression]) => LogicalPlan =
-    (predicates: Seq[Expression]) =>
-      planNodeIndexUniqueSeek(idName, label, propertyKey, valueExpr, predicates, hint, argumentIds)
+object IndexLeafPlanner {
 
+  def constructUniquePlan(idName: IdName,
+    label: LabelToken,
+    propertyKey: PropertyKeyToken,
+    valueExpr: QueryExpression[Expression],
+    hint: Option[UsingIndexHint],
+    argumentIds: Set[IdName],
+    context: LogicalPlanningContext,
+    predicates: Seq[Expression]): LogicalPlan =
+    planNodeIndexUniqueSeek(idName, label, propertyKey, valueExpr, predicates, hint, argumentIds)
 
-  protected def findIndexesFor(label: String, property: String)(implicit context: LogicalPlanningContext): Option[IndexDescriptor] =
+  def findUniqueIndexesFor(label: String, property: String, context: LogicalPlanningContext): Option[IndexDescriptor] =
     context.planContext.getUniqueIndexRule(label, property)
-}
 
-object indexSeekLeafPlanner extends IndexLeafPlanner {
-  protected def constructPlan(idName: IdName,
-                              label: LabelToken,
-                              propertyKey: PropertyKeyToken,
-                              valueExpr: QueryExpression[Expression],
-                              hint: Option[UsingIndexHint],
-                              argumentIds: Set[IdName])
-                             (implicit context: LogicalPlanningContext): (Seq[Expression]) => LogicalPlan =
-    (predicates: Seq[Expression]) =>
-      planNodeIndexSeek(idName, label, propertyKey, valueExpr, predicates, hint, argumentIds)
+  def constructPlan(idName: IdName,
+    label: LabelToken,
+    propertyKey: PropertyKeyToken,
+    valueExpr: QueryExpression[Expression],
+    hint: Option[UsingIndexHint],
+    argumentIds: Set[IdName],
+    context: LogicalPlanningContext,
+    predicates: Seq[Expression]): LogicalPlan =
+    planNodeIndexSeek(idName, label, propertyKey, valueExpr, predicates, hint, argumentIds)
 
-  protected def findIndexesFor(label: String, property: String)(implicit context: LogicalPlanningContext): Option[IndexDescriptor] =
+  def findIndexesFor(label: String, property: String, context: LogicalPlanningContext): Option[IndexDescriptor] =
     context.planContext.getIndexRule(label, property)
 
 }
+
+object uniqueIndexSeekLeafPlanner extends IndexLeafPlanner(
+  constructPlan = IndexLeafPlanner.constructUniquePlan,
+  findIndexesFor = IndexLeafPlanner.findUniqueIndexesFor
+)
+
+object indexSeekLeafPlanner extends IndexLeafPlanner(
+  constructPlan = IndexLeafPlanner.constructPlan,
+  findIndexesFor = IndexLeafPlanner.findIndexesFor
+)
 
 object legacyHintLeafPlanner extends LeafPlanner {
   def apply(qg: QueryGraph)(implicit context: LogicalPlanningContext) = {

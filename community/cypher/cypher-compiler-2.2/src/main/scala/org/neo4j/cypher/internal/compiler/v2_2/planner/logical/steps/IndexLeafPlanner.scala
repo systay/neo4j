@@ -20,7 +20,7 @@
 package org.neo4j.cypher.internal.compiler.v2_2.planner.logical.steps
 
 import org.neo4j.cypher.internal.compiler.v2_2.ast._
-import org.neo4j.cypher.internal.compiler.v2_2.commands.{ManyQueryExpression, QueryExpression}
+import org.neo4j.cypher.internal.compiler.v2_2.commands.{ManyQueryExpression, QueryExpression, SingleQueryExpression}
 import org.neo4j.cypher.internal.compiler.v2_2.planner.QueryGraph
 import org.neo4j.cypher.internal.compiler.v2_2.planner.logical._
 import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.plans._
@@ -30,11 +30,11 @@ import org.neo4j.kernel.api.index.IndexDescriptor
 
 case class IndexLeafPlanner(
   constructPlan: (IdName, LabelToken, PropertyKeyToken, QueryExpression[Expression], Option[UsingIndexHint], Set[IdName], LogicalPlanningContext, Seq[Expression]) => LogicalPlan,
-  findIndexesFor: (String, String, LogicalPlanningContext) => Option[IndexDescriptor]
-  ) extends LeafPlanner {
+  findIndexesFor: (String, String, LogicalPlanningContext) => Option[IndexDescriptor],
+  findPredicates: QueryGraph => PartialFunction[Expression, (String, PropertyKeyName, Expression, QueryExpression[Expression])]
+                             ) extends LeafPlanner {
   def apply(qg: QueryGraph)(implicit context: LogicalPlanningContext) = {
     implicit val semanticTable = context.semanticTable
-    val predicates: Seq[Expression] = qg.selections.flatPredicates
     val labelPredicateMap: Map[IdName, Set[HasLabels]] = qg.selections.labelPredicates
 
     def producePlanFor(name: String, propertyKeyName: PropertyKeyName, propertyPredicate: Expression, queryExpression: QueryExpression[Expression]) = {
@@ -53,10 +53,10 @@ case class IndexLeafPlanner(
       }
     }
 
-    predicates.collect {
-      case inPredicate@In(Property(identifier@Identifier(name), propertyKeyName), ConstantExpression(valueExpr))
-        if !qg.argumentIds.contains(IdName(name)) =>
-        producePlanFor(name, propertyKeyName, inPredicate, ManyQueryExpression(valueExpr))
+    val predicates: Seq[Expression] = qg.selections.flatPredicates
+    predicates.collect(findPredicates(qg)).map {
+      case (name, propertyKeyName, propertyPredicate, queryExpression) =>
+        producePlanFor(name, propertyKeyName, propertyPredicate, queryExpression)
     }.flatten
   }
 }
@@ -64,42 +64,60 @@ case class IndexLeafPlanner(
 object IndexLeafPlanner {
 
   def constructUniquePlan(idName: IdName,
-    label: LabelToken,
-    propertyKey: PropertyKeyToken,
-    valueExpr: QueryExpression[Expression],
-    hint: Option[UsingIndexHint],
-    argumentIds: Set[IdName],
-    context: LogicalPlanningContext,
-    predicates: Seq[Expression]): LogicalPlan =
+                          label: LabelToken,
+                          propertyKey: PropertyKeyToken,
+                          valueExpr: QueryExpression[Expression],
+                          hint: Option[UsingIndexHint],
+                          argumentIds: Set[IdName],
+                          context: LogicalPlanningContext,
+                          predicates: Seq[Expression]): LogicalPlan =
     planNodeIndexUniqueSeek(idName, label, propertyKey, valueExpr, predicates, hint, argumentIds)
 
   def findUniqueIndexesFor(label: String, property: String, context: LogicalPlanningContext): Option[IndexDescriptor] =
     context.planContext.getUniqueIndexRule(label, property)
 
   def constructPlan(idName: IdName,
-    label: LabelToken,
-    propertyKey: PropertyKeyToken,
-    valueExpr: QueryExpression[Expression],
-    hint: Option[UsingIndexHint],
-    argumentIds: Set[IdName],
-    context: LogicalPlanningContext,
-    predicates: Seq[Expression]): LogicalPlan =
+                    label: LabelToken,
+                    propertyKey: PropertyKeyToken,
+                    valueExpr: QueryExpression[Expression],
+                    hint: Option[UsingIndexHint],
+                    argumentIds: Set[IdName],
+                    context: LogicalPlanningContext,
+                    predicates: Seq[Expression]): LogicalPlan =
     planNodeIndexSeek(idName, label, propertyKey, valueExpr, predicates, hint, argumentIds)
 
   def findIndexesFor(label: String, property: String, context: LogicalPlanningContext): Option[IndexDescriptor] =
     context.planContext.getIndexRule(label, property)
 
+  def equalityComparisons(qg: QueryGraph): PartialFunction[Expression, (String, PropertyKeyName, Expression, QueryExpression[Expression])] = {
+    case inPredicate@In(Property(Identifier(name), propertyKeyName), ConstantExpression(valueExpr))
+      if !qg.argumentIds.contains(IdName(name)) => (name, propertyKeyName, inPredicate, ManyQueryExpression(valueExpr))
+  }
+
+  def likeQuery(qg: QueryGraph): PartialFunction[Expression, (String, PropertyKeyName, Expression, QueryExpression[Expression])] = {
+    case like@Like(Property(Identifier(name), propertyKeyName), ConstantExpression(valueExpr), false)
+      if !qg.argumentIds.contains(IdName(name)) => (name, propertyKeyName, like, SingleQueryExpression(valueExpr))
+  }
 }
 
 object uniqueIndexSeekLeafPlanner extends IndexLeafPlanner(
   constructPlan = IndexLeafPlanner.constructUniquePlan,
-  findIndexesFor = IndexLeafPlanner.findUniqueIndexesFor
+  findIndexesFor = IndexLeafPlanner.findUniqueIndexesFor,
+  findPredicates = IndexLeafPlanner.equalityComparisons
 )
 
 object indexSeekLeafPlanner extends IndexLeafPlanner(
   constructPlan = IndexLeafPlanner.constructPlan,
-  findIndexesFor = IndexLeafPlanner.findIndexesFor
+  findIndexesFor = IndexLeafPlanner.findIndexesFor,
+  findPredicates = IndexLeafPlanner.equalityComparisons
 )
+
+object likeByIndexLeafPlanner extends IndexLeafPlanner(
+  constructPlan = IndexLeafPlanner.constructPlan,
+  findIndexesFor = IndexLeafPlanner.findIndexesFor,
+  findPredicates = IndexLeafPlanner.likeQuery
+)
+
 
 object legacyHintLeafPlanner extends LeafPlanner {
   def apply(qg: QueryGraph)(implicit context: LogicalPlanningContext) = {

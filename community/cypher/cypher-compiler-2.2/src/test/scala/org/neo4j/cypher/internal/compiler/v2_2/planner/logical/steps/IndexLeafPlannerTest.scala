@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.internal.compiler.v2_2.planner.logical.plans
+package org.neo4j.cypher.internal.compiler.v2_2.planner.logical.steps
 
 import org.neo4j.cypher.internal.commons.CypherFunSuite
 import org.neo4j.cypher.internal.compiler.v2_2.ast._
@@ -25,7 +25,7 @@ import org.neo4j.cypher.internal.compiler.v2_2.commands.ManyQueryExpression
 import org.neo4j.cypher.internal.compiler.v2_2.planner.BeLikeMatcher._
 import org.neo4j.cypher.internal.compiler.v2_2.planner._
 import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.LogicalPlanningContext
-import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.steps.{indexSeekLeafPlanner, uniqueIndexSeekLeafPlanner}
+import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.plans.{IdName, NodeIndexSeek, NodeIndexUniqueSeek}
 
 class IndexLeafPlannerTest extends CypherFunSuite with LogicalPlanningTestSupport2 {
 
@@ -50,6 +50,7 @@ class IndexLeafPlannerTest extends CypherFunSuite with LogicalPlanningTestSuppor
       }
     }
   }
+
   test("does not plan index seek when no unique index exist") {
     new given {
       qg = queryGraph(inCollectionValue, hasLabels)

@@ -22,10 +22,27 @@ package org.neo4j.cypher
 import org.neo4j.cypher.internal.compiler.v2_2.pipes.NodeIndexSeekPipe
 
 class IndexUsageAcceptanceTest extends ExecutionEngineFunSuite with NewPlannerTestSupport{
+
+  def createDb()  {
+    execute("""CREATE
+         (_0:Matrix { name:'The Architect' }),
+         (_1:Matrix { name:'Agent Smith' }),
+         (_2:Matrix:Crew { name:'Cypher' }),
+         (_3:Crew { name:'Trinity' }),
+         (_4:Crew { name:'Morpheus' }),
+         (_5:Crew { name:'Neo' }),
+        _1-[:CODED_BY]->_0,
+        _2-[:KNOWS]->_1,
+        _4-[:KNOWS]->_3,
+        _4-[:KNOWS]->_2,
+        _5-[:KNOWS]->_4,
+        _5-[:LOVES]->_3""")
+    graph.createIndex("Crew", "name")
+  }
+
   test("should be able to use indexes") {
     // Given
-    execute("CREATE (_0:Matrix { name:'The Architect' }),(_1:Matrix { name:'Agent Smith' }),(_2:Matrix:Crew { name:'Cypher' }),(_3:Crew { name:'Trinity' }),(_4:Crew { name:'Morpheus' }),(_5:Crew { name:'Neo' }), _1-[:CODED_BY]->_0, _2-[:KNOWS]->_1, _4-[:KNOWS]->_3, _4-[:KNOWS]->_2, _5-[:KNOWS]->_4, _5-[:LOVES]->_3")
-    graph.createIndex("Crew", "name")
+    createDb()
 
     // When
     val result = executeWithNewPlanner("MATCH (n:Crew) WHERE n.name = 'Neo' RETURN n")
@@ -36,9 +53,7 @@ class IndexUsageAcceptanceTest extends ExecutionEngineFunSuite with NewPlannerTe
 
   test("should not forget predicates") {
     // Given
-    execute("CREATE (_0:Matrix { name:'The Architect' }),(_1:Matrix { name:'Agent Smith' }),(_2:Matrix:Crew { name:'Cypher' }),(_3:Crew { name:'Trinity' }),(_4:Crew { name:'Morpheus' }),(_5:Crew { name:'Neo' }), _1-[:CODED_BY]->_0, _2-[:KNOWS]->_1, _4-[:KNOWS]->_3, _4-[:KNOWS]->_2, _5-[:KNOWS]->_4, _5-[:LOVES]->_3")
-    graph.createIndex("Crew", "name")
-
+    createDb()
 
     // When
     val result = executeWithNewPlanner("MATCH (n:Crew) WHERE n.name = 'Neo' AND n.name = 'Morpheus' RETURN n")
@@ -50,9 +65,7 @@ class IndexUsageAcceptanceTest extends ExecutionEngineFunSuite with NewPlannerTe
 
   test("should use index when there are multiple labels on the node") {
     // Given
-    execute("CREATE (_0:Matrix { name:'The Architect' }),(_1:Matrix { name:'Agent Smith' }),(_2:Matrix:Crew { name:'Cypher' }),(_3:Crew { name:'Trinity' }),(_4:Crew { name:'Morpheus' }),(_5:Crew { name:'Neo' }), _1-[:CODED_BY]->_0, _2-[:KNOWS]->_1, _4-[:KNOWS]->_3, _4-[:KNOWS]->_2, _5-[:KNOWS]->_4, _5-[:LOVES]->_3")
-    graph.createIndex("Crew", "name")
-
+    createDb()
     // When
     val result = executeWithNewPlanner("MATCH (n:Matrix:Crew) WHERE n.name = 'Neo' RETURN n")
 
@@ -101,5 +114,16 @@ class IndexUsageAcceptanceTest extends ExecutionEngineFunSuite with NewPlannerTe
         false
     }
     found shouldBe true
+  }
+
+  test("should be able to handle LIKE queries for startsWith queries") {
+    // Given
+    createDb()
+
+    // When
+    val result = executeWithNewPlanner("MATCH (n:Crew) WHERE n.name LIKE 'N%' RETURN n")
+
+    // Then
+    result.executionPlanDescription().toString should include("NodeIndexScan")
   }
 }

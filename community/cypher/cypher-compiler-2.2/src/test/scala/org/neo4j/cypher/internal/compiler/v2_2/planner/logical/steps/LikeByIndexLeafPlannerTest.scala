@@ -1,0 +1,77 @@
+/**
+ * Copyright (c) 2002-2015 "Neo Technology,"
+ * Network Engine for Objects in Lund AB [http://neotechnology.com]
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+package org.neo4j.cypher.internal.compiler.v2_2.planner.logical.steps
+
+import org.neo4j.cypher.internal.commons.CypherFunSuite
+import org.neo4j.cypher.internal.compiler.v2_2.ast._
+import org.neo4j.cypher.internal.compiler.v2_2.commands.SingleQueryExpression
+import org.neo4j.cypher.internal.compiler.v2_2.planner._
+import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.LogicalPlanningContext
+import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.plans.{IdName, LogicalPlan, NodeIndexSeek}
+import org.neo4j.cypher.internal.compiler.v2_2.{LabelId, PropertyKeyId}
+
+class LikeByIndexLeafPlannerTest extends CypherFunSuite with LogicalPlanningTestSupport2 {
+
+  val idName    = IdName("n")
+  val hasLabels = HasLabels(ident("n"), Seq(LabelName("Awesome") _)) _
+  val property  = Property(ident("n"), PropertyKeyName("prop") _) _
+  val query: Expression = StringLiteral("Apa%") _
+  val labelToken = LabelToken.apply("Awesome", LabelId(0))
+  val propertyKeyToken = PropertyKeyToken.apply("prop", PropertyKeyId(0))
+
+  val likePredicate = Like(property, query)_
+
+  test("does not plan index seek when no index exist") {
+    new given {
+      qg = queryGraph(likePredicate, hasLabels)
+
+      withLogicalPlanningContext { (ctx: LogicalPlanningContext) =>
+        // when
+        val resultPlans = likeByIndexLeafPlanner(qg)(ctx)
+
+        // then
+        resultPlans shouldBe empty
+      }
+    }
+  }
+
+  test("index scan when there is an index on the property") {
+    new given {
+      qg = queryGraph(likePredicate, hasLabels)
+
+      indexOn("Awesome", "prop")
+
+      withLogicalPlanningContext { (ctx) =>
+        // when
+        val resultPlans = likeByIndexLeafPlanner(qg)(ctx)
+
+        // then
+        val expected: LogicalPlan = NodeIndexSeek(idName, labelToken, propertyKeyToken, SingleQueryExpression(query), Set.empty)(PlannerQuery.empty)
+        resultPlans should equal(Seq(expected))
+      }
+    }
+  }
+
+  private def queryGraph(predicates: Expression*) =
+    QueryGraph(
+      selections = Selections(predicates.map(Predicate(Set(idName), _)).toSet),
+      patternNodes = Set(idName)
+    )
+}

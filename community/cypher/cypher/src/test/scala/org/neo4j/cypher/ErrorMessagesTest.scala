@@ -23,7 +23,7 @@ import org.hamcrest.CoreMatchers._
 import org.junit.Assert._
 import org.neo4j.cypher.internal.compiler.v2_2.commands.expressions.StringHelper
 
-class ErrorMessagesTest extends ExecutionEngineFunSuite with StringHelper {
+class ErrorMessagesTest extends ExecutionEngineFunSuite {
 
   test("fails when merging relationship with null property") {
     expectError("create (a) create (b) merge (a)-[r:X {p: null}]->(b) return r", "Cannot merge relationship using null property value for p")

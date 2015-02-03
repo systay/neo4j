@@ -103,7 +103,7 @@ object Planner {
       collapseInCollectionsContainingConstants,
       nameUpdatingClauses /* this is actually needed as a precondition for projectedNamedPaths even though we do not handle updates in Ronja */,
       projectNamedPaths,
-      enableCondition(containsNamedPathOnlyForShortestPath),
+//      enableCondition(containsNamedPathOnlyForShortestPath),
       projectFreshSortExpressions,
       inlineProjections
     )

@@ -37,16 +37,16 @@ class ASTRewriter(rewritingMonitor: AstRewritingMonitor, shouldExtractParameters
       (Rewriter.lift(PartialFunction.empty), Map.empty[String, Any])
 
     val rewriter = RewriterStepSequencer.newDefault("ASTRewriter")(
-      enableCondition(noReferenceEqualityAmongIdentifiers),
-      enableCondition(containsNoNodesOfType[UnaliasedReturnItem]),
+//      enableCondition(noReferenceEqualityAmongIdentifiers),
+//      enableCondition(containsNoNodesOfType[UnaliasedReturnItem]),
       expandStar(semanticState),
-      enableCondition(containsNoReturnAll),
+//      enableCondition(containsNoReturnAll),
       foldConstants,
       ApplyRewriter("extractParameters", extractParameters),
       nameMatchPatternElements,
       normalizeMatchPredicates,
       normalizeNotEquals,
-      enableCondition(containsNoNodesOfType[NotEquals]),
+//      enableCondition(containsNoNodesOfType[NotEquals]),
       normalizeEqualsArgumentOrder,
       addUniquenessPredicates,
       isolateAggregation

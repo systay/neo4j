@@ -78,11 +78,14 @@ case class QueryGraph(patternRelationships: Set[PatternRelationship] = Set.empty
     copy(optionalMatches = optionalMatches :+ optionalMatch.addArgumentIds(argumentIds.toSeq))
   }
 
-  def withOptionalMatches(optionalMatches: Seq[QueryGraph]): QueryGraph = {
+  def withOptionalMatches(optionalMatches: Seq[QueryGraph]): QueryGraph =
     copy(optionalMatches = optionalMatches)
-  }
 
-  def withSelections(selections: Selections): QueryGraph = copy(selections = selections)
+  def withSelections(selections: Selections): QueryGraph =
+    copy(selections = selections)
+
+  def withShortestPaths(shortestPathPatterns: Set[ShortestPathPattern]): QueryGraph =
+    copy(shortestPathPatterns = shortestPathPatterns)
 
   def knownLabelsOnNode(node: IdName): Seq[LabelName] =
     selections

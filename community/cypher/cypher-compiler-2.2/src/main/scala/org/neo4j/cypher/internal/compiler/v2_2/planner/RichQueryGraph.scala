@@ -63,29 +63,33 @@ object RichQueryGraph {
       throw new IndexOutOfBoundsException(s"Expected $size to be in [0,${inner.patternRelationships.size}[")
     else
       if (size == 0) {
-        val nonArgs = inner.
-                      patternNodes.filterNot(inner.argumentIds).
-                      map(createSubQueryWithNode(_, inner.argumentIds, inner.hints)).toSeq
-
-        val args: Option[QueryGraph] = if ((inner.argumentIds intersect inner.patternNodes).isEmpty)
-          None
-        else {
-          val filteredHints = inner.hints.filter(h => inner.argumentIds.contains(IdName(h.identifier.name)))
-
-          Some(QueryGraph(
-            patternNodes = inner.patternNodes.filter(inner.argumentIds),
-            argumentIds = inner.argumentIds,
-            selections = Selections.from(inner.selections.predicatesGiven(inner.argumentIds): _*),
-            hints = filteredHints
-          ))
-        }
-
-        nonArgs ++ args
+        patternNodesAndArguments
       } else {
         inner.
         patternRelationships.toSeq.combinations(size).
         map(r => createSubQueryWithRels(r.toSet, inner.hints)).toSeq
       }
+
+    private def patternNodesAndArguments = {
+      val nonArgs = inner.
+                    patternNodes.filterNot(inner.argumentIds).
+                    map(createSubQueryWithNode(_, inner.argumentIds, inner.hints)).toSeq
+
+      val args: Option[QueryGraph] = if ((inner.argumentIds intersect inner.patternNodes).isEmpty)
+        None
+      else {
+        val filteredHints = inner.hints.filter(h => inner.argumentIds.contains(IdName(h.identifier.name)))
+
+        Some(QueryGraph(
+          patternNodes = inner.patternNodes.filter(inner.argumentIds),
+          argumentIds = inner.argumentIds,
+          selections = Selections.from(inner.selections.predicatesGiven(inner.argumentIds): _*),
+          hints = filteredHints
+        ))
+      }
+
+      nonArgs ++ args
+    }
 
     private def connectedComponentFor(startNode: IdName, visited: mutable.Set[IdName]): QueryGraph = {
       val queue = mutable.Queue(startNode)
@@ -122,8 +126,11 @@ object RichQueryGraph {
         hints = filteredHints
       )
 
+      val shortestPaths = inner.shortestPathPatterns.filter(p => p.isFindableFrom(qg.coveredIds))
+
       qg.
-      withSelections(selections = Selections.from(inner.selections.predicatesGiven(qg.coveredIds): _*))
+      withSelections(selections = Selections.from(inner.selections.predicatesGiven(qg.coveredIds): _*)).
+      withShortestPaths(shortestPaths)
     }
 
     private def createSubQueryWithNode(id: IdName, argumentIds: Set[IdName], hints: Set[Hint]) = {

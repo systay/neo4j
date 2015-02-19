@@ -21,12 +21,12 @@ package org.neo4j.cypher.internal.compiler.v2_2.planner.logical
 
 import org.neo4j.cypher.internal.commons.CypherFunSuite
 import org.neo4j.cypher.internal.compiler.v2_2.ast._
-import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.plans.{IdName, PatternRelationship, SimplePatternLength}
+import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.plans._
 import org.neo4j.cypher.internal.compiler.v2_2.planner.{QueryGraph, Selections}
 import org.neo4j.graphdb.Direction
 import org.neo4j.cypher.internal.compiler.v2_2.planner.RichQueryGraph._
 
-class QueryGraphCombinationsTest extends CypherFunSuite with AstConstructionTestSupport {
+class RichQueryGraphCombinationsTest extends CypherFunSuite with AstConstructionTestSupport {
   val labelA = LabelName("A")(pos)
   val prop = ident("prop")
   val propKeyName = PropertyKeyName(prop.name)(pos)
@@ -42,6 +42,7 @@ class QueryGraphCombinationsTest extends CypherFunSuite with AstConstructionTest
   val R5 = PatternRelationship(IdName("r5"), (A, X), Direction.OUTGOING, Seq.empty, SimplePatternLength)
   val R6 = PatternRelationship(IdName("r6"), (B, X), Direction.OUTGOING, Seq.empty, SimplePatternLength)
   val R7 = PatternRelationship(IdName("r7"), (C, X), Direction.OUTGOING, Seq.empty, SimplePatternLength)
+  val shortestPathBetweenA_and_X = ShortestPathPattern(Some(IdName("p")), PatternRelationship(IdName("rels"), (A, X), Direction.OUTGOING, Seq.empty, VarPatternLength(1, None)), false)(null)
 
   val singleNode = (
     "MATCH a",
@@ -105,6 +106,14 @@ class QueryGraphCombinationsTest extends CypherFunSuite with AstConstructionTest
     QueryGraph(
       patternNodes = Set(A, B, C, X),
       patternRelationships = Set(R5, R6, R7)
+    ))
+
+  val starPatternWShortestPath = (
+    "MATCH a-[r5]->x, b-[r6]->x, c-[r7]->x, p = shortestPath( a-[*]-> x)",
+    QueryGraph(
+      patternNodes = Set(A, B, C, X),
+      patternRelationships = Set(R5, R6, R7),
+      shortestPathPatterns = Set(shortestPathBetweenA_and_X)
     ))
 
   val singleRelWithArgs = (
@@ -171,6 +180,12 @@ class QueryGraphCombinationsTest extends CypherFunSuite with AstConstructionTest
       QueryGraph(patternNodes = Set(C)),
       QueryGraph(patternNodes = Set(X)))),
 
+    (starPatternWShortestPath,  0, Set(
+      QueryGraph(patternNodes = Set(A)),
+      QueryGraph(patternNodes = Set(B)),
+      QueryGraph(patternNodes = Set(C)),
+      QueryGraph(patternNodes = Set(X)))),
+
     (singleRelWithArgs, 0, Set(
       QueryGraph(patternNodes = Set(A), argumentIds = Set(X)),
       QueryGraph(patternNodes = Set(B), argumentIds = Set(X)))),
@@ -225,6 +240,18 @@ class QueryGraphCombinationsTest extends CypherFunSuite with AstConstructionTest
         patternNodes = Set(C, X),
         patternRelationships = Set(R7)))),
 
+    (starPatternWShortestPath, 1, Set(
+      QueryGraph(
+        patternNodes = Set(A, X),
+        patternRelationships = Set(R5),
+        shortestPathPatterns = Set(shortestPathBetweenA_and_X)),
+      QueryGraph(
+        patternNodes = Set(B, X),
+        patternRelationships = Set(R6)),
+      QueryGraph(
+        patternNodes = Set(C, X),
+        patternRelationships = Set(R7)))),
+
     (singleRelWithArgs,      1, Set(
       QueryGraph(
         patternNodes = Set(A, B),
@@ -258,13 +285,30 @@ class QueryGraphCombinationsTest extends CypherFunSuite with AstConstructionTest
         patternNodes = Set(A, C, X),
         patternRelationships = Set(R5, R7)))),
 
+    (starPatternWShortestPath, 2, Set(
+      QueryGraph(
+        patternNodes = Set(A, B, X),
+        patternRelationships = Set(R5, R6),
+        shortestPathPatterns = Set(shortestPathBetweenA_and_X)),
+      QueryGraph(
+        patternNodes = Set(B, C, X),
+        patternRelationships = Set(R6, R7)),
+      QueryGraph(
+        patternNodes = Set(A, C, X),
+        patternRelationships = Set(R5, R7),
+        shortestPathPatterns = Set(shortestPathBetweenA_and_X)))),
+
     (starPattern,       3, Set(
       QueryGraph(
         patternNodes = Set(A, B, C, X),
-        patternRelationships = Set(R5, R6, R7))))
-  )
+        patternRelationships = Set(R5, R6, R7)))),
 
-  import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.ExhaustiveQueryGraphSolver._
+    (starPatternWShortestPath, 3, Set(
+      QueryGraph(
+        patternNodes = Set(A, B, C, X),
+        patternRelationships = Set(R5, R6, R7),
+        shortestPathPatterns = Set(shortestPathBetweenA_and_X))))
+  )
 
   tests.foreach {
     case ((name, qg), size, expectedResult) =>

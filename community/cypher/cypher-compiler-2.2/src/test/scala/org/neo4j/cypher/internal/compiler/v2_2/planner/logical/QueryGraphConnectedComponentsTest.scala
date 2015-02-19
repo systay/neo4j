@@ -24,6 +24,7 @@ import org.neo4j.cypher.internal.compiler.v2_2.ast._
 import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.plans.{IdName, PatternRelationship, ShortestPathPattern, SimplePatternLength}
 import org.neo4j.cypher.internal.compiler.v2_2.planner.{LogicalPlanningTestSupport, QueryGraph, Selections}
 import org.neo4j.graphdb.Direction
+import org.neo4j.cypher.internal.compiler.v2_2.planner.RichQueryGraph._
 
 class QueryGraphConnectedComponentsTest extends CypherFunSuite with AstConstructionTestSupport with LogicalPlanningTestSupport {
   private val labelA = LabelName("A")(pos)

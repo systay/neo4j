@@ -20,11 +20,11 @@
 package org.neo4j.cypher.internal.compiler.v2_2.planner.logical
 
 import org.neo4j.cypher.internal.compiler.v2_2.planner.QueryGraph
-import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.ExhaustiveQueryGraphSolver._
 import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.plans._
 import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.steps.LogicalPlanProducer._
 import org.neo4j.cypher.internal.helpers.CollectionSupport
 import org.neo4j.graphdb.Direction
+import org.neo4j.cypher.internal.compiler.v2_2.planner.RichQueryGraph._
 
 case object expandOptions extends PlanProducer with CollectionSupport {
 

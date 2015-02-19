@@ -24,8 +24,7 @@ import org.neo4j.cypher.internal.compiler.v2_2.ast.Equals
 import org.neo4j.cypher.internal.compiler.v2_2.planner.{LogicalPlanningTestSupport, Selections, QueryGraph}
 import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.plans.{SimplePatternLength, PatternRelationship, IdName}
 import org.neo4j.graphdb.Direction
-
-import scala.util.Random
+import org.neo4j.cypher.internal.compiler.v2_2.planner.RichQueryGraph._
 
 class QueryGraphDifferenceTest extends CypherFunSuite with LogicalPlanningTestSupport {
   val A = IdName("a")
@@ -57,8 +56,6 @@ class QueryGraphDifferenceTest extends CypherFunSuite with LogicalPlanningTestSu
      QueryGraph(patternNodes = Set(A, B), patternRelationships = Set(R1), selections = Selections.from(P1)),
      QueryGraph(patternNodes = Set(B, C), patternRelationships = Set(R2), selections = Selections.from(P2)))
   )
-
-  import ExhaustiveQueryGraphSolver._
 
   (tests zipWithIndex).foreach {
     case ((original, subQG1, subQG2), idx) =>

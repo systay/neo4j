@@ -22,7 +22,6 @@ package org.neo4j.cypher.internal.compiler.v2_2.planner.logical
 import org.neo4j.cypher.internal.commons.CypherFunSuite
 import org.neo4j.cypher.internal.compiler.v2_2.ast.{Equals, HasLabels, LabelName}
 import org.neo4j.cypher.internal.compiler.v2_2.pipes.LazyLabel
-import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.ExhaustiveQueryGraphSolver.PlanProducer
 import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.plans._
 import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.steps.applyOptional
 import org.neo4j.cypher.internal.compiler.v2_2.planner.{LogicalPlanningTestSupport2, PlannerQuery, QueryGraph, Selections}
@@ -398,35 +397,44 @@ class ExhaustiveQueryGraphSolverTest extends CypherFunSuite with LogicalPlanning
     }
   }
 
-//  test("should handle query starting with an optional match") {
-//    new given {
-//      queryGraphSolver = ExhaustiveQueryGraphSolver.withDefaults(optionalSolvers = Seq(applyOptional))
-//      qg = QueryGraph(/WITH a OPTIONAL MATCH a-->b RETURN b a
-//        patternNodes = Seb"
-//        argumentIds = Set("a"),),
-//        optionalMatches = Seq(QueryGraph(
-//          patternNodes = Set(", "b"b"),
-//          argumentIds = Se"a"b"),
-//          patternRelationships = SePatternRelationship("r", ("a", "b"), Direction.OUTGOING, Seq.empty, SimplePatternLength)h))
-//        ))
-//      )
-//
-//      withLogicalPlanningContext { (ctx) =>
-//        implicit val x = ctx
-//
-//        val lhs = CartesianProduct(AllNodesScan(IdName("a"), Set.empty)(null), AllNodesScan(IdName("b"), Set.empty)(null))(null)
-//
-//        queryGraphSolver.plan(qg) should equal(
-//          Apply(
-//            lhs,
-//            Optional(
-//              Expand(Argument(Set("a", "b"))(null)(), "a", Direction.OUTGOING, Seq.empty, "b", "r", ExpandInto)(null)
-//            )(null)
-//          )(null)
-//        )
-//      }
-//    }
-//  }
+  test("should handle query starting with an optional match") {
+    new given {
+      queryGraphSolver = ExhaustiveQueryGraphSolver.withDefaults(optionalSolvers = Seq(applyOptional))
+      qg = QueryGraph(//OPTIONAL MATCH a-->b RETURN b a
+        patternNodes = Set(),
+        argumentIds = Set(),
+        optionalMatches = Seq(QueryGraph(
+          patternNodes = Set("a", "b"),
+          argumentIds = Set(),
+          patternRelationships = Set(PatternRelationship("r", ("a", "b"), Direction.OUTGOING, Seq.empty, SimplePatternLength))
+        ))
+      )
+
+      withLogicalPlanningContext { (ctx) =>
+        implicit val x = ctx
+
+        queryGraphSolver.plan(qg) should equal(
+          Apply(
+            SingleRow(),
+            Optional(
+              Expand(AllNodesScan("a", Set.empty)(null), "a", Direction.OUTGOING, Seq.empty, "b", "r", ExpandAll)(null)
+            )(null)
+          )(null)
+        )
+      }
+    }
+  }
+
+  /*Missing tests
+start p1=node:stuff('key:*'), p2=node:stuff('key:*') match (p1)--(e), (p2)--(e) where p1.value = 0 and p2.value = 0 AND p1 <> p2 return p1,p2,e
+
+match a, b, p=shortestPath(a-[*]->b)
+
+match a,b return a-[*]->b
+
+
+ */
+
 
   private val undefinedPlanProducer: PlanProducer = new PlanProducer {
     def apply(qg: QueryGraph, cache: PlanTable): Seq[LogicalPlan] = ???

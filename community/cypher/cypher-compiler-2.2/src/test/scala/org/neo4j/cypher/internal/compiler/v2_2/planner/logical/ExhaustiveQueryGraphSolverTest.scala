@@ -425,10 +425,36 @@ class ExhaustiveQueryGraphSolverTest extends CypherFunSuite with LogicalPlanning
     }
   }
 
+  test("should plan for a single shortest path pattern") {
+    val shortestPathPattern = ShortestPathPattern(Some(IdName("p")), PatternRelationship(IdName("rels"), ("a", "b"), Direction.OUTGOING, Seq.empty, VarPatternLength(1, None)), false)(null)
+
+    new given {
+      queryGraphSolver = ExhaustiveQueryGraphSolver.withDefaults(
+        leafPlanTableGenerator = generatePlanTable(
+          AllNodesScan("a", Set.empty)(PlannerQuery(graph = QueryGraph(patternNodes = Set("a")))),
+          AllNodesScan("b", Set.empty)(PlannerQuery(graph = QueryGraph(patternNodes = Set("b"))))),
+        planProducers = Seq(expandOptions))
+      qg = QueryGraph(
+        patternNodes = Set("a", "b"),
+        shortestPathPatterns = Set(shortestPathPattern)
+      )
+
+      withLogicalPlanningContext { (ctx) =>
+        implicit val x = ctx
+
+        queryGraphSolver.plan(qg) should equal(
+          FindShortestPaths(
+            CartesianProduct(
+              AllNodesScan("a", Set.empty)(null),
+              AllNodesScan("b", Set.empty)(null))(null),
+            shortestPathPattern)(null)
+        )
+      }
+    }
+  }
+
   /*Missing tests
 start p1=node:stuff('key:*'), p2=node:stuff('key:*') match (p1)--(e), (p2)--(e) where p1.value = 0 and p2.value = 0 AND p1 <> p2 return p1,p2,e
-
-match a, b, p=shortestPath(a-[*]->b)
 
 match a,b return a-[*]->b
 

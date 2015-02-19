@@ -61,7 +61,7 @@ case class ExhaustiveQueryGraphSolver(leafPlanTableGenerator: PlanTableGenerator
 
   // This is the dynamic programming part of the solver
   private def solveMandatoryQuerygraph(queryGraph: QueryGraph)(implicit context: LogicalPlanningContext, leafPlan: Option[LogicalPlan]): (PlanTable, Option[LogicalPlan]) = {
-    val cache = initiateCacheWithLeafPlans(queryGraph, leafPlan)
+    val cache: PlanTable = initiateCacheWithLeafPlans(queryGraph, leafPlan)
     val plans = queryGraph.connectedComponents.map { qg =>
       (1 to qg.size) foreach { x =>
         qg.combinations(x).foreach {
@@ -69,20 +69,37 @@ case class ExhaustiveQueryGraphSolver(leafPlanTableGenerator: PlanTableGenerator
             val logicalPlans = planProducers.flatMap(producer => producer(subQG, cache))
             val plans = logicalPlans.map(config.applySelections(_, subQG))
             val bestPlan = bestPlanFinder(plans)
-            bestPlan.foreach(p => cache + p)
+
+            bestPlan.foreach { p =>
+              val result = solveShortestPaths(p, subQG.shortestPathPatterns)
+              cache + result
+            }
         }
       }
 
       cache(qg)
     }
 
-    val resultPlan = plans.reduceRightOption[LogicalPlan] { case (plan, acc) =>
-      val result = config.applySelections(planCartesianProduct(plan, acc), queryGraph)
-      cache + result
-      result
-    }
+    val resultPlan = combinePlansIntoOne(plans, cache, queryGraph)
     (cache, resultPlan)
   }
+
+  private def combinePlansIntoOne(plans: Seq[LogicalPlan], cache: PlanTable, queryGraph: QueryGraph)(implicit context: LogicalPlanningContext) =
+    plans.reduceRightOption[LogicalPlan] {
+      case (lhs, rhs) =>
+        val cartesianProduct = planCartesianProduct(lhs, rhs)
+        val resultWithoutShortestPaths = config.applySelections(cartesianProduct, queryGraph)
+        val shortestPathsToSolve = queryGraph.shortestPathPatterns -- resultWithoutShortestPaths.solved.graph.shortestPathPatterns
+        val result = solveShortestPaths(resultWithoutShortestPaths, shortestPathsToSolve)
+        cache + config.applySelections(result, queryGraph)
+        result
+    }
+
+  private def solveShortestPaths(input: LogicalPlan, shortestPaths: Set[ShortestPathPattern]) =
+    shortestPaths.foldLeft(input) {
+      case (plan, shortestPath) => planShortestPaths(plan, shortestPath)
+    }
+
 
   private def initiateCacheWithLeafPlans(queryGraph: QueryGraph, leafPlan: Option[LogicalPlan])
                                         (implicit context: LogicalPlanningContext) =

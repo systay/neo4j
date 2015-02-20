@@ -163,9 +163,15 @@ object LogicalPlanProducer extends CollectionSupport {
   }
 
   def planLegacyHintSeek(idName: IdName, hint: LegacyIndexHint, argumentIds: Set[IdName]) = {
+    val patternNodes: Seq[IdName] = if (hint.isInstanceOf[NodeStartItem])
+      Seq(IdName(hint.identifier.name))
+    else
+      Seq()
+
     LegacyIndexSeek(idName, hint, argumentIds)(
       PlannerQuery(graph = QueryGraph.empty
         .addHints(Some(hint))
+        .addPatternNodes(patternNodes: _*)
         .addArgumentIds(argumentIds.toSeq)
       )
     )

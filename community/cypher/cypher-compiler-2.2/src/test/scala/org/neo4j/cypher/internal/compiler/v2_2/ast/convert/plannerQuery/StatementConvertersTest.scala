@@ -1062,6 +1062,7 @@ class StatementConvertersTest extends CypherFunSuite with LogicalPlanningTestSup
     val hint: LegacyIndexHint = NodeByIdentifiedIndex(ident("n"), ident("nodes"), ident("name"), StringLiteral("A")_)_
 
     query.graph.hints should equal(Set(hint))
+    query.graph.patternNodes should equal(Set(IdName("n")))
     query.tail should equal(None)
   }
 
@@ -1072,6 +1073,7 @@ class StatementConvertersTest extends CypherFunSuite with LogicalPlanningTestSup
     val hint: LegacyIndexHint = NodeByIndexQuery(ident("n"), ident("nodes"), StringLiteral("name:A")_)_
 
     query.graph.hints should equal(Set(hint))
+    query.graph.patternNodes should equal(Set(IdName("n")))
     query.tail should equal(None)
   }
 

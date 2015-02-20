@@ -223,7 +223,13 @@ object ClauseConverters {
             throw new CantHandleQueryException()
           }
 
-          qg.addHints(hints)
+          val patternNodes = hints.collect {
+            case hint: NodeStartItem => IdName(hint.identifier.name)
+          }
+
+          qg.
+            addHints(hints).
+            addPatternNodes(patternNodes: _*)
         }
     }
   }

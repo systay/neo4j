@@ -26,7 +26,7 @@ import org.neo4j.cypher.internal.compiler.v2_2.planner.{LogicalPlanningTestSuppo
 import org.neo4j.graphdb.Direction
 import org.neo4j.cypher.internal.compiler.v2_2.planner.RichQueryGraph._
 
-class QueryGraphConnectedComponentsTest extends CypherFunSuite with AstConstructionTestSupport with LogicalPlanningTestSupport {
+class RichQueryGraphConnectedComponentsTest extends CypherFunSuite with AstConstructionTestSupport with LogicalPlanningTestSupport {
   private val labelA = LabelName("A")(pos)
   private val prop = ident("prop")
   private val propKeyName = PropertyKeyName(prop.name)(pos)
@@ -39,9 +39,6 @@ class QueryGraphConnectedComponentsTest extends CypherFunSuite with AstConstruct
   private val R3 = PatternRelationship(IdName("r7"), (C, X), Direction.OUTGOING, Seq.empty, SimplePatternLength)
   private val identA = ident(A.name)
   private val identB = ident(B.name)
-
-
-  import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.ExhaustiveQueryGraphSolver._
 
   test("empty query graph returns no connected querygraphs") {
     QueryGraph().connectedComponents shouldBe empty
@@ -191,6 +188,14 @@ class QueryGraphConnectedComponentsTest extends CypherFunSuite with AstConstruct
       patternNodes = Set(A, B),
       patternRelationships = Set(R2),
       shortestPathPatterns = Set(shortestPath))
+
+    graph.connectedComponents should equal(Seq(graph))
+  }
+
+  test("a query with a START node and not much else") {
+    val graph = QueryGraph(
+      patternNodes = Set(A),
+      hints = Set(NodeByIndexQuery(ident("a"), ident("index"), Null()(pos))(pos)))
 
     graph.connectedComponents should equal(Seq(graph))
   }

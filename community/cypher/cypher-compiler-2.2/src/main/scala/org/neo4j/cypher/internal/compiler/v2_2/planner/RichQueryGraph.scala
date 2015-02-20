@@ -28,6 +28,8 @@ object RichQueryGraph {
 
   // Maybe this class should be merged with QueryGraph. Unsure
   implicit class RichQueryGraph(inner: QueryGraph) {
+    def size = inner.patternRelationships.size
+
     /**
      * Returns the connected patterns of this query graph where each connected pattern is represented by a QG.
      * Does not include optional matches, shortest paths or predicates that have dependencies across multiple of the
@@ -46,10 +48,10 @@ object RichQueryGraph {
             p => coveredIds.contains(p.rel.nodes._1) && coveredIds.contains(p.rel.nodes._2)
           }
           qg.
-          withSelections(Selections(predicates)).
-          withArgumentIds(arguments).
-          addHints(hints).
-          addShortestPaths(shortestPaths.toSeq: _*)
+            withSelections(Selections(predicates)).
+            withArgumentIds(arguments).
+            addHints(hints).
+            addShortestPaths(shortestPaths.toSeq: _*)
       }
     }
 
@@ -75,21 +77,27 @@ object RichQueryGraph {
                     patternNodes.filterNot(inner.argumentIds).
                     map(createSubQueryWithNode(_, inner.argumentIds, inner.hints)).toSeq
 
-      val args: Option[QueryGraph] = if ((inner.argumentIds intersect inner.patternNodes).isEmpty)
+      val args = if (argumentsOverlapsWithNodes)
+        Some(queryGraphWithArguments)
+      else
         None
-      else {
-        val filteredHints = inner.hints.filter(h => inner.argumentIds.contains(IdName(h.identifier.name)))
-
-        Some(QueryGraph(
-          patternNodes = inner.patternNodes.filter(inner.argumentIds),
-          argumentIds = inner.argumentIds,
-          selections = Selections.from(inner.selections.predicatesGiven(inner.argumentIds): _*),
-          hints = filteredHints
-        ))
-      }
 
       nonArgs ++ args
     }
+
+    def queryGraphWithArguments: QueryGraph = {
+      val filteredHints = inner.hints.filter(h => inner.argumentIds.contains(IdName(h.identifier.name)))
+
+      val graph = QueryGraph(
+        patternNodes = inner.patternNodes.filter(inner.argumentIds),
+        argumentIds = inner.argumentIds,
+        selections = Selections.from(inner.selections.predicatesGiven(inner.argumentIds): _*),
+        hints = filteredHints
+      )
+      graph
+    }
+
+    private def argumentsOverlapsWithNodes = (inner.argumentIds intersect inner.patternNodes).nonEmpty
 
     private def connectedComponentFor(startNode: IdName, visited: mutable.Set[IdName]): QueryGraph = {
       val queue = mutable.Queue(startNode)
@@ -129,8 +137,8 @@ object RichQueryGraph {
       val shortestPaths = inner.shortestPathPatterns.filter(p => p.isFindableFrom(qg.coveredIds))
 
       qg.
-      withSelections(selections = Selections.from(inner.selections.predicatesGiven(qg.coveredIds): _*)).
-      withShortestPaths(shortestPaths)
+        withSelections(selections = Selections.from(inner.selections.predicatesGiven(qg.coveredIds): _*)).
+        withShortestPaths(shortestPaths)
     }
 
     private def createSubQueryWithNode(id: IdName, argumentIds: Set[IdName], hints: Set[Hint]) = {
@@ -144,5 +152,4 @@ object RichQueryGraph {
       )
     }
   }
-
 }

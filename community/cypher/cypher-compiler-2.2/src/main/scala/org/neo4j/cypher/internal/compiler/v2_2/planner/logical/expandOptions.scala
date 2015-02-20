@@ -19,6 +19,7 @@
  */
 package org.neo4j.cypher.internal.compiler.v2_2.planner.logical
 
+import org.neo4j.cypher.internal.compiler.v2_2.ast.{Identifier, FilterScope, AllIterablePredicate}
 import org.neo4j.cypher.internal.compiler.v2_2.planner.QueryGraph
 import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.plans._
 import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.steps.LogicalPlanProducer._
@@ -36,19 +37,36 @@ case object expandOptions extends PlanProducer with CollectionSupport {
         if (startsFromSubQG) {
           val from = missingRel.nodes._1
           val to = missingRel.nodes._2
-          createLogicalPlan(cache, subQG, to, from, missingRel, missingRel.dir)
+          createLogicalPlan(cache, subQG, qg, to, from, missingRel, missingRel.dir)
         } else {
           val from = missingRel.nodes._2
           val to = missingRel.nodes._1
-          createLogicalPlan(cache, subQG, to, from, missingRel, missingRel.dir.reverse())
+          createLogicalPlan(cache, subQG, qg, to, from, missingRel, missingRel.dir.reverse())
         }
     }
   }
 
-  private def createLogicalPlan(cache: PlanTable, subQG: QueryGraph,
-                                to: IdName, from: IdName, r: PatternRelationship, dir: Direction): Option[Expand] = {
+  private def createLogicalPlan(cache: PlanTable, subQG: QueryGraph, qg: QueryGraph,
+                                to: IdName, from: IdName, r: PatternRelationship, dir: Direction): Option[LogicalPlan] = {
     val overlapping = subQG.coveredIds.contains(to)
     val mode = if (overlapping) ExpandInto else ExpandAll
-    cache.get(subQG).map(planSimpleExpand(_, from, dir, to, r, mode))
+
+    cache.get(subQG) map {
+      innerPlan =>
+        r.length match {
+          case SimplePatternLength =>
+            planSimpleExpand(innerPlan, from, dir, to, r, mode)
+
+          case _:VarPatternLength =>
+            val availablePredicates = qg.selections.predicatesGiven(innerPlan.availableSymbols + r.name)
+            val (predicates, allPredicates) = availablePredicates.collect {
+              case all@AllIterablePredicate(FilterScope(identifier, Some(innerPredicate)), relId@Identifier(r.name.name))
+                if identifier == relId || !innerPredicate.dependencies(relId) =>
+                (identifier, innerPredicate) -> all
+            }.unzip
+            planVarExpand(innerPlan, from, dir, to, r, predicates, allPredicates, mode)
+        }
+
+    }
   }
 }

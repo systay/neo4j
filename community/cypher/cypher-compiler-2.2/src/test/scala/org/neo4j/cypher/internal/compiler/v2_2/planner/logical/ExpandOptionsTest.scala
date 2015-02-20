@@ -20,7 +20,8 @@
 package org.neo4j.cypher.internal.compiler.v2_2.planner.logical
 
 import org.neo4j.cypher.internal.commons.CypherFunSuite
-import org.neo4j.cypher.internal.compiler.v2_2.planner.{QueryGraph, LogicalPlanningTestSupport}
+import org.neo4j.cypher.internal.compiler.v2_2.ast._
+import org.neo4j.cypher.internal.compiler.v2_2.planner.{Selections, Predicate, QueryGraph, LogicalPlanningTestSupport}
 import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.plans._
 import org.neo4j.graphdb.Direction
 
@@ -39,6 +40,7 @@ class ExpandOptionsTest extends CypherFunSuite with LogicalPlanningTestSupport {
   val R5 = PatternRelationship(IdName("r5"), (A, X), Direction.OUTGOING, Seq.empty, SimplePatternLength)
   val R6 = PatternRelationship(IdName("r6"), (B, X), Direction.OUTGOING, Seq.empty, SimplePatternLength)
   val R7 = PatternRelationship(IdName("r7"), (C, X), Direction.OUTGOING, Seq.empty, SimplePatternLength)
+  val VR1 = PatternRelationship(IdName("r1"), (A, B), Direction.OUTGOING, Seq.empty, VarPatternLength(1, None))
 
   test("match a-[r1]->b") {
     // GIVEN
@@ -89,4 +91,43 @@ class ExpandOptionsTest extends CypherFunSuite with LogicalPlanningTestSupport {
     ))
   }
 
+  test("match a-[r1*]->b") {
+    // GIVEN
+    val qg = QueryGraph(patternNodes = Set(A, B), patternRelationships = Set(VR1))
+    val lpA = newMockedLogicalPlan("a")
+    val lpB = newMockedLogicalPlan("b")
+    val cache = ExhaustivePlanTable(lpA, lpB)
+
+    // WHEN
+    val solutions = expandOptions(qg, cache)
+
+    // THEN
+    solutions should equal(Seq(
+      planVarExpand(lpA, A, Direction.OUTGOING, B, VR1, Seq.empty, Seq.empty, ExpandAll),
+      planVarExpand(lpB, B, Direction.INCOMING, A, VR1, Seq.empty, Seq.empty, ExpandAll)
+    ))
+  }
+
+  test("match a-[r1*]->b where all(r in r1 where r.prop = 42)") {
+    val innerIdent = ident("r")
+    val innerPredicate: Expression = Equals( // r.prop = 20
+      Property(innerIdent, PropertyKeyName("prop")_)_,
+      SignedDecimalIntegerLiteral("42")_)_
+
+    val allPredicate = AllIterablePredicate(innerIdent,ident(VR1.name.name), Some(innerPredicate))(pos)
+
+    val qg = QueryGraph(patternNodes = Set(A, B), patternRelationships = Set(VR1), selections = Selections.from(allPredicate))
+    val lpA = newMockedLogicalPlan("a")
+    val lpB = newMockedLogicalPlan("b")
+    val cache = ExhaustivePlanTable(lpA, lpB)
+
+    // WHEN
+    val solutions = expandOptions(qg, cache)
+
+    // THEN
+    solutions should equal(Seq(
+      planVarExpand(lpA, A, Direction.OUTGOING, B, VR1, Seq(innerIdent -> innerPredicate), Seq(allPredicate), ExpandAll),
+      planVarExpand(lpB, B, Direction.INCOMING, A, VR1, Seq(innerIdent -> innerPredicate), Seq(allPredicate), ExpandAll)
+    ))
+  }
 }

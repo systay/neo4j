@@ -508,6 +508,28 @@ class ExhaustiveQueryGraphSolverTest extends CypherFunSuite with LogicalPlanning
     }
   }
 
+  test("should plan for a single shortest path pattern where one end point is an arguments") {
+
+    new given {
+      queryGraphSolver = ExhaustiveQueryGraphSolver.withDefaults()
+      qg = QueryGraph(
+        patternNodes = Set("a", "b"),
+        argumentIds = Set("a"),
+        shortestPathPatterns = Set(shortestPathPattern)
+      )
+
+      withLogicalPlanningContext { (ctx) =>
+        implicit val x = ctx
+
+        queryGraphSolver.plan(qg) should equal(
+          FindShortestPaths(
+            AllNodesScan("a", Set(IdName("b")))(null),
+            shortestPathPattern)(null)
+        )
+      }
+    }
+  }
+
   private val undefinedPlanProducer: PlanProducer = new PlanProducer {
     def apply(qg: QueryGraph, cache: PlanTable): Seq[LogicalPlan] = ???
   }

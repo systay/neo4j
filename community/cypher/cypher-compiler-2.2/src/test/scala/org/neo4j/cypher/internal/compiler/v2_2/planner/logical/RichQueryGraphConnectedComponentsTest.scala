@@ -21,10 +21,10 @@ package org.neo4j.cypher.internal.compiler.v2_2.planner.logical
 
 import org.neo4j.cypher.internal.commons.CypherFunSuite
 import org.neo4j.cypher.internal.compiler.v2_2.ast._
+import org.neo4j.cypher.internal.compiler.v2_2.planner.RichQueryGraph._
 import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.plans.{IdName, PatternRelationship, ShortestPathPattern, SimplePatternLength}
 import org.neo4j.cypher.internal.compiler.v2_2.planner.{LogicalPlanningTestSupport, QueryGraph, Selections}
 import org.neo4j.graphdb.Direction
-import org.neo4j.cypher.internal.compiler.v2_2.planner.RichQueryGraph._
 
 class RichQueryGraphConnectedComponentsTest extends CypherFunSuite with AstConstructionTestSupport with LogicalPlanningTestSupport {
   private val labelA = LabelName("A")(pos)
@@ -87,7 +87,7 @@ class RichQueryGraphConnectedComponentsTest extends CypherFunSuite with AstConst
 
     graph.connectedComponents should equal(Seq(
       QueryGraph(patternNodes = Set(A, B), patternRelationships = Set(R1), argumentIds = Set(A)),
-      QueryGraph(patternNodes = Set(C, X), patternRelationships = Set(R3), argumentIds = Set(A))
+      QueryGraph(patternNodes = Set(A, C, X), patternRelationships = Set(R3), argumentIds = Set(A))
     ))
   }
 
@@ -99,8 +99,8 @@ class RichQueryGraphConnectedComponentsTest extends CypherFunSuite with AstConst
     )
 
     graph.connectedComponents should equal(Seq(
-      QueryGraph(patternNodes = Set(A, B), patternRelationships = Set(R1), argumentIds = Set(A, C)),
-      QueryGraph(patternNodes = Set(C, X), patternRelationships = Set(R3), argumentIds = Set(A, C))
+      QueryGraph(patternNodes = Set(A, B, C), patternRelationships = Set(R1), argumentIds = Set(A, C)),
+      QueryGraph(patternNodes = Set(A, C, X), patternRelationships = Set(R3), argumentIds = Set(A, C))
     ))
   }
 
@@ -198,5 +198,10 @@ class RichQueryGraphConnectedComponentsTest extends CypherFunSuite with AstConst
       hints = Set(NodeByIndexQuery(ident("a"), ident("index"), Null()(pos))(pos)))
 
     graph.connectedComponents should equal(Seq(graph))
+  }
+
+  test("two pattern nodes that are both arguments should be treated as a single connected component") {
+    QueryGraph(patternNodes = Set(A, B), argumentIds = Set(A, B)).connectedComponents should equal(
+      Seq(QueryGraph(patternNodes = Set(A, B), argumentIds = Set(A, B))))
   }
 }

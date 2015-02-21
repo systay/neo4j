@@ -49,15 +49,13 @@ case class ExhaustiveQueryGraphSolver(leafPlanTableGenerator: PlanTableGenerator
     solveOptionalQGsInOrder(plan, optionalQGs)
   }
 
-  private def solveOptionalQGsInOrder(plan: LogicalPlan, optionalQGs: Seq[QueryGraph])(implicit context: LogicalPlanningContext): LogicalPlan = {
-    val result = optionalQGs.foldLeft(plan) {
+  private def solveOptionalQGsInOrder(plan: LogicalPlan, optionalQGs: Seq[QueryGraph])(implicit context: LogicalPlanningContext): LogicalPlan =
+    optionalQGs.foldLeft(plan) {
       case (lhs: LogicalPlan, optionalQg: QueryGraph) =>
         val plans = optionalSolvers.flatMap(_.apply(optionalQg, lhs))
         assert(plans.map(_.solved).distinct.size == 1) // All plans are solving the same query
         bestPlanFinder(plans).get
     }
-    result
-  }
 
   // This is the dynamic programming part of the solver
   private def solveMandatoryQuerygraph(queryGraph: QueryGraph)(implicit context: LogicalPlanningContext, leafPlan: Option[LogicalPlan]): (PlanTable, Option[LogicalPlan]) = {
@@ -75,6 +73,12 @@ case class ExhaustiveQueryGraphSolver(leafPlanTableGenerator: PlanTableGenerator
               cache + result
             }
         }
+      }
+
+      if(cache.get(qg).isEmpty && qg.shortestPathPatterns.nonEmpty) {
+        val startPlan = cache(qg.withShortestPaths(Set()))
+        val result = solveShortestPaths(startPlan, qg.shortestPathPatterns)
+        cache + result
       }
 
       cache(qg)

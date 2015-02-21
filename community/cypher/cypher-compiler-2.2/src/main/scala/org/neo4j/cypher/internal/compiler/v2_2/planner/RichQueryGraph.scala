@@ -52,7 +52,7 @@ object RichQueryGraph {
             withArgumentIds(arguments).
             addHints(hints).
             addShortestPaths(shortestPaths.toSeq: _*)
-      }
+      }.distinct
     }
 
     def --(other: QueryGraph): QueryGraph = {
@@ -101,7 +101,8 @@ object RichQueryGraph {
 
     private def connectedComponentFor(startNode: IdName, visited: mutable.Set[IdName]): QueryGraph = {
       val queue = mutable.Queue(startNode)
-      var qg = QueryGraph.empty.withArgumentIds(inner.argumentIds)
+      val argumentNodes = inner.patternNodes intersect inner.argumentIds
+      var qg = QueryGraph(argumentIds = inner.argumentIds, patternNodes = argumentNodes)
       while (queue.nonEmpty) {
         val node = queue.dequeue()
         qg = if (visited(node)) {

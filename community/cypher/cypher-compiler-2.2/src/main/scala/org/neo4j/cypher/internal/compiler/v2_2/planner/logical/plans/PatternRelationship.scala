@@ -44,6 +44,8 @@ final case class PatternRelationship(name: IdName, nodes: (IdName, IdName), dir:
     case Direction.INCOMING => (right, left)
     case _ => (left, right)
   }
+
+  def hasEndPointSolved(symbols: Set[IdName]) = symbols(nodes._1) || symbols(nodes._2)
 }
 
 object PatternRelationship {

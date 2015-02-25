@@ -26,20 +26,5 @@ import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.steps.LogicalPlan
 
 case object joinOptions extends PlanProducer {
 
-  def apply(qg: QueryGraph, cache: PlanTable): Seq[LogicalPlan] =
-    (1 to qg.size - 1).flatMap {
-      size =>
-        qg.combinations(size).flatMap {
-          subQg: QueryGraph =>
-            val otherSideQG: QueryGraph = qg -- subQg
-            val overlappingNodeIds = subQg.patternNodes intersect otherSideQG.patternNodes
-
-            if (overlappingNodeIds.isEmpty)
-              None
-            else {
-              for ( lhs <- cache.get(subQg) ; rhs <- cache.get(otherSideQG) )
-                  yield planNodeHashJoin(overlappingNodeIds, lhs, rhs)
-            }
-        }
-    }
+  def apply(qg: QueryGraph, cache: PlanTable): Seq[LogicalPlan] = ???
 }

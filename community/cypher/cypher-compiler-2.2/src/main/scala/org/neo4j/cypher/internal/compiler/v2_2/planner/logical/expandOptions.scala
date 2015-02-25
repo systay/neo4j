@@ -28,22 +28,7 @@ import org.neo4j.graphdb.Direction
 
 case object expandOptions extends PlanProducer with CollectionSupport {
 
-  def apply(qg: QueryGraph, cache: PlanTable): Seq[LogicalPlan] = {
-    qg.combinations(qg.size - 1).flatMap {
-      subQG =>
-        val missingRel = (qg.patternRelationships -- subQG.patternRelationships).head
-        val startsFromSubQG = subQG.coveredIds.contains(missingRel.nodes._1)
-        if (startsFromSubQG) {
-          val from = missingRel.nodes._1
-          val to = missingRel.nodes._2
-          createLogicalPlan(cache, subQG, to, from, missingRel, missingRel.dir)
-        } else {
-          val from = missingRel.nodes._2
-          val to = missingRel.nodes._1
-          createLogicalPlan(cache, subQG, to, from, missingRel, missingRel.dir.reverse())
-        }
-    }
-  }
+  def apply(qg: QueryGraph, cache: PlanTable): Seq[LogicalPlan] = ???
 
   private def createLogicalPlan(cache: PlanTable, subQG: QueryGraph,
                                 to: IdName, from: IdName, r: PatternRelationship, dir: Direction): Option[Expand] = {

@@ -306,20 +306,25 @@ class IDPQueryGraphSolverTest extends CypherFunSuite with LogicalPlanningTestSup
     // keep around, practical for investigating performance
     val numberOfPatternRelationships = 10
 
-    new given {
-      queryGraphSolver = IDPQueryGraphSolver()
-      val patternRels = for (i <- 1 to numberOfPatternRelationships) yield {
-        PatternRelationship("r" + i, ("n" + i, "x"), Direction.INCOMING, Seq.empty, SimplePatternLength)
+    while(true) {
+      val t = System.currentTimeMillis()
+      new given {
+        queryGraphSolver = IDPQueryGraphSolver()
+        val patternRels = for (i <- 1 to numberOfPatternRelationships) yield {
+          PatternRelationship("r" + i, ("n" + i, "x"), Direction.INCOMING, Seq.empty, SimplePatternLength)
+        }
+
+        val patternNodes = for (i <- 1 to numberOfPatternRelationships) yield {
+          IdName("n" + i)
+        }
+
+        qg = QueryGraph(patternNodes = patternNodes.toSet + IdName("x"), patternRelationships = patternRels.toSet)
+      }.withLogicalPlanningContext { (cfg, ctx) =>
+        implicit val x = ctx
+        queryGraphSolver.plan(cfg.qg) // should not throw
       }
 
-      val patternNodes = for (i <- 1 to numberOfPatternRelationships) yield {
-        IdName("n" + i)
-      }
-
-      qg = QueryGraph(patternNodes = patternNodes.toSet + IdName("x"), patternRelationships = patternRels.toSet)
-    }.withLogicalPlanningContext { (cfg, ctx) =>
-      implicit val x = ctx
-      queryGraphSolver.plan(cfg.qg) // should not throw
+      println(System.currentTimeMillis() - t)
     }
   }
 

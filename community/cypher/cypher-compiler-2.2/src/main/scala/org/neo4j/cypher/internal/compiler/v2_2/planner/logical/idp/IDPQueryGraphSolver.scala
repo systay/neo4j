@@ -164,15 +164,26 @@ case class IDPQueryGraphSolver(maxDepth: Int = 5,
     if (size > 1) {
       // line 7-16
       val k = Math.min(size, maxDepth)
-      for (i <- 2 to k;
-           goal <- toDo.subsets(i) if !table.contains(goal); // If we already have an optimal plan, no need to replan
-           candidates = solutionGenerator(goal);
-           best <- bestPlanFinder(candidates)) {
-        table.put(goal, best)
-      }
+      var i = 2
+      val started = System.currentTimeMillis()
+      def continue(): Boolean = (System.currentTimeMillis() - started) < 500 || i == 2
+      var largestFinished = 0
+      while (i <= k && continue()) {
+        val goals = toDo.subsets(i).filterNot(table.contains)
 
+        while(goals.hasNext && continue()) {
+          val goal = goals.next()
+          val candidates = solutionGenerator(goal)
+          val best = bestPlanFinder(candidates)
+          best.foreach(p => table.put(goal, p))
+        }
+
+        if(continue()) largestFinished = i
+
+        i += 1
+      }
       // line 17
-      val blockCandidates = table.plansOfSize(k)
+      val blockCandidates = table.plansOfSize(largestFinished)
       val (bestSolvables, bestBlock) = pickSolution(blockCandidates).getOrElse(throw new InternalException("Did not find a single solution for a block"))
 
       // TODO: Test this

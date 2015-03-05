@@ -23,23 +23,29 @@ import org.neo4j.cypher.internal.compiler.v2_2.planner.logical.plans.LogicalPlan
 
 import scala.collection.{Map, mutable}
 
-// TODO: Make immutable
 class ExhaustivePlanTable extends (Set[Solvable] => Option[LogicalPlan]) {
   private val table = new mutable.HashMap[Set[Solvable], LogicalPlan]()
 
-  def head = table.head._2
+  def singleRemainingPlan = {
+    assert(table.size == 1, "Expected a single plan to be left in the plan table")
+    table.head._2
+  }
 
   def apply(solved: Set[Solvable]): Option[LogicalPlan] = table.get(solved)
 
-  def put(solved: Set[Solvable], plan: LogicalPlan): Unit = {
+  def put(solved: Set[Solvable], plan: LogicalPlan) {
     table.put(solved, plan)
   }
 
-  def remove(solved: Set[Solvable]): Unit = {
-    table.remove(solved)
+  def removeAllTracesOf(solvables: Set[Solvable]) = {
+    table.retain {
+      case (k, _) => (k intersect solvables).isEmpty
+    }
   }
 
   def contains(solved: Set[Solvable]): Boolean = table.contains(solved)
 
   def plansOfSize(k: Int): Map[Set[Solvable], LogicalPlan] = table.filterKeys(_.size == k)
+
+  def keySet: Set[Set[Solvable]] = table.keySet.toSet
 }

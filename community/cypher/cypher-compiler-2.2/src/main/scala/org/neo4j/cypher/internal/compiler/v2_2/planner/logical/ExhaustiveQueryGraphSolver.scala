@@ -146,8 +146,7 @@ case class ExhaustiveQueryGraphSolver(leafPlanFinder: LogicalLeafPlan.Finder = l
       val solutionGenerator = newSolutionGenerator(qg, kit, table)
       solvePatterns(qg, initialToDo, kit, table, solutionGenerator)
 
-      // TODO: Not exactly pretty
-      table.head
+      table.singleRemainingPlan
     } else {
       val solutionPlans = leaves.filter(plan => (qg.coveredIds -- plan.availableSymbols).isEmpty)
       bestPlanFinder(solutionPlans).getOrElse(throw new InternalException("Found no leaf plan for connected component.  This must not happen."))
@@ -179,7 +178,7 @@ case class ExhaustiveQueryGraphSolver(leafPlanFinder: LogicalLeafPlan.Finder = l
       val blockSolved = SolvableBlock(bestSolvables.flatMap(_.solvables))
       table.put(Set(blockSolved), bestBlock)
       val newToDo = toDo -- bestSolvables + blockSolved
-      bestSolvables.subsets.foreach(table.remove)
+      table.removeAllTracesOf(bestSolvables)
       solvePatterns(qg, newToDo, kit, table, solutionGenerator)
     }
   }
@@ -215,5 +214,5 @@ case class ExhaustiveQueryGraphSolver(leafPlanFinder: LogicalLeafPlan.Finder = l
 }
 
 object ExhaustiveQueryGraphSolver {
-  val MAX_SEARCH_DEPTH = 9
+  val MAX_SEARCH_DEPTH = 5
 }

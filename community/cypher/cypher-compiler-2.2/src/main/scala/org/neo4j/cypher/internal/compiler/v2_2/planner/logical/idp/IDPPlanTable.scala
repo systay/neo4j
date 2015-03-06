@@ -49,4 +49,8 @@ class IDPPlanTable extends (Set[Solvable] => Option[LogicalPlan]) {
   def plansOfSize(k: Int): Map[Set[Solvable], LogicalPlan] = table.filterKeys(_.size == k)
 
   def keySet: Set[Set[Solvable]] = table.keySet.toSet
+
+  def size: Int = table.size
+
+  override def toString(): String = s"IDPPlanTable(numberOfPlans=$size, largestSolved=${table.keySet.map(_.size).max})"
 }

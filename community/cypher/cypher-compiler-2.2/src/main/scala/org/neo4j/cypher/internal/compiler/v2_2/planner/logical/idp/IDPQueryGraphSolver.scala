@@ -36,7 +36,7 @@ import scala.annotation.tailrec
  *
  * Line comments correspond to the lines in the pseudo-code in that paper for the IDP1 algorithm.
  */
-case class IDPQueryGraphSolver(maxDepth: Int = 5,
+case class IDPQueryGraphSolver(maxTableSize: Int = 256,
                                leafPlanFinder: LogicalLeafPlan.Finder = leafPlanOptions,
                                config: QueryPlannerConfiguration = QueryPlannerConfiguration.default,
                                solvers: Seq[IDPTableSolver] = Seq(joinTableSolver, expandTableSolver),
@@ -101,19 +101,37 @@ case class IDPQueryGraphSolver(maxDepth: Int = 5,
                             table: IDPPlanTable,
                             solutionGenerator: Set[Solvable] => Iterable[LogicalPlan])
                            (implicit context: LogicalPlanningContext, kit: QueryPlannerKit): Unit = {
+
+    /*
+    This part is different from the paper. Instead of searching at a given search depth, the algorithm only allows
+    the plan table to grow into a predetermined size. It is a way of limiting the time/memory planning takes.
+     */
+
     val size = toDo.size
     if (size > 1) {
-      // line 7-16
-      val k = Math.min(size, maxDepth)
-      for (i <- 2 to k;
-           goal <- toDo.subsets(i) if !table.contains(goal); // If we already have an optimal plan, no need to replan
-           candidates = solutionGenerator(goal);
-           best <- kit.pickBest(candidates)) {
-        table.put(goal, best)
+      var i = 2
+      var largestFinished = -1
+      def shouldContinueThisIteration() = table.size < maxTableSize || i == 2 // The minimal search depth we can handle is 2 - greedy planning
+
+      while (i <= toDo.size && shouldContinueThisIteration()) {
+        val goals = toDo.subsets(i).filterNot(table.contains)
+
+        while (goals.hasNext && shouldContinueThisIteration()) {
+          val goal = goals.next()
+
+          val candidates = solutionGenerator(goal)
+          val best = kit.pickBest(candidates)
+          best.foreach(p => table.put(goal, p))
+        }
+
+        if (shouldContinueThisIteration()) // We only mark this size finished if we saw all the plans for this size
+          largestFinished = i
+
+        i += 1
       }
 
       // line 17
-      val blockCandidates = table.plansOfSize(k)
+      val blockCandidates = table.plansOfSize(largestFinished)
       val (bestSolvables, bestBlock) = pickSolution(blockCandidates).getOrElse(throw new InternalException("Did not find a single solution for a block"))
 
       // TODO: Test this

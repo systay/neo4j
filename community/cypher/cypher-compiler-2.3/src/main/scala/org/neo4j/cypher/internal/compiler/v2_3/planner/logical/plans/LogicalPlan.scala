@@ -47,6 +47,10 @@ abstract class LogicalPlan
 //  def toDefaultPrettyString(formatter: DocFormatter) =
 //    toPrettyString(formatter)(InternalDocHandler.docGen)
 
+  def produce()
+  def consume()
+
+
   def lhs: Option[LogicalPlan]
   def rhs: Option[LogicalPlan]
   def solved: PlannerQuery

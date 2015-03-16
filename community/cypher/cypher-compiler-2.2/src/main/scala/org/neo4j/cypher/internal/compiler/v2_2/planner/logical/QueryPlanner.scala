@@ -60,7 +60,7 @@ class DefaultQueryPlanner(config: QueryPlannerConfiguration = QueryPlannerConfig
     val partPlan = planPart(query, leafPlan)
 
     val projectedPlan = planEventHorizon(query, partPlan)
-    val projectedContext = context.recurse(projectedPlan)
+    val projectedContext = calculateCardinalityForTail(context, projectedPlan)
     val expressionRewriter = expressionRewriterFactory(projectedContext)
     val completePlan = projectedPlan.endoRewrite(expressionRewriter)
 
@@ -72,14 +72,15 @@ class DefaultQueryPlanner(config: QueryPlannerConfiguration = QueryPlannerConfig
     remaining match {
       case Some(query) =>
         val lhs = pred
-        val lhsContext = context.recurse(lhs)
+        val lhsContext = calculateCardinalityForTail(context, lhs)
+
         val rhs = planPart(query, Some(planQueryArgumentRow(query.graph)))(lhsContext)
         val applyPlan = planTailApply(lhs, rhs)
 
         val applyContext = lhsContext.recurse(applyPlan)
         val projectedPlan = planEventHorizon(query, applyPlan)(applyContext)
 
-        val projectedContext = applyContext.recurse(projectedPlan)
+        val projectedContext = calculateCardinalityForTail(applyContext, projectedPlan)
         val expressionRewriter = expressionRewriterFactory(projectedContext)
         val completePlan = projectedPlan.endoRewrite(expressionRewriter)
 
@@ -89,6 +90,14 @@ class DefaultQueryPlanner(config: QueryPlannerConfiguration = QueryPlannerConfig
       case None =>
         pred
     }
+
+  private def calculateCardinalityForTail(context: LogicalPlanningContext, lhs: LogicalPlan): LogicalPlanningContext = {
+    val result = context.recurse(lhs)
+    if (result.cardinalityInput.inboundCardinality.amount < 1)
+      result.copy(cardinalityInput = result.cardinalityInput.withCardinality(Cardinality(1)))
+    else
+      result
+  }
 
   private def planPart(query: PlannerQuery, leafPlan: Option[LogicalPlan])(implicit context: LogicalPlanningContext): LogicalPlan =
     context.strategy.plan(query.graph)(context, leafPlan)

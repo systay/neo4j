@@ -17,13 +17,27 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.internal;
+package org.neo4j.cypher.internal.compiler.v2_3.birk.il
 
-import org.neo4j.helpers.collection.Visitor;
-import org.neo4j.kernel.api.Statement;
-import org.neo4j.kernel.api.exceptions.KernelException;
+case class BuildProbeTable(name: String, node: String) extends Instruction {
+  def generateInit() = s"PrimitiveLongIntMap $name = Primitive.longIntMap();"
 
-public interface ExecutablePlan
-{
-    void accept( Visitor visitor, Statement statement ) throws KernelException;
+  def generateCode() =
+    s"""int count = $name.get( $node );
+       |if ( count == LongKeyIntValueTable.NULL )
+       |{
+       |    $name.put( $node, 1 );
+       |}
+       |else
+       |{
+       |    $name.put( $node, count + 1 );
+       |}""".stripMargin
+
+  override def _importedClasses() = Seq(
+    "org.neo4j.collection.primitive.PrimitiveLongIntMap",
+    "org.neo4j.collection.primitive.hopscotch.LongKeyIntValueTable")
+}
+
+object BuildProbeTable {
+  def producedType: String = "PrimitiveLongIntMap"
 }

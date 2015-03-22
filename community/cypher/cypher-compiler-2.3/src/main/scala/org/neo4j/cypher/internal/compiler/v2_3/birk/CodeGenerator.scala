@@ -19,189 +19,156 @@
  */
 package org.neo4j.cypher.internal.compiler.v2_3.birk
 
+import java.util.concurrent.atomic.AtomicInteger
+
+import org.neo4j.cypher.internal.compiler.v2_3.birk.il._
 import org.neo4j.cypher.internal.compiler.v2_3.planner.logical.plans._
-import org.neo4j.graphdb.Direction
 
 import scala.collection.immutable.Stack
-import scala.collection.mutable.ListBuffer
 
+object CodeGenerator {
+  private val nameCounter = new AtomicInteger(0)
 
-class CodeGenerator {
-  def generate(plan: LogicalPlan): String = {
-    val planStatements = createResultAst(plan)
-    generateCodeFromAst(planStatements)
+  def nextClassName(): String = {
+    val x = nameCounter.getAndIncrement
+    s"GeneratedExecutionPlan$x"
   }
 
-  private def generateCodeFromAst(statements: Seq[ResultAst]) = {
-    val imports = statements.flatMap(_.importedClasses()).distinct.sorted.mkString("import ", ";\nimport ", ";")
-    val init = statements.map(_.generateInit()).reduce(_ + "\n" + _)
-    val methodBody = statements.map(_.generateCode()).reduce(_ + "\n" + _)
+  def indentNicely(in: String): String = {
 
-    s"""$imports
+    var indent = 0
+
+    in.split(n).flatMap {
+      line =>
+        val l = line.stripPrefix(" ")
+        if (l == "")
+          None
+        else {
+          if (l == "}")
+            indent = indent - 1
+
+          val result = "  " * indent + l
+
+          if (l == "{")
+            indent = indent + 1
+
+          Some(result)
+        }
+    }.mkString(n)
+  }
+
+  def n = System.lineSeparator()
+}
+
+class CodeGenerator {
+
+  import CodeGenerator.n
+
+  def generate(plan: LogicalPlan): String = {
+    val planStatements: Seq[Instruction] = createResultAst(plan)
+    val source = generateCodeFromAst(CodeGenerator.nextClassName(), planStatements)
+    CodeGenerator.indentNicely(source)
+  }
+
+  private def generateCodeFromAst(className: String, statements: Seq[Instruction]) = {
+    val importLines = statements.flatMap(_.importedClasses())
+    val imports = if(importLines.nonEmpty)
+      importLines.distinct.sorted.mkString("import ", s";${n}import ", ";")
+    else
+      ""
+    val init = statements.map(_.generateInit()).reduce(_ + n + _)
+    val methodBody = statements.map(_.generateCode()).reduce(_ + n + _)
+    val privateMethods = statements.flatMap(_.methods).distinct.sortBy(_.name)
+    val privateMethodText = privateMethods.map(_.generateCode).reduceOption(_ + n + _).getOrElse("")
+
+    s"""package org.neo4j.cypher.internal.compiler.v2_3.birk.generated;
        |
-       |public class APA {
-       |  public void execute(Statement statement, ResultVisitor visitor) {
-       |    // INIT DATA STRUCTURES
-       |    $init
+       |import org.neo4j.helpers.collection.Visitor;
+       |import org.neo4j.kernel.api.Statement;
+       |import org.neo4j.kernel.api.exceptions.KernelException;
+       |import org.neo4j.cypher.internal.compiler.v2_3.birk.ExecutablePlan
+       |import org.neo4j.kernel.api.ReadOperations;
+       |$imports
        |
-       |    // DO IT!
-       |    $methodBody
-       |  }
+       |public class $className implements ExecutablePlan
+       |{
+       |@Override
+       |public void accept(Visitor visitor, Statement statement) throws KernelException
+       |{
+       |ReadOperations ro = statement.readOperations();
+       |$init
+       |$methodBody
+       |}
+       |$privateMethodText
        |}""".stripMargin
   }
 
-  private def createResultAst(plan: LogicalPlan):Seq[ResultAst] = {
+
+  class Namer(prefix: String) {
     var varCounter = 0
+
+    def next() = {
+      varCounter += 1
+      prefix + varCounter
+    }
+  }
+
+  case class Symbol(id: String, javaType: String)
+
+  private def createResultAst(plan: LogicalPlan): Seq[Instruction] = {
     var variables: Map[String, String] = Map.empty
     var probeTables: Map[NodeHashJoin, String] = Map.empty
-    val builder = new ListBuffer[ResultAst]
+    val variableName = new Namer("v")
+    val methodName = new Namer("m")
 
-    def createVariableName() = {
-      varCounter += 1
-      s"v$varCounter"
-    }
-
-    def produce(plan: LogicalPlan, stack: Stack[LogicalPlan]) {
+    def produce(plan: LogicalPlan, stack: Stack[LogicalPlan]): (Option[Symbol], Seq[Instruction]) = {
       plan match {
         case AllNodesScan(id, arguments) =>
-          val variable = createVariableName()
+          val variable = variableName.next()
           variables = variables + (id.name -> variable)
-          val actions = consume(stack.top, plan, stack.pop)
-          builder += WhileLoop(variable, ScanAllNodes(), actions)
+          val (apa, actions) = consume(stack.top, plan, stack.pop)
+          (apa, Seq(WhileLoop(variable, ScanAllNodes(), actions)))
 
         case _: ProduceResult | _: Expand =>
           produce(plan.lhs.get, stack.push(plan))
 
         case NodeHashJoin(_, lhs, rhs) =>
-          produce(lhs, stack.push(plan))
-          produce(rhs, stack.push(plan))
+          val (Some(symbol), lAst) = produce(lhs, stack.push(plan))
+          val lhsMethod = MethodInvocation(symbol.id, symbol.javaType, methodName.next(), lAst)
+          val (x, r) = produce(rhs, stack.push(plan))
+          (x, lhsMethod +: r)
       }
     }
 
-    def consume(plan: LogicalPlan, from: LogicalPlan, stack: Stack[LogicalPlan]): ResultAst = {
+    def consume(plan: LogicalPlan, from: LogicalPlan, stack: Stack[LogicalPlan]): (Option[Symbol], Instruction) = {
       plan match {
         case ProduceResult(columns, _) =>
-          ProduceResults(columns.map(c => c -> variables(c)).toMap)
+          (None, ProduceResults(columns.map(c => c -> variables(c)).toMap))
 
         case Expand(_, IdName(f), dir, _, IdName(to), IdName(rel), _) =>
-          val nodeVar = createVariableName()
-          val relVar = createVariableName()
+          val nodeVar = variableName.next()
+          val relVar = variableName.next()
           variables = variables + (rel -> relVar) + (to -> nodeVar)
-          val action = consume(stack.top, plan, stack.pop)
+          val (variable,action) = consume(stack.top, plan, stack.pop)
           val fromVar = variables(f)
-          WhileLoop(relVar, ExpandC(fromVar, relVar, nodeVar, dir), action)
+          (variable, WhileLoop(relVar, ExpandC(fromVar, relVar, nodeVar, dir), action))
 
         case join@NodeHashJoin(nodes, lhs, rhs) if from == lhs =>
           val nodeId = variables(nodes.head.name)
-          val probeTableName = createVariableName()
+          val probeTableName = variableName.next()
           probeTables = probeTables. + (join -> probeTableName)
-          BuildProbeTable(probeTableName, nodeId)
+          (Some(Symbol(probeTableName, BuildProbeTable.producedType)), BuildProbeTable(probeTableName, nodeId))
 
         case join@NodeHashJoin(_, lhs, rhs) if from == rhs =>
-          val action = consume(stack.top, plan, stack.pop)
-          val matches = createVariableName()
+          val (x, action) = consume(stack.top, plan, stack.pop)
+          val matches = variableName.next()
           val probeTableName = probeTables(join)
-          WhileLoop(matches, GetMatchesFromProbeTable(probeTableName), action)
+          (x, WhileLoop(matches, GetMatchesFromProbeTable(probeTableName), action))
       }
     }
 
-    produce(plan, Stack.empty)
+    val (_, result) = produce(plan, Stack.empty)
 
-    builder.toSeq
+    result
   }
-}
-
-trait ResultAst {
-  // Actual code produced by element
-  def generateCode(): String
-
-  // Initialises necessary data-structures. Is inserted at the top of the generated method
-  def generateInit(): String
-
-  // Generates import list for class
-  def importedClasses(): Vector[String]
-}
-
-// Generates the code that moves data into local variables from the iterator being consumed
-trait LoopDataGenerator extends ResultAst {
-  def generateVariablesAndAssignment(): String
-}
-
-case class WhileLoop(id: String, producer: LoopDataGenerator, action: ResultAst) extends ResultAst {
-  def generateCode(): String = {
-    val iterator = s"${id}Iter"
-
-    s"""  PrimitiveLongIterator $iterator = ${producer.generateCode()};
-       |  while ( $iterator.hasNext() ) {
-       |    long $id = $iterator.next();
-       |    ${producer.generateVariablesAndAssignment()}
-       |    ${action.generateCode()}
-       |  }
-       |""".stripMargin
-  }
-
-  def generateInit() = producer.generateInit() + action.generateInit()
-
-  def importedClasses() =
-    producer.importedClasses() ++
-    action.importedClasses() :+
-      "org.neo4j.collection.primitive.PrimitiveLongIterator"
-}
-
-case class ScanAllNodes() extends ResultAst with LoopDataGenerator {
-  def generateCode() = "ro.nodesGetAll()"
-
-  def generateVariablesAndAssignment() = ""
-
-  def generateInit() = ""
-
-  def importedClasses() = Vector.empty
-}
-
-case class ProduceResults(columns: Map[String, String]) extends ResultAst {
-  def generateCode() = columns.toSeq.map {
-    case (k, v) => s"""    row.setNodeId("$k", $v);"""
-  }.mkString("\n") + "\n    visitor.accept(row);\n"
-
-  def generateInit() = ""
-
-  def importedClasses() = Vector.empty
-}
-
-case class ExpandC(from: String, relVar: String, nodeVar: String, dir: Direction) extends LoopDataGenerator {
-  def generateCode(): String = s"ro.nodeGetRelationships($from, Direction.$dir)"
-
-  def generateVariablesAndAssignment(): String = s"long $nodeVar = 666; // Should get the other end of the relationship"
-
-  def generateInit() = ""
-
-  // Generates import list for class
-  def importedClasses() = Vector.empty
-}
-
-case class BuildProbeTable(name: String, node: String) extends ResultAst {
-  def generateInit() = s"PrimitiveLongIntMap $name = Primitive.longIntMap();"
-
-  def generateCode() =
-    s"""    int count = $name.get( $node );
-       |    if ( count == LongKeyIntValueTable.NULL ) {
-       |        $name.put( $node, 1 );
-       |    } else {
-       |        $name.put( $node, count + 1 );
-       |    }""".stripMargin
-
-  // Generates import list for class
-  def importedClasses() = Vector("org.neo4j.collection.primitive.PrimitiveLongIntMap", "org.neo4j.collection.primitive.hopscotch.LongKeyIntValueTable")
-}
-
-case class GetMatchesFromProbeTable(probeTable: String) extends LoopDataGenerator {
-  // Initialises necessary data-structures. Is inserted at the top of the generated method
-  def generateInit() = ""
-
-  // Generates import list for class
-  def importedClasses() = Vector.empty
-
-  def generateCode() = "GET MATCHES FROM PROBE TABLE"
-
-  def generateVariablesAndAssignment() = "APA!"
 }

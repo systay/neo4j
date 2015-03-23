@@ -20,22 +20,23 @@
 package org.neo4j.cypher.internal.compiler.v2_3.birk.il
 
 import org.neo4j.cypher.internal.compiler.v2_3.birk.CodeGenerator.n
+import org.neo4j.cypher.internal.compiler.v2_3.birk.JavaSymbol
 
-case class WhileLoop(id: String, producer: LoopDataGenerator, action: Instruction) extends Instruction {
+case class WhileLoop(id: JavaSymbol, producer: LoopDataGenerator, action: Instruction) extends Instruction {
   def generateCode(): String = {
     val iterator = s"${id}Iter"
 
-    s"""PrimitiveLongIterator $iterator = ${producer.generateCode()};
+    s"""${producer.javaType} $iterator = ${producer.generateCode()};
        |while ( $iterator.hasNext() )
        |{
-       |long $id = $iterator.next();
+       |${id.javaType} ${id.name} = $iterator.next();
        |${producer.generateVariablesAndAssignment()}
        |${action.generateCode()}
        |}
        |""".stripMargin
   }
 
-  override def _importedClasses() = Seq(
+  override def _importedClasses() = Set(
       "org.neo4j.collection.primitive.PrimitiveLongIterator",
       "org.neo4j.collection.primitive.Primitive")
 

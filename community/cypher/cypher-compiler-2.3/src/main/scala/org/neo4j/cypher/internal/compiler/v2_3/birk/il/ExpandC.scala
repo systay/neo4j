@@ -26,7 +26,34 @@ case class ExpandC(from: String, relVar: String, nodeVar: String, dir: Direction
 
   def generateVariablesAndAssignment() = s"long $nodeVar = 666; // Should get the other end of the relationship"
 
-  override def _importedClasses() = Seq("org.neo4j.graphdb.Direction")
+  override def _importedClasses() = Set(
+    "org.neo4j.graphdb.Direction",
+    "org.neo4j.collection.primitive.PrimitiveLongIterator")
+
+  def javaType = "PrimitiveLongIterator"
+
+  def generateInit() = ""
+}
+
+case class ExpandFromRelationship(relId: Symbol, nodeVar: Symbol, inner: Instruction) extends Instruction {
+  override def generateCode(): String =
+    s"""
+       |ro.relationshipVisit( ${relId.name}, new RelationshipVisitor<KernelException>()
+       |{
+       |@Override
+       |public void visit( long relId, int type, long startNode, long ${nodeVar.name} ) throws KernelException
+       |{
+       |${inner.generateCode()}
+       |}
+       |}
+       |);
+       |""".stripMargin
+
+  override protected def children = Seq(inner)
+
+  override def _importedClasses() = Set(
+    "org.neo4j.kernel.api.exceptions.KernelException",
+    "org.neo4j.kernel.impl.api.RelationshipVisitor")
 
   def generateInit() = ""
 }

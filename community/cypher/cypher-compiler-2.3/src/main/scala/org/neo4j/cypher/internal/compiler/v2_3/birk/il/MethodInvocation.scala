@@ -40,7 +40,7 @@ case class MethodInvocation(resultVariable: String, resultType: String, methodNa
       val init = statements.map(_.generateInit()).reduce(_ + n + _)
       val methodBody = statements.map(_.generateCode()).reduce(_ + n + _)
 
-      s"""private $resultType $methodName(ReadOperation ro)
+      s"""private $resultType $methodName(ReadOperations ro)
          |{
          |$init
          |$methodBody

@@ -33,7 +33,7 @@ case class BuildProbeTable(name: String, node: String) extends Instruction {
        |    $name.put( $node, count + 1 );
        |}""".stripMargin
 
-  override def _importedClasses() = Seq(
+  override def _importedClasses() = Set(
     "org.neo4j.collection.primitive.PrimitiveLongIntMap",
     "org.neo4j.collection.primitive.hopscotch.LongKeyIntValueTable")
 }

@@ -24,6 +24,10 @@ case class ScanAllNodes() extends Instruction with LoopDataGenerator {
 
   def generateVariablesAndAssignment() = ""
 
-  // Initialises necessary data-structures. Is inserted at the top of the generated method
   def generateInit() = ""
+
+  override def _importedClasses() =
+    Set("org.neo4j.collection.primitive.PrimitiveLongIterator")
+
+  def javaType = "PrimitiveLongIterator"
 }

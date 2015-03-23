@@ -22,4 +22,5 @@ package org.neo4j.cypher.internal.compiler.v2_3.birk.il
 // Generates the code that moves data into local variables from the iterator being consumed
 trait LoopDataGenerator extends Instruction {
   def generateVariablesAndAssignment(): String
+  def javaType:String
 }

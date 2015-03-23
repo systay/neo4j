@@ -20,10 +20,46 @@
 package org.neo4j.cypher
 
 import org.neo4j.cypher.internal.PathImpl
+import org.neo4j.cypher.internal.compiler.v2_3.birk.ResultRow
+import org.neo4j.cypher.internal.compiler.v2_3.birk.generated.GeneratedExecutionPlan0
 import org.neo4j.graphdb._
+import org.neo4j.graphdb.factory.GraphDatabaseFactory
+import org.neo4j.kernel.GraphDatabaseAPI
+import org.neo4j.kernel.api.exceptions.KernelException
+import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import scala.collection.JavaConverters._
+import org.neo4j.helpers.collection.Visitor
 
 class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with NewPlannerTestSupport {
+
+  class PrintlnVisitor(columns: String*) extends Visitor[ResultRow, KernelException] {
+    def visit(e: ResultRow) = {
+      val result = columns.map(c => s"$c -> ${e.getNodeAt(c)}").mkString(",")
+      println(result)
+
+      true
+    }
+  }
+
+  test("apa") {
+    val db = new GraphDatabaseFactory().newEmbeddedDatabase("/tmp/db").asInstanceOf[GraphDatabaseAPI]
+    db.inTx {
+      createLabeledNode("A")
+      createLabeledNode("A", "B")
+      createLabeledNode("A", "B", "C")
+      createLabeledNode("B", "C")
+      createLabeledNode("C")
+    }
+    db
+    try {
+      val tx: Transaction = db.beginTx
+      val nodeManager = (db.asInstanceOf[GraphDatabaseAPI]).getDependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge])
+      val statement = nodeManager.instance
+      val plan = new GeneratedExecutionPlan0
+      plan.accept(new PrintlnVisitor("a"), statement, db)
+      tx.close()
+    } finally db.shutdown()
+  }
 
   test("Get node degree via length of pattern expression") {
     val node = createLabeledNode("X")

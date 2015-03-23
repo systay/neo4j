@@ -21,6 +21,7 @@ package org.neo4j.cypher.internal.compiler.v2_3.birk
 
 import java.util.concurrent.atomic.AtomicInteger
 
+import org.neo4j.cypher.internal.compiler.v2_3.birk.CodeGenerator.JavaTypes.LONG
 import org.neo4j.cypher.internal.compiler.v2_3.birk.il._
 import org.neo4j.cypher.internal.compiler.v2_3.planner.logical.plans._
 
@@ -58,7 +59,13 @@ object CodeGenerator {
   }
 
   def n = System.lineSeparator()
+  
+  object JavaTypes {
+    def LONG = "long"
+  }
 }
+
+case class JavaSymbol(name: String, javaType: String)
 
 class CodeGenerator {
 
@@ -71,9 +78,14 @@ class CodeGenerator {
   }
 
   private def generateCodeFromAst(className: String, statements: Seq[Instruction]) = {
-    val importLines = statements.flatMap(_.importedClasses())
+    val importLines: Set[String] =
+      statements.
+        map(_.importedClasses()).
+        reduceOption(_ ++ _).
+        getOrElse(Set.empty)
+
     val imports = if(importLines.nonEmpty)
-      importLines.distinct.sorted.mkString("import ", s";${n}import ", ";")
+      importLines.toSeq.sorted.mkString("import ", s";${n}import ", ";")
     else
       ""
     val init = statements.map(_.generateInit()).reduce(_ + n + _)
@@ -84,18 +96,22 @@ class CodeGenerator {
     s"""package org.neo4j.cypher.internal.compiler.v2_3.birk.generated;
        |
        |import org.neo4j.helpers.collection.Visitor;
+       |import org.neo4j.graphdb.GraphDatabaseService;
        |import org.neo4j.kernel.api.Statement;
        |import org.neo4j.kernel.api.exceptions.KernelException;
-       |import org.neo4j.cypher.internal.compiler.v2_3.birk.ExecutablePlan
        |import org.neo4j.kernel.api.ReadOperations;
+       |import org.neo4j.cypher.internal.compiler.v2_3.birk.ExecutablePlan;
+       |import org.neo4j.cypher.internal.compiler.v2_3.birk.ResultRow;
+       |import org.neo4j.cypher.internal.compiler.v2_3.birk.ResultRowImpl;
        |$imports
        |
        |public class $className implements ExecutablePlan
        |{
        |@Override
-       |public void accept(Visitor visitor, Statement statement) throws KernelException
+       |public void accept(Visitor<ResultRow, KernelException> visitor, Statement statement, GraphDatabaseService db) throws KernelException
        |{
        |ReadOperations ro = statement.readOperations();
+       |ResultRowImpl row = new ResultRowImpl(db);
        |$init
        |$methodBody
        |}
@@ -107,24 +123,25 @@ class CodeGenerator {
   class Namer(prefix: String) {
     var varCounter = 0
 
-    def next() = {
+    def next(): String = {
       varCounter += 1
       prefix + varCounter
     }
+    
+    def nextWithType(typ: String): JavaSymbol = JavaSymbol(next(), typ)
   }
 
-  case class Symbol(id: String, javaType: String)
 
   private def createResultAst(plan: LogicalPlan): Seq[Instruction] = {
-    var variables: Map[String, String] = Map.empty
+    var variables: Map[String, JavaSymbol] = Map.empty
     var probeTables: Map[NodeHashJoin, String] = Map.empty
     val variableName = new Namer("v")
     val methodName = new Namer("m")
 
-    def produce(plan: LogicalPlan, stack: Stack[LogicalPlan]): (Option[Symbol], Seq[Instruction]) = {
+    def produce(plan: LogicalPlan, stack: Stack[LogicalPlan]): (Option[JavaSymbol], Seq[Instruction]) = {
       plan match {
         case AllNodesScan(id, arguments) =>
-          val variable = variableName.next()
+          val variable = variableName.nextWithType(LONG)
           variables = variables + (id.name -> variable)
           val (apa, actions) = consume(stack.top, plan, stack.pop)
           (apa, Seq(WhileLoop(variable, ScanAllNodes(), actions)))
@@ -134,34 +151,27 @@ class CodeGenerator {
 
         case NodeHashJoin(_, lhs, rhs) =>
           val (Some(symbol), lAst) = produce(lhs, stack.push(plan))
-          val lhsMethod = MethodInvocation(symbol.id, symbol.javaType, methodName.next(), lAst)
+          val lhsMethod = MethodInvocation(symbol.name, symbol.javaType, methodName.next(), lAst)
           val (x, r) = produce(rhs, stack.push(plan))
           (x, lhsMethod +: r)
       }
     }
 
-    def consume(plan: LogicalPlan, from: LogicalPlan, stack: Stack[LogicalPlan]): (Option[Symbol], Instruction) = {
+    def consume(plan: LogicalPlan, from: LogicalPlan, stack: Stack[LogicalPlan]): (Option[JavaSymbol], Instruction) = {
       plan match {
         case ProduceResult(columns, _) =>
-          (None, ProduceResults(columns.map(c => c -> variables(c)).toMap))
-
-        case Expand(_, IdName(f), dir, _, IdName(to), IdName(rel), _) =>
-          val nodeVar = variableName.next()
-          val relVar = variableName.next()
-          variables = variables + (rel -> relVar) + (to -> nodeVar)
-          val (variable,action) = consume(stack.top, plan, stack.pop)
-          val fromVar = variables(f)
-          (variable, WhileLoop(relVar, ExpandC(fromVar, relVar, nodeVar, dir), action))
+          (None, ProduceResults(columns.map(c => c -> variables(c).name).toMap))
 
         case join@NodeHashJoin(nodes, lhs, rhs) if from == lhs =>
           val nodeId = variables(nodes.head.name)
-          val probeTableName = variableName.next()
-          probeTables = probeTables. + (join -> probeTableName)
-          (Some(Symbol(probeTableName, BuildProbeTable.producedType)), BuildProbeTable(probeTableName, nodeId))
+          val probeTableName = variableName.nextWithType(BuildProbeTable.producedType)
+          probeTables = probeTables + (join -> probeTableName.name)
+
+          (Some(probeTableName), BuildProbeTable(probeTableName.name, nodeId.name))
 
         case join@NodeHashJoin(_, lhs, rhs) if from == rhs =>
           val (x, action) = consume(stack.top, plan, stack.pop)
-          val matches = variableName.next()
+          val matches = variableName.nextWithType(LONG)
           val probeTableName = probeTables(join)
           (x, WhileLoop(matches, GetMatchesFromProbeTable(probeTableName), action))
       }

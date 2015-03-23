@@ -19,11 +19,13 @@
  */
 package org.neo4j.cypher.internal.compiler.v2_3.birk;
 
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.exceptions.KernelException;
 
 public interface ExecutablePlan
 {
-    void accept( Visitor visitor, Statement statement ) throws KernelException;
+    void accept( Visitor<ResultRow, KernelException> visitor, Statement statement, GraphDatabaseService db ) throws KernelException;
 }
+

@@ -25,4 +25,6 @@ case class GetMatchesFromProbeTable(probeTable: String) extends LoopDataGenerato
   def generateVariablesAndAssignment() = "APA!"
 
   def generateInit() = ""
+
+  def javaType = "???"
 }

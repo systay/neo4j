@@ -25,7 +25,7 @@ case class ProduceResults(columns: Map[String, String]) extends Instruction {
 
   def generateCode() = columns.toSeq.map {
     case (k, v) => s"""row.setNodeId("$k", $v);"""
-  }.mkString(n) + s"${n}visitor.accept(row);$n"
+  }.mkString(n) + s"${n}visitor.visit(row);$n"
 
   def generateInit() = ""
 }

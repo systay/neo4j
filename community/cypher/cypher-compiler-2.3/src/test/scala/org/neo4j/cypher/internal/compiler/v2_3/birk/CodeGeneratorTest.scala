@@ -34,6 +34,15 @@ class CodeGeneratorTest extends CypherFunSuite with LogicalPlanningTestSupport {
     println(generator.generate(plan))
   }
 
+  test("hash join of all nodes scans") { // MATCH a RETURN a
+    val lhs = AllNodesScan(IdName("a"), Set.empty)(solved)
+    val rhs = AllNodesScan(IdName("a"), Set.empty)(solved)
+    val join = NodeHashJoin(Set(IdName("a")), lhs, rhs)(solved)
+    val plan = ProduceResult(List("a"), join)
+
+    println(generator.generate(plan))
+  }
+
   test("all nodes scan + expand") { // MATCH (a)-[r]->(b) RETURN a, b
     val plan = ProduceResult(List("a", "b"),
       Expand(

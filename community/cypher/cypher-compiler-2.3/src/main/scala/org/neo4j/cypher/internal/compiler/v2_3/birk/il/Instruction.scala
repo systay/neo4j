@@ -23,7 +23,7 @@ trait Instruction {
   // Actual code produced by element
   def generateCode(): String
 
-  def importedClasses() = allLeafs.flatMap(_._importedClasses())
+  def importedClasses() = allLeafs.flatMap(_._importedClasses()).toSet
 
   // Initialises necessary data-structures. Is inserted at the top of the generated method
   def generateInit(): String
@@ -33,7 +33,7 @@ trait Instruction {
   }
 
   // Generates import list for class
-  protected def _importedClasses(): Seq[String] = Seq.empty
+  protected def _importedClasses(): Set[String] = Set.empty
 
   protected def children: Seq[Instruction] = Seq.empty
 

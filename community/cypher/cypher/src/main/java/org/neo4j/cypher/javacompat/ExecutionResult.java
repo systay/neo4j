@@ -286,11 +286,12 @@ public class ExecutionResult implements ResourceIterable<Map<String,Object>>, Re
     @Override
     public void accept( ResultVisitor visitor )
     {
-        final MapResultRow row = new MapResultRow();
-        for ( boolean cont = true; cont && iter.hasNext(); cont = visitor.visit( row ) )
-        {
-            row.setMap( iter.next() );
-        }
+        inner.accept( visitor );
+//        final MapResultRow row = new MapResultRow();
+//        for ( boolean cont = true; cont && iter.hasNext(); cont = visitor.visit( row ) )
+//        {
+//            row.setMap( iter.next() );
+//        }
     }
 
     @Override

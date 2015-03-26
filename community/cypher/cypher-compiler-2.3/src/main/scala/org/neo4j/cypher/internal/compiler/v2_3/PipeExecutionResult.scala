@@ -20,21 +20,42 @@
 package org.neo4j.cypher.internal.compiler.v2_3
 
 import java.io.PrintWriter
+import java.lang.{Boolean, Double, Long}
 import java.util
 import java.util.Collections
 
 import org.neo4j.cypher.internal.compiler.v2_3.executionplan.InternalExecutionResult
-import org.neo4j.cypher.internal.compiler.v2_3.helpers.{Eagerly, CollectionSupport}
+import org.neo4j.cypher.internal.compiler.v2_3.helpers.{CollectionSupport, Eagerly}
+import org.neo4j.cypher.internal.compiler.v2_3.notification.InternalNotification
 import org.neo4j.cypher.internal.compiler.v2_3.pipes.QueryState
 import org.neo4j.cypher.internal.compiler.v2_3.planDescription.InternalPlanDescription
 import org.neo4j.cypher.internal.compiler.v2_3.spi.QueryContext
-import org.neo4j.cypher.internal.{ExplainMode, ExecutionMode, ProfileMode}
-import org.neo4j.cypher.internal.compiler.v2_3.notification.InternalNotification
+import org.neo4j.cypher.internal.{ExecutionMode, ExplainMode, ProfileMode}
 import org.neo4j.graphdb.QueryExecutionType.{QueryType, profiled, query}
-import org.neo4j.graphdb.ResourceIterator
+import org.neo4j.graphdb.Result.{ResultRow, ResultVisitor}
+import org.neo4j.graphdb.{Node, Path, Relationship, ResourceIterator}
 
 import scala.collection.JavaConverters._
 import scala.collection.Map
+
+//TODO: Do this for reals
+case class MapRowAdapter(m: Map[String,Any]) extends ResultRow {
+  def getNode(key: String): Node = m(key).asInstanceOf[Node]
+
+  def getRelationship(key: String): Relationship = m(key).asInstanceOf[Relationship]
+
+  def get(key: String): AnyRef = m(key).asInstanceOf[AnyRef]
+
+  def getDouble(key: String): Double = m(key).asInstanceOf[Double]
+
+  def getLong(key: String): Long = m(key).asInstanceOf[Long]
+
+  def getBoolean(key: String): Boolean = m(key).asInstanceOf[Boolean]
+
+  def getPath(key: String): Path = m(key).asInstanceOf[Path]
+
+  def getString(key: String): String = m(key).asInstanceOf[String]
+}
 
 class PipeExecutionResult(val result: ResultIterator,
                           val columns: List[String],
@@ -46,6 +67,14 @@ class PipeExecutionResult(val result: ResultIterator,
   with CollectionSupport {
 
   self =>
+
+  def accept(visitor: ResultVisitor) = {
+    var cont = true
+    while (cont && result.hasNext) {
+      val map = result.next()
+      cont = visitor.visit(MapRowAdapter(map))
+    }
+  }
 
   lazy val dumpToString = withDumper(dumper => dumper.dumpToString(_))
 

@@ -174,7 +174,9 @@ trait CompatibilityFor2_3 {
   }
 }
 
-case class ExecutionResultWrapperFor2_3(inner: InternalExecutionResult, planner: PlannerName)(implicit monitor: QueryExecutionMonitor, session: QuerySession) extends ExtendedExecutionResult {
+case class ExecutionResultWrapperFor2_3(inner: InternalExecutionResult, planner: PlannerName)
+                                       (implicit monitor: QueryExecutionMonitor, session: QuerySession)
+  extends ExtendedExecutionResult {
 
   import org.neo4j.cypher.internal.compatibility.helpers._
   def planDescriptionRequested = exceptionHandlerFor2_3.runSafely {inner.planDescriptionRequested}

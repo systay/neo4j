@@ -19,10 +19,11 @@
  */
 package org.neo4j.cypher
 
-import org.neo4j.graphdb.{Notification, QueryExecutionType}
+import org.neo4j.graphdb.{Notification, QueryExecutionType, Result}
 
 trait ExtendedExecutionResult extends ExecutionResult {
   def planDescriptionRequested: Boolean
   def executionType: QueryExecutionType
   def notifications: Iterable[Notification]
+  def accept(visitor: Result.ResultVisitor)
 }

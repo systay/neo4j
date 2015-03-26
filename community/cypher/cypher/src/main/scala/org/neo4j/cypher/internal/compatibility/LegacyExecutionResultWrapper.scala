@@ -26,6 +26,7 @@ import org.neo4j.cypher.internal.AmendedRootPlanDescription
 import org.neo4j.cypher.internal.compiler.v2_3.RulePlannerName
 import org.neo4j.graphdb.QueryExecutionType.{QueryType, profiled, query}
 import org.neo4j.graphdb.ResourceIterator
+import org.neo4j.graphdb.Result.ResultVisitor
 import org.neo4j.kernel.impl.query.{QueryExecutionMonitor, QuerySession}
 
 case class LegacyExecutionResultWrapper(inner: ExecutionResult, planDescriptionRequested: Boolean, version: CypherVersion)
@@ -117,6 +118,8 @@ case class LegacyExecutionResultWrapper(inner: ExecutionResult, planDescriptionR
       stats.indexesRemoved > 0 ||
       stats.constraintsAdded > 0 ||
       stats.constraintsRemoved > 0)
+
+  def accept( visitor: ResultVisitor ) = ???
 }
 
 case class ExtendedPlanDescriptionWrapper(inner: PlanDescription) extends ExtendedPlanDescription {

@@ -44,39 +44,39 @@ class OptionalBehaviourAcceptanceTest extends AbstractAcceptanceTest {
 
   test("optional nodes with labels in match clause should return null when there is no match") {
     val result = execute("match (n:Single) optional match n-[r]-(m:NonExistent) return r")
-    assert(result.toList === List(Map("r" -> null)))
+    assert(result === List(Map("r" -> null)))
   }
 
   test("optional nodes with labels in match clause should not return if where is no match") {
     val result = execute("match (n:Single) optional match (n)-[r]-(m) where m:NonExistent return r")
-    assert(result.toList === List(Map("r" -> null)))
+    assert(result === List(Map("r" -> null)))
   }
 
   test("predicates on optional matches should be respected") {
     val result = execute("match (n:Single) optional match n-[r]-(m) where m.prop = 42 return m")
-    assert(result.toList === List(Map("m" -> nodeA)))
+    assert(result === List(Map("m" -> nodeA)))
   }
 
   test("should allow match following optional match if there is an intervening WITH when there are no results") {
     val result = execute("MATCH (a:Single) OPTIONAL MATCH (a)-->(b:NonExistent) OPTIONAL MATCH (a)-->(c:NonExistent) WITH coalesce(b, c) as x MATCH (x)-->(d) RETURN d")
-    assert(result.toList === List())
+    assert(result === List())
   }
 
   test("should allow match following optional match if there is an intervening WITH when there are no results 23") {
     val result = execute("MATCH (a:Single) OPTIONAL MATCH (a)-->(b:A) OPTIONAL MATCH (a)-->(c:B) WITH coalesce(b, c) as x MATCH (x)-->(d) RETURN d")
-    assert(result.toList === List(Map("d" -> nodeC)))
+    assert(result === List(Map("d" -> nodeC)))
   }
 
   test("should support optional match without any external dependencies in WITH") {
     val result = execute("OPTIONAL MATCH (a:A) WITH a AS a MATCH (b:B) RETURN a, b")
 
-    assert(result.toList === List(Map("a" -> nodeA, "b" -> nodeB)))
+    assert(result === List(Map("a" -> nodeA, "b" -> nodeB)))
   }
 
   test("should support named paths inside of optional matches") {
     val result = execute("match (a:A) optional match p = a-[:X]->b return p")
 
-    assert(result.toList === List(Map("p" -> null)))
+    assert(result === List(Map("p" -> null)))
   }
 
   test("optional matching between two found nodes behaves as expected") {
@@ -85,7 +85,7 @@ class OptionalBehaviourAcceptanceTest extends AbstractAcceptanceTest {
         |optional match (x)-->(b)
         |return x""".stripMargin)
 
-    assert(result.toSet === Set(
+    assert(result === Set(
       Map("x" -> nodeA)
     ))
   }
@@ -94,7 +94,7 @@ class OptionalBehaviourAcceptanceTest extends AbstractAcceptanceTest {
   test("should support names paths inside of option matches with node predicates") {
     val result = execute("match (a:A), (b:B) optional match p = a-[:X]->b return p")
 
-    assert(result.toList === List(Map("p" -> null)))
+    assert(result === List(Map("p" -> null)))
   }
 
   test("should support varlength optional relationships") {
@@ -110,25 +110,25 @@ class OptionalBehaviourAcceptanceTest extends AbstractAcceptanceTest {
   test("should support varlength optional relationships that is longer than the existing longest") {
     val result = execute("match (a:Single) optional match a-[*3..]->b return b")
 
-    assert(result.toSet === Set(Map("b" -> null)))
+    assert(result === Set(Map("b" -> null)))
   }
 
   test("should support optional match to find self loops") {
     val result = execute("match (a:B) optional match a-[r]->a return r")
 
-    assert(result.toSet === Set(Map("r" -> selfRel)))
+    assert(result === Set(Map("r" -> selfRel)))
   }
 
   test("should support optional match to not find self loops") {
     val result = execute("match (a) where not (a:B) optional match (a)-[r]->(a) return r")
 
-    assert(result.toSet === Set(Map("r" -> null)))
+    assert(result === Set(Map("r" -> null)))
   }
 
   test("should support varlength optional relationships where both ends are already bound") {
     val result = execute("match (a:Single), (x:C) optional match (a)-[*]->(x) return x")
 
-    assert(result.toSet === Set(
+    assert(result === Set(
       Map("x" -> nodeC)
     ))
   }
@@ -136,7 +136,7 @@ class OptionalBehaviourAcceptanceTest extends AbstractAcceptanceTest {
   test("should support varlength optional relationships where both ends are already bound but no paths exist") {
     val result = execute("match (a:A), (b:B) optional match p = (a)-[*]->(b) return p")
 
-    assert(result.toSet === Set(
+    assert(result === Set(
       Map("p" -> null)
     ))
   }
@@ -144,7 +144,7 @@ class OptionalBehaviourAcceptanceTest extends AbstractAcceptanceTest {
   test("should support optional relationships where both ends are already bound") {
     val result = execute("match (a:Single), (c:C) optional match (a)-->(b)-->(c) return b")
 
-    assert(result.toSet === Set(
+    assert(result === Set(
       Map("b" -> nodeA)
     ))
   }
@@ -152,7 +152,7 @@ class OptionalBehaviourAcceptanceTest extends AbstractAcceptanceTest {
   test("should support optional relationships where both ends are already bound and no paths exist") {
     val result = execute("match (a:A), (c:C) optional match (a)-->(b)-->(c) return b")
 
-    assert(result.toSet === Set(
+    assert(result === Set(
       Map("b" -> null)
     ))
   }
@@ -160,7 +160,7 @@ class OptionalBehaviourAcceptanceTest extends AbstractAcceptanceTest {
   test("should handle pattern predicates in optional match") {
     val result = execute("match (a:A), (c:C) optional match (a)-->(b) WHERE (b)-->(c) return b")
 
-    assert(result.toSet === Set(
+    assert(result === Set(
       Map("b" -> null)
     ))
   }
@@ -168,7 +168,7 @@ class OptionalBehaviourAcceptanceTest extends AbstractAcceptanceTest {
   test("should handle pattern predicates in optional match with hit") {
     val result = execute("match (a:Single), (c:C) optional match (a)-->(b) WHERE (b)-->(c) return b")
 
-    assert(result.toSet === Set(
+    assert(result === Set(
       Map("b" -> nodeA)
     ))
   }
@@ -180,7 +180,7 @@ class OptionalBehaviourAcceptanceTest extends AbstractAcceptanceTest {
         |optional match (x)-[r]->(b)
         |return x, r""".stripMargin)
 
-    assert(result.toSet === Set(
+    assert(result === Set(
       Map("x" -> nodeC, "r" -> null)
     ))
   }
@@ -223,8 +223,8 @@ trait AbstractAcceptanceTest extends CypherFunSuite with BeforeAndAfterAll {
     }
   }
 
-  def execute(query: String): ExecutionResult =
-    engine.execute(query)
+  def execute(query: String): List[Map[String, Any]] =
+    engine.execute(query).toList
 
   private def inTx[T](f: => T): T = {
     val tx = graph.beginTx()

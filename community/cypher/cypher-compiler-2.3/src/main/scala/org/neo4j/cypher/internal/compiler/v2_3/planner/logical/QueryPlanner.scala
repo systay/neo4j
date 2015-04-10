@@ -21,10 +21,11 @@ package org.neo4j.cypher.internal.compiler.v2_3.planner.logical
 
 import org.neo4j.cypher.internal.compiler.v2_3._
 import org.neo4j.cypher.internal.compiler.v2_3.planner._
-import org.neo4j.cypher.internal.compiler.v2_3.planner.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.compiler.v2_3.planner.logical.plans.{IdName, LogicalPlan, ProduceResult}
 import org.neo4j.cypher.internal.compiler.v2_3.planner.logical.steps.{aggregation, projection, sortSkipAndLimit, verifyBestPlan}
+import org.neo4j.cypher.internal.compiler.v2_3.symbols._
 
-import scala.annotation.tailrec
+import scala.collection.mutable
 
 trait QueryPlanner {
   def plan(plannerQuery: UnionQuery)(implicit context: LogicalPlanningContext): LogicalPlan
@@ -37,14 +38,33 @@ case class DefaultQueryPlanner(planRewriter: Rewriter,
 
   def plan(unionQuery: UnionQuery)(implicit context: LogicalPlanningContext): LogicalPlan = unionQuery match {
     case UnionQuery(queries, distinct) =>
-      val plan = planQuery(queries, distinct)
-      plan.endoRewrite(planRewriter)
+      val plan = planQueries(queries, distinct)
+      val rewrittenPlan = plan.endoRewrite(planRewriter)
+
+      val nodes = mutable.ListBuffer[String]()
+      val rels = mutable.ListBuffer[String]()
+      val others = mutable.ListBuffer[String]()
+
+      val lastQuery = unionQuery.queries.last
+      val columns = lastQuery.lastQueryHorizon.exposedSymbols(lastQuery.lastQueryGraph)
+
+      columns.foreach {
+        case IdName(name) =>
+          if (context.semanticTable.getTypeFor(name) == CTNode.invariant)
+            nodes += name
+          else if (context.semanticTable.getTypeFor(name) == CTRelationship.invariant)
+            rels += name
+          else
+            others += name
+      }
+
+      ProduceResult(nodes, rels, others, rewrittenPlan)
 
     case _ =>
       throw new CantHandleQueryException
   }
 
-  private def planQuery(queries: Seq[PlannerQuery], distinct: Boolean)(implicit context: LogicalPlanningContext) = {
+  private def planQueries(queries: Seq[PlannerQuery], distinct: Boolean)(implicit context: LogicalPlanningContext) = {
     val logicalPlans: Seq[LogicalPlan] = queries.map(p => planSingleQuery(p))
     val unionPlan = logicalPlans.reduce[LogicalPlan] {
       case (p1, p2) => context.logicalPlanProducer.planUnion(p1, p2)
@@ -69,7 +89,8 @@ case class planEventHorizonX(config: QueryPlannerConfiguration = QueryPlannerCon
 
       case queryProjection: RegularQueryProjection =>
         val sortedAndLimited = sortSkipAndLimit(selectedPlan, query)
-        projection(sortedAndLimited, queryProjection.projections, intermediate = query.tail.isDefined)
+        val x = projection(sortedAndLimited, queryProjection.projections)
+         x
 
       case UnwindProjection(identifier, expression) =>
         context.logicalPlanProducer.planUnwind(plan, identifier, expression)
@@ -86,7 +107,6 @@ case class planWithTailX(expressionRewriterFactory: (LogicalPlanningContext => R
                         planEventHorizon: LogicalPlanningFunction2[PlannerQuery, LogicalPlan, LogicalPlan] = planEventHorizonX())
   extends LogicalPlanningFunction2[LogicalPlan, Option[PlannerQuery], LogicalPlan] {
 
-//  @tailrec
   override def apply(pred: LogicalPlan, remaining: Option[PlannerQuery])(implicit context: LogicalPlanningContext): LogicalPlan = {
     remaining match {
       case Some(query) =>

@@ -324,6 +324,10 @@ case class LogicalPlanProducer(cardinalityModel: CardinalityModel) extends Colle
                         (implicit context: LogicalPlanningContext) =
     inner.updateSolved(_.updateTailOrSelf(_.updateQueryProjection(_.withProjections(expressions))))
 
+  def planProduceResults(inner: LogicalPlan, columns: Seq[String])(implicit context: LogicalPlanningContext) = {
+    ???
+  }
+
   def planRegularProjection(inner: LogicalPlan, expressions: Map[String, Expression])
                            (implicit context: LogicalPlanningContext) = {
     val solved = inner.solved.updateTailOrSelf(_.updateQueryProjection(_.withProjections(expressions)))

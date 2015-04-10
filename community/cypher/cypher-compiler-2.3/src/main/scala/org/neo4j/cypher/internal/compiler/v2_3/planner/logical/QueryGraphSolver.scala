@@ -56,3 +56,5 @@ trait TentativeQueryGraphSolver extends QueryGraphSolver with PatternExpressionS
   def plan(queryGraph: QueryGraph)(implicit context: LogicalPlanningContext, leafPlan: Option[LogicalPlan] = None): LogicalPlan =
     tryPlan(queryGraph).getOrElse(throw new InternalException("Failed to create a plan for the given QueryGraph " + queryGraph))
 }
+
+// MATCH a WHERE a-[`  UNAMED43`]->(:Label) RETURN a

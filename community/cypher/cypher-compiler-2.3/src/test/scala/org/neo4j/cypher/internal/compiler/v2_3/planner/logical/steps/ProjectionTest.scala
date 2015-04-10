@@ -41,7 +41,7 @@ class ProjectionTest extends CypherFunSuite with LogicalPlanningTestSupport {
     implicit val (context, startPlan) = queryGraphWith(projectionsMap = projections)
 
     // when
-    val result = projection(startPlan, projections, intermediate = true)
+    val result = projection(startPlan, projections)
 
     // then
     result should equal(Projection(startPlan, projections)(solved))
@@ -54,33 +54,7 @@ class ProjectionTest extends CypherFunSuite with LogicalPlanningTestSupport {
     implicit val (context, startPlan) = queryGraphWith(projectionsMap = projections)
 
     // when
-    val result = projection(startPlan, projections, intermediate = true)
-
-    // then
-    result should equal(startPlan)
-    result.solved.horizon should equal(RegularQueryProjection(projections))
-  }
-
-  test("does add the final projection when needed") {
-    // given
-    val projections: Map[String, ast.Expression] = Map("n" -> ast.Identifier("n") _)
-    implicit val (context, startPlan) = queryGraphWith(projectionsMap = projections)
-
-    // when
-    val result = projection(startPlan, projections, intermediate = false)
-
-    // then
-    result should equal(Projection(startPlan, projections)(solved))
-    result.solved.horizon should equal(RegularQueryProjection(projections))
-  }
-
-  test("does not add the final projection when not needed") {
-    // given
-    val projections: Map[String, ast.Expression] = Map("n" -> ast.Identifier("n") _, "m" -> ast.Identifier("m") _)
-    implicit val (context, startPlan) = queryGraphWith(projectionsMap = projections)
-
-    // when
-    val result = projection(startPlan, projections, intermediate = false)
+    val result = projection(startPlan, projections)
 
     // then
     result should equal(startPlan)

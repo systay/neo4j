@@ -36,7 +36,7 @@ case class RealLogicalPlanningConfiguration()
   }
 
   override def costModel(): PartialFunction[(LogicalPlan, QueryGraphSolverInput), Cost] = {
-    val model: Metrics.CostModel = CardinalityCostModel
+    val model: Metrics.CostModel = CardinalityCostModel()
     ({
       case (plan: LogicalPlan, input: QueryGraphSolverInput) => model(plan, input)
     })

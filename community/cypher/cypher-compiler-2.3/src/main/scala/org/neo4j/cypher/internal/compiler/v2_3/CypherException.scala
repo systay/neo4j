@@ -48,7 +48,7 @@ class CypherTypeException(message: String, cause: Throwable = null) extends Cyph
   def mapToPublic[T <: Throwable](mapper: MapToPublicExceptions[T]) = mapper.cypherTypeException(message, cause)
 }
 
-class ParameterNotFoundException(message: String, cause: Throwable) extends CypherException(cause) {
+class ParameterNotFoundException(message: String, cause: Throwable) extends CypherException(message, cause) {
   def this(message: String) = this(message, null)
 
   def mapToPublic[T <: Throwable](mapper: MapToPublicExceptions[T]) = mapper.parameterNotFoundException(message, cause)

@@ -37,7 +37,7 @@ trait ExecutionPlanInProgressRewriter {
 class LegacyExecutablePlanBuilder(monitors: Monitors, rewriterSequencer: (String) => RewriterStepSequencer, eagernessRewriter: Pipe => Pipe = addEagernessIfNecessary)
   extends PatternGraphBuilder with ExecutablePlanBuilder with GraphQueryBuilder {
 
-  private implicit val pipeMonitor: PipeMonitor = monitors.newMonitor[PipeMonitor]()
+  private lazy implicit val pipeMonitor: PipeMonitor = null
 
   override def producePlan(in: PreparedQuery, planContext: PlanContext) = {
     val rewriter = rewriterSequencer("LegacyPipeBuilder")(reattachAliasedExpressions).rewriter

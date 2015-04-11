@@ -23,18 +23,16 @@ import org.neo4j.cypher.internal.compiler.v2_3.ast.{HasLabels, Property}
 import org.neo4j.cypher.internal.compiler.v2_3.planner.logical.Metrics._
 import org.neo4j.cypher.internal.compiler.v2_3.planner.logical.plans._
 
-object CardinalityCostModel extends CostModel {
-
-  /*
-   * These constants are approximations derived from test runs,
-   * see ActualCostCalculationTest
-   */
-  private val CPU_BOUND: CostPerRow = 0.1
-  private val FAST_STORE: CostPerRow = 1.0
-  private val SLOW_STORE: CostPerRow = 10.0
-  private val PROBE_BUILD_COST: CostPerRow = FAST_STORE
-  private val PROBE_SEARCH_COST: CostPerRow = PROBE_BUILD_COST * .5
-  private val EAGERNESS_MULTIPLIER: Multiplier = 3.0
+/*
+* These default values are approximations derived from test runs,
+* see ActualCostCalculationTest
+*/
+case class CardinalityCostModel(CPU_BOUND: CostPerRow = 0.1,
+                                FAST_STORE: CostPerRow = 1.0,
+                                SLOW_STORE: CostPerRow = 10.0,
+                                PROBE_BUILD_COST: CostPerRow = 1.0,
+                                PROBE_SEARCH_COST: CostPerRow = .5,
+                                EAGERNESS_MULTIPLIER: Multiplier = 3.0) extends CostModel {
 
   private def costPerRow(plan: LogicalPlan): CostPerRow = plan match {
 

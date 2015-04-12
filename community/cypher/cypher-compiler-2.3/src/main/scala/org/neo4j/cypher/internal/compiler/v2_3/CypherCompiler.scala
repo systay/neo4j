@@ -111,7 +111,25 @@ object CypherCompilerFactory {
     }
   }
 }
-
+/*
+                       .     _///_,
+                     .      / ` ' '>
+                       )   o'  __/_'>
+                      (   /  _/  )_\'>
+                       ' "__/   /_/\_>
+                           ____/_/_/_/
+                          /,---, _/ /
+                         ""  /_/_/_/
+                            /_(_(_(_                 \
+                           (   \_\_\\_               )\
+                            \'__\_\_\_\__            ).\
+                            //____|___\__)           )_/
+                            |  _  \'___'_(           /'
+                             \_ (-'\'___'_\      __,'_'
+                             __) \  \\___(_   __/.__,'
+                          ,((,-,__\  '", __\_/. __,'
+                                       '"./_._._-'
+ */
 case class CypherCompiler(parser: CypherParser,
                           semanticChecker: SemanticChecker,
                           executionPlanBuilder: ExecutionPlanBuilder,

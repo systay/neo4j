@@ -61,6 +61,8 @@ class ProjectionTest extends CypherFunSuite with LogicalPlanningTestSupport {
     result.solved.horizon should equal(RegularQueryProjection(projections))
   }
 
+  // TODO: TEST THAT Projection is not added when only identifiers
+
   private def queryGraphWith(skip: Option[ast.Expression] = None,
                              limit: Option[ast.Expression] = None,
                              sortItems: Seq[ast.SortItem] = Seq.empty,

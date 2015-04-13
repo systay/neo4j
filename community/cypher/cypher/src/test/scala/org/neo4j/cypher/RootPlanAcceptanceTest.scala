@@ -171,15 +171,26 @@ class RootPlanAcceptanceTest extends ExecutionEngineFunSuite {
   test("query that lacks support from Birk") {
     given(
       "CREATE ()")
+    .withCypherVersion(CypherVersion.v2_3)
+    .withRuntime(CompiledRuntimeName)
+    .shouldHaveCypherVersion(CypherVersion.v2_3)
+    .shouldHaveRuntime(InterpretedRuntimeName)
+  }
+
+  test("query that should go through Birk but does not") {
+    given(
+      "MATCH a-->b RETURN a")
       .withCypherVersion(CypherVersion.v2_3)
       .withRuntime(CompiledRuntimeName)
       .shouldHaveCypherVersion(CypherVersion.v2_3)
-      .shouldHaveRuntime(InterpretedRuntimeName)
+      .shouldHaveRuntime(CompiledRuntimeName)
       .shouldHavePlanner(RulePlannerName)
   }
 
   test("children should be empty") {
-    given("match n return n").planDescription.getChildren.size() should equal(0)
+    val description = given("match n return n").planDescription
+    val children = description.getChildren
+    children should be (empty)
   }
 
   test("DbHits should be properly formatted") {

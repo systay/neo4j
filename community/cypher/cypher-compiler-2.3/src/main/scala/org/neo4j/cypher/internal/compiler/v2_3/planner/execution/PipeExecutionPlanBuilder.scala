@@ -216,7 +216,6 @@ class PipeExecutionPlanBuilder(clock: Clock, monitors: Monitors) {
         case ProduceResult(nodes, rels, others, lhs) =>
           val source = buildPipe(lhs)
           val columns = nodes ++ rels ++ others
-          if(lhs.availableSymbols.map(_.name).toSeq == columns) source else
           ProduceResultsPipe(source, columns)()
 
         case x =>

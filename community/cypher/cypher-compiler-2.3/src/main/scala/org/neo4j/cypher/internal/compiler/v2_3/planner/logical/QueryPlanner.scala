@@ -23,6 +23,7 @@ import org.neo4j.cypher.internal.compiler.v2_3._
 import org.neo4j.cypher.internal.compiler.v2_3.planner._
 import org.neo4j.cypher.internal.compiler.v2_3.planner.logical.plans.{IdName, LogicalPlan, ProduceResult}
 import org.neo4j.cypher.internal.compiler.v2_3.planner.logical.steps.{aggregation, projection, sortSkipAndLimit, verifyBestPlan}
+import org.neo4j.cypher.internal.compiler.v2_3.symbols._
 
 import scala.collection.mutable
 
@@ -38,22 +39,23 @@ case class DefaultQueryPlanner(planRewriter: Rewriter,
   def plan(unionQuery: UnionQuery)(implicit context: LogicalPlanningContext): LogicalPlan = unionQuery match {
     case UnionQuery(queries, distinct) =>
       val plan = planQueries(queries, distinct)
-      val r = plan.endoRewrite(planRewriter)
+      val rewrittenPlan = plan.endoRewrite(planRewriter)
 
       val nodes = mutable.ListBuffer[String]()
       val rels = mutable.ListBuffer[String]()
       val others = mutable.ListBuffer[String]()
 
-      r.availableSymbols.foreach {
+      rewrittenPlan.availableSymbols.foreach {
         case IdName(name) =>
-          if (context.semanticTable.getTypeFor(name) == symbols.CTNode.invariant)
+          if (context.semanticTable.getTypeFor(name) == CTNode.invariant)
             nodes += name
-          else if (context.semanticTable.getTypeFor(name) == symbols.CTRelationship.invariant)
+          else if (context.semanticTable.getTypeFor(name) == CTRelationship.invariant)
             rels += name
-          else others += name
+          else
+            others += name
       }
 
-      ProduceResult(nodes, rels, others, r)
+      ProduceResult(nodes, rels, others, rewrittenPlan)
 
     case _ =>
       throw new CantHandleQueryException
@@ -101,7 +103,6 @@ case class planWithTailX(expressionRewriterFactory: (LogicalPlanningContext => R
                         planEventHorizon: LogicalPlanningFunction2[PlannerQuery, LogicalPlan, LogicalPlan] = planEventHorizonX())
   extends LogicalPlanningFunction2[LogicalPlan, Option[PlannerQuery], LogicalPlan] {
 
-//  @tailrec
   override def apply(pred: LogicalPlan, remaining: Option[PlannerQuery])(implicit context: LogicalPlanningContext): LogicalPlan = {
     remaining match {
       case Some(query) =>

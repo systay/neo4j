@@ -45,7 +45,10 @@ case class DefaultQueryPlanner(planRewriter: Rewriter,
       val rels = mutable.ListBuffer[String]()
       val others = mutable.ListBuffer[String]()
 
-      rewrittenPlan.availableSymbols.foreach {
+      val lastQuery = unionQuery.queries.last
+      val columns = lastQuery.lastQueryHorizon.exposedSymbols(lastQuery.lastQueryGraph)
+
+      columns.foreach {
         case IdName(name) =>
           if (context.semanticTable.getTypeFor(name) == CTNode.invariant)
             nodes += name
@@ -86,7 +89,8 @@ case class planEventHorizonX(config: QueryPlannerConfiguration = QueryPlannerCon
 
       case queryProjection: RegularQueryProjection =>
         val sortedAndLimited = sortSkipAndLimit(selectedPlan, query)
-        projection(sortedAndLimited, queryProjection.projections)
+        val x = projection(sortedAndLimited, queryProjection.projections)
+         x
 
       case UnwindProjection(identifier, expression) =>
         context.logicalPlanProducer.planUnwind(plan, identifier, expression)

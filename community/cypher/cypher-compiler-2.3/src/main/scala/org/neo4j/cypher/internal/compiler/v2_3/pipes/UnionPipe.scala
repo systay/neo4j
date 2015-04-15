@@ -49,7 +49,7 @@ case class NewUnionPipe(l: Pipe, r: Pipe)
   def planDescriptionWithoutCardinality: InternalPlanDescription =
     new PlanDescriptionImpl(this.id, "Union", TwoChildren(l.planDescription, r.planDescription), Seq.empty, identifiers)
 
-  def symbols: SymbolTable = l.symbols
+  def symbols: SymbolTable = SymbolTable((l.symbols.identifiers.toSet & r.symbols.identifiers.toSet).toMap)
 
   protected def internalCreateResults(state: QueryState): Iterator[ExecutionContext] =
     l.createResults(state) ++ r.createResults(state)

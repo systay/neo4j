@@ -63,7 +63,7 @@ class MealTestIgnored extends DocumentingTestBase {
         "WHERE me.name='Peter' and not (ingredient) --> ()" +
         "RETURN ingredient.name ",
       optionalResultExplanation = "",
-      (p) => {
+      assertions = (p) => {
         val result = p.toList
         assertEquals(Set(Map("ingredient.name" -> "Potatoes"),
           Map("ingredient.name" -> "Meat"),

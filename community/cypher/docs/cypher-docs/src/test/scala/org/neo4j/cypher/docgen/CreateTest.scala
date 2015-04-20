@@ -23,12 +23,12 @@ import org.junit.Test
 import org.neo4j.graphdb.{ DynamicLabel, Node, Relationship }
 import org.neo4j.cypher.QueryStatisticsTestSupport
 
-class CreateTest extends DocumentingTestBase with QueryStatisticsTestSupport {
+class CreateTest extends DocumentingTestBase with QueryStatisticsTestSupport with RuleOnlyTests {
 
   def section = "Create"
 
   @Test def create_single_node() {
-    testQuery(
+    testRuleQuery(
       title = "Create single node",
       text = "Creating a single node is done by issuing the following query.",
       queryText = "create (n)",
@@ -37,7 +37,7 @@ class CreateTest extends DocumentingTestBase with QueryStatisticsTestSupport {
   }
 
   @Test def create_single_node_with_label() {
-    testQuery(
+    testRuleQuery(
       title = "Create a node with a label",
       text = "To add a label when creating a node, use the syntax below.",
       queryText = "create (n:Person)",
@@ -46,7 +46,7 @@ class CreateTest extends DocumentingTestBase with QueryStatisticsTestSupport {
   }
 
   @Test def create_single_node_with_labels() {
-    testQuery(
+    testRuleQuery(
       title = "Create a node with multiple labels",
       text = "To add labels when creating a node, use the syntax below. In this case, we add two labels.",
       queryText = "create (n:Person:Swedish)",
@@ -55,7 +55,7 @@ class CreateTest extends DocumentingTestBase with QueryStatisticsTestSupport {
   }
 
   @Test def create_single_node_with_labels_and_properties() {
-    testQuery(
+    testRuleQuery(
       title = "Create node and add labels and properties",
       text = "When creating a new node with labels, you can add properties at the same time.",
       queryText = "create (n:Person {name : 'Andres', title : 'Developer'})",
@@ -64,7 +64,7 @@ class CreateTest extends DocumentingTestBase with QueryStatisticsTestSupport {
   }
 
   @Test def create_single_node_and_return_it() {
-    testQuery(
+    testRuleQuery(
       title = "Return created node",
       text = "Creating a single node is done by issuing the following query.",
       queryText = "create (a {name : 'Andres'}) return a",
@@ -85,7 +85,7 @@ class CreateTest extends DocumentingTestBase with QueryStatisticsTestSupport {
   @Test def connect_two_nodes_with_a_relationship() {
     createTwoNodes
 
-    testQuery(
+    testRuleQuery(
       title = "Create a relationship between two nodes",
       text = "To create a relationship between two nodes, we first get the two nodes. " +
         "Once the nodes are loaded, we simply create a relationship between them.",
@@ -103,7 +103,7 @@ class CreateTest extends DocumentingTestBase with QueryStatisticsTestSupport {
       b.setProperty("name", "Michael")
     }
 
-    testQuery(
+    testRuleQuery(
       title = "Set a property to an array",
       text = """When you set a property to an expression that returns a collection of values,
 Cypher will turn that into an array. All the elements in the collection must be of the same type
@@ -117,7 +117,7 @@ for this to work.""",
   }
 
   @Test def create_full_path_in_one_go() {
-    testQuery(
+    testRuleQuery(
       title = "Create a full path",
       text =
         """When you use `CREATE` and a pattern, all parts of the pattern that are not already in scope at this time
@@ -131,7 +131,7 @@ will be created. """,
   @Test def create_relationship_with_properties() {
     createTwoNodes
 
-    testQuery(
+    testRuleQuery(
       title = "Create a relationship and set properties",
       text = "Setting properties on relationships is done in a similar manner to how it's done when creating nodes. " +
         "Note that the values can be any expression.",
@@ -146,7 +146,7 @@ will be created. """,
   }
 
   @Test def create_single_node_from_map() {
-    prepareAndTestQuery(
+    prepareAndTestRuleQuery(
       title = "Create node with a parameter for the properties",
       text = """
 You can also create a graph entity from a map.
@@ -160,7 +160,7 @@ In this case we add a +Person+ label to the node as well.
   }
 
   @Test def create_multiple_nodes_from_maps() {
-    prepareAndTestQuery(
+    prepareAndTestRuleQuery(
       title = "Create multiple nodes with a parameter for their properties",
       text = """
 By providing Cypher an array of maps, it will create a node for each map.

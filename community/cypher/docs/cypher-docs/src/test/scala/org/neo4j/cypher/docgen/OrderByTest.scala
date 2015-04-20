@@ -28,9 +28,9 @@ import org.neo4j.visualization.graphviz.AsciiDocSimpleStyle
 class OrderByTest extends DocumentingTestBase {
   override def graphDescription = List("A KNOWS B", "B KNOWS C")
 
-  override protected def getGraphvizStyle: GraphStyle = 
+  override protected def getGraphvizStyle: GraphStyle =
     AsciiDocSimpleStyle.withAutomaticRelationshipTypeColors()
-  
+
   override val properties = Map(
     "A" -> Map("age" -> 34, "length"->170),
     "B" -> Map("age" -> 34),
@@ -44,7 +44,7 @@ class OrderByTest extends DocumentingTestBase {
       text = "+ORDER BY+ is used to sort the output.",
       queryText = """match (n) return n order by n.name""",
       optionalResultExplanation = """The nodes are returned, sorted by their name.""",
-      (p) => assertEquals(List(node("A"), node("B"), node("C")), p.columnAs[Node]("n").toList))
+      assertions = (p) => assertEquals(List(node("A"), node("B"), node("C")), p.columnAs[Node]("n").toList))
   }
 
   @Test def sortByNameReverse() {
@@ -53,7 +53,7 @@ class OrderByTest extends DocumentingTestBase {
       text = "By adding +DESC[ENDING]+ after the identifier to sort on, the sort will be done in reverse order.",
       queryText = """match (n) return n order by n.name DESC""",
       optionalResultExplanation = """The example returns the nodes, sorted by their name reversely.""",
-      (p) => assertEquals(List(node("C"), node("B"), node("A")), p.columnAs[Node]("n").toList))
+      assertions = (p) => assertEquals(List(node("C"), node("B"), node("A")), p.columnAs[Node]("n").toList))
   }
 
   @Test def sortByMultipleColumns() {
@@ -64,7 +64,7 @@ class OrderByTest extends DocumentingTestBase {
         "go to the next property in the `ORDER BY` clause, and so on.",
       queryText = """match (n) return n order by n.age, n.name""",
       optionalResultExplanation = """This returns the nodes, sorted first by their age, and then by their name.""",
-      (p) => assertEquals(List(node("C"), node("A"), node("B")), p.columnAs[Node]("n").toList))
+      assertions = (p) => assertEquals(List(node("C"), node("A"), node("B")), p.columnAs[Node]("n").toList))
   }
 
   @Test def order_by_nullable_property() {
@@ -74,6 +74,6 @@ class OrderByTest extends DocumentingTestBase {
         " ascending sorting, and first when doing descending sort.",
       queryText = """match (n) return n.length, n order by n.length""",
       optionalResultExplanation = """The nodes are returned sorted by the length property, with a node without that property last.""",
-      (p) => assertEquals(List(node("A"), node("C"), node("B")), p.columnAs[Node]("n").toList))
+      assertions = (p) => assertEquals(List(node("A"), node("C"), node("B")), p.columnAs[Node]("n").toList))
   }
 }

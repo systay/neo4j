@@ -68,7 +68,7 @@ Rather use application generated ids.
              """,
       queryText = "match n where id(n) = %Charlie% return n",
       optionalResultExplanation = "The corresponding node is returned.",
-      (p) => assertThat(p.columnAs[Node]("n").toList.asJava, hasItem(node("Charlie"))))
+      assertions = (p) => assertThat(p.columnAs[Node]("n").toList.asJava, hasItem(node("Charlie"))))
   }
 
   @Test def relationships_by_id() {
@@ -81,7 +81,7 @@ This is not recommended practice. See <<match-node-by-id>> for more information 
              """,
       queryText = "match ()-[r]->() where id(r) = 0 return r",
       optionalResultExplanation = "The relationship with id +0+ is returned.",
-      (p) => assertThat(p.columnAs[Relationship]("r").toList.asJava, hasItem(rel(0))))
+      assertions = (p) => assertThat(p.columnAs[Relationship]("r").toList.asJava, hasItem(rel(0))))
   }
 
   @Test def multiple_nodes_by_id() {
@@ -90,7 +90,7 @@ This is not recommended practice. See <<match-node-by-id>> for more information 
       text = "Multiple nodes are selected by specifying them in an IN clause.",
       queryText = "match n where id(n) in [%Charlie%, %Martin%, %Oliver%] return n",
       optionalResultExplanation = "This returns the nodes listed in the `IN` expression.",
-      (p) => assertEquals(Set(node("Charlie"), node("Martin"), node("Oliver")), p.columnAs[Node]("n").toSet))
+      assertions = (p) => assertEquals(Set(node("Charlie"), node("Martin"), node("Oliver")), p.columnAs[Node]("n").toSet))
   }
 
   @Test def start_with_multiple_nodes() {
@@ -99,7 +99,7 @@ This is not recommended practice. See <<match-node-by-id>> for more information 
       text = "Sometimes you want to return multiple nodes by id and separate identifiers. Just list them separated by commas.",
       queryText = "match a, b where id(a) = %Charlie% and id(b) = %Martin% return a, b",
       optionalResultExplanation = """Both the nodes +Charlie+ and the +Martin+  are returned.""",
-      p => assertEquals(List(Map("a" -> node("Charlie"), "b" -> node("Martin"))), p.toList))
+      assertions = p => assertEquals(List(Map("a" -> node("Charlie"), "b" -> node("Martin"))), p.toList))
   }
 
   @Test def get_all_nodes() {

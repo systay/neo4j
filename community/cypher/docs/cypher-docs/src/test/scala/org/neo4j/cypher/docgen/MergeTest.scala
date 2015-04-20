@@ -24,7 +24,7 @@ import org.junit.Test
 import org.neo4j.visualization.graphviz.GraphStyle
 import org.neo4j.visualization.graphviz.AsciiDocSimpleStyle
 
-class MergeTest extends DocumentingTestBase with QueryStatisticsTestSupport {
+class MergeTest extends DocumentingTestBase with QueryStatisticsTestSupport with RuleOnlyTests {
 
   override protected def getGraphvizStyle: GraphStyle =
     AsciiDocSimpleStyle.withAutomaticRelationshipTypeColors()
@@ -56,7 +56,7 @@ class MergeTest extends DocumentingTestBase with QueryStatisticsTestSupport {
     "CREATE CONSTRAINT ON (n:Person) ASSERT n.role IS UNIQUE")
 
   @Test def merge_single_node_with_label() {
-    testQuery(
+    testRuleQuery(
       title = "Merge single node with a label",
       text = "Merging a single node with a given label.",
       queryText = "merge (robert:Critic)\nreturn robert, labels(robert)",
@@ -66,7 +66,7 @@ class MergeTest extends DocumentingTestBase with QueryStatisticsTestSupport {
   }
 
   @Test def merge_single_node_with_properties() {
-    testQuery(
+    testRuleQuery(
       title = "Merge single node with properties",
       text = "Merging a single node with properties where not all properties match any existing node.",
       queryText = "merge (charlie {name:'Charlie Sheen', age:10})\nreturn charlie",
@@ -77,7 +77,7 @@ class MergeTest extends DocumentingTestBase with QueryStatisticsTestSupport {
   }
 
   @Test def merge_single_node_with_label_and_property() {
-    testQuery(
+    testRuleQuery(
       title = "Merge single node specifying both label and property",
       text = "Merging a single node with both label and property matching an existing node.",
       queryText = "merge (michael:Person {name:'Michael Douglas'})\nreturn michael",
@@ -87,7 +87,7 @@ class MergeTest extends DocumentingTestBase with QueryStatisticsTestSupport {
   }
 
   @Test def merge_node_and_set_property_on_creation() {
-    testQuery(
+    testRuleQuery(
       title = "Merge with ON CREATE",
       text = "Merge a node and set properties if the node needs to be created.",
       queryText = """merge (keanu:Person {name:'Keanu Reeves'})
@@ -99,7 +99,7 @@ return keanu""",
   }
 
   @Test def merge_node_and_set_property_on_match() {
-    testQuery(
+    testRuleQuery(
       title = "Merge with ON MATCH",
       text = "Merging nodes and setting properties on found nodes.",
       queryText = "merge (person:Person)\non match set person.found = true\nreturn person",
@@ -109,7 +109,7 @@ return keanu""",
   }
 
   @Test def merge_node_and_set_property_on_creation_or_update_prop() {
-    testQuery(
+    testRuleQuery(
       title = "Merge with ON CREATE and ON MATCH",
       text = "Merge a node and set properties if the node needs to be created.",
       queryText =
@@ -124,7 +124,7 @@ return keanu""",
   }
 
   @Test def merge_and_set_multiple_properties_on_match() {
-    testQuery(
+    testRuleQuery(
       title = "Merge with ON MATCH setting multiple properties",
       text = "If multiple properties should be set, simply separate them with commas.",
       queryText = """merge (person:Person)
@@ -136,7 +136,7 @@ return keanu""",
   }
 
   @Test def merge_node_and_create_with_unique_constraint() {
-    testQuery(
+    testRuleQuery(
       title = "Merge using unique constraints creates a new node if no node is found",
       text = "Merge using unique constraints creates a new node if no node is found.",
       queryText = """merge (laurence:Person {name: 'Laurence Fishburne'}) return laurence""",
@@ -147,7 +147,7 @@ return keanu""",
   }
 
   @Test def merge_node_and_match_with_unique_constraint() {
-    testQuery(
+    testRuleQuery(
       title = "Merge using unique constraints matches an existing node",
       text = "Merge using unique constraints matches an existing node.",
       queryText = """merge (oliver:Person {name:'Oliver Stone'}) return oliver""",
@@ -158,7 +158,7 @@ return keanu""",
 
   @Test def merge_node_and_match_many_with_unique_constraint_fails_for_partial_matches() {
     generateConsole = false
-    testFailingQuery[MergeConstraintConflictException](
+    testFailingRuleQuery[MergeConstraintConflictException](
       title = "Merge with unique constraints and partial matches",
       text = "Merge using unique constraints fails when finding partial matches.",
       queryText = """merge (michael:Person {name:'Michael Douglas', role:'Gordon Gekko'}) return michael""",
@@ -169,7 +169,7 @@ return keanu""",
 
   @Test def merge_node_and_match_many_with_unique_constraint_fails_for_conflicting_matches() {
     generateConsole = false
-    testFailingQuery[MergeConstraintConflictException](
+    testFailingRuleQuery[MergeConstraintConflictException](
       title = "Merge with unique constraints and conflicting matches",
       text = "Merge using unique constraints fails when finding conflicting matches.",
       queryText = """merge (oliver:Person {name:'Oliver Stone', role:'Gordon Gekko'}) return oliver""",
@@ -179,7 +179,7 @@ return keanu""",
   }
 
   @Test def using_map_parameters_with_merge() {
-    prepareAndTestQuery(
+    prepareAndTestRuleQuery(
       title = "Using map parameters with MERGE",
       text = """+MERGE+ does not support map parameters like for example +CREATE+ does.
 To use map parameters with +MERGE+, it is necessary to explicitly use the expected properties, like in the following example.
@@ -192,7 +192,7 @@ For more information on parameters, see <<cypher-parameters>>.""",
   }
 
   @Test def merging_on_a_single_relationship() {
-    testQuery(
+    testRuleQuery(
       title = "Merge on a relationship",
       text = "+MERGE+ can be used to match or create a relationship.",
       queryText =
@@ -207,7 +207,7 @@ return r""",
   }
 
   @Test def merging_on_a_longer_pattern() {
-    testQuery(
+    testRuleQuery(
       title = "Merge on multiple relationships",
       text = "When +MERGE+ is used on a whole pattern, either everything matches, or everything is created.",
       queryText =
@@ -222,7 +222,7 @@ return movie""",
   }
 
   @Test def merging_on_undirected_relationship() {
-    testQuery(
+    testRuleQuery(
       title = "Merge on an undirected relationship",
       text = "+MERGE+ can also be used with an undirected relationship. When it needs to create a new one, it will pick a direction.",
       queryText =

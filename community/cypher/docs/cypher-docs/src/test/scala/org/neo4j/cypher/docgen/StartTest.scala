@@ -40,7 +40,7 @@ class StartTest extends DocumentingTestBase {
       text = "When the starting point can be found by using index lookups, it can be done like this: `node:index-name(key = \"value\")`. In this example, there exists a node index named `nodes`.",
       queryText = """start n=node:nodes(name = "A") return n""",
       optionalResultExplanation = """The query returns the node indexed with the name "+A+".""",
-      (p) => assertEquals(List(Map("n" -> node("A"))), p.toList))
+      assertions = (p) => assertEquals(List(Map("n" -> node("A"))), p.toList))
   }
 
   @Test def relationships_by_index() {
@@ -60,7 +60,7 @@ class StartTest extends DocumentingTestBase {
       text = "When the starting point can be found by using index lookups, it can be done like this: `relationship:index-name(key = \"value\")`.",
       queryText = """start r=relationship:rels(name = "Andrés") return r""",
       optionalResultExplanation = """The relationship indexed with the +name+ property set to "+Andrés+" is returned by the query.""",
-      (p) => assertEquals(List(Map("r" -> rel(0))), p.toList))
+      assertions = (p) => assertEquals(List(Map("r" -> rel(0))), p.toList))
   }
 
   @Test def nodes_by_index_query() {
@@ -71,7 +71,7 @@ class StartTest extends DocumentingTestBase {
         "This allows you to write more advanced index queries.",
       queryText = """start n=node:nodes("name:A") return n""",
       optionalResultExplanation = """The node indexed with name "A" is returned by the query.""",
-      (p) => assertEquals(List(Map("n" -> node("A"))), p.toList))
+      assertions = (p) => assertEquals(List(Map("n" -> node("A"))), p.toList))
   }
 
 }

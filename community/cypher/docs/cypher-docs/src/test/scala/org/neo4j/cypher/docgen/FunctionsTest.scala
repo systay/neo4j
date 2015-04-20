@@ -852,7 +852,7 @@ In case all arguments are +NULL+, +NULL+ will be returned.""",
       assertions = (p) => assert(p.toList.head("endNode(r)") === node("C")))
   }
 
-  private def testThis(title: String, syntax: String, arguments: List[(String, String)], text: String, queryText: String, returns: String, assertions: (InternalExecutionResult => Unit)*) {
+  private def testThis(title: String, syntax: String, arguments: List[(String, String)], text: String, queryText: String, returns: String, assertions: (InternalExecutionResult => Unit)) {
     val argsText = arguments.map(x => "* _" + x._1 + ":_ " + x._2).mkString("\r\n\r\n")
     val fullText = String.format("""%s
 
@@ -861,6 +861,6 @@ In case all arguments are +NULL+, +NULL+ will be returned.""",
 *Arguments:*
 
 %s""", text, syntax, argsText)
-    testQuery(title, fullText, queryText, returns, assertions: _*)
+    testQuery(title, fullText, queryText, returns, assertions)
   }
 }

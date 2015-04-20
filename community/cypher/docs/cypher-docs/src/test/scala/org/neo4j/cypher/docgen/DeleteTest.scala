@@ -25,7 +25,7 @@ import org.neo4j.visualization.graphviz.AsciiDocSimpleStyle
 import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.graphdb.DynamicLabel
 
-class DeleteTest extends DocumentingTestBase with QueryStatisticsTestSupport {
+class DeleteTest extends DocumentingTestBase with QueryStatisticsTestSupport with RuleOnlyTests {
   override def graphDescription = List("Andres KNOWS Tobias", "Andres KNOWS Peter")
 
   override val properties = Map(
@@ -34,7 +34,7 @@ class DeleteTest extends DocumentingTestBase with QueryStatisticsTestSupport {
     "Peter"  -> Map("name"->"Peter",  "age" -> 34l)
   )
 
-  override protected def getGraphvizStyle: GraphStyle = 
+  override protected def getGraphvizStyle: GraphStyle =
     AsciiDocSimpleStyle.withAutomaticRelationshipTypeColors()
 
   def section = "Delete"
@@ -43,7 +43,7 @@ class DeleteTest extends DocumentingTestBase with QueryStatisticsTestSupport {
 
     db.inTx(db.createNode(DynamicLabel.label("Useless")))
 
-    testQuery(
+    testRuleQuery(
       title = "Delete single node",
       text = "To delete a node, use the +DELETE+ clause.",
       queryText = "match (n:Useless) delete n",
@@ -52,7 +52,7 @@ class DeleteTest extends DocumentingTestBase with QueryStatisticsTestSupport {
   }
 
   @Test def delete_single_node_with_all_relationships() {
-    testQuery(
+    testRuleQuery(
       title = "Delete a node and connected relationships",
       text = "If you are trying to delete a node with relationships on it, you have to delete these as well.",
       queryText = "match (n {name: 'Andres'})-[r]-() delete n, r",
@@ -61,7 +61,7 @@ class DeleteTest extends DocumentingTestBase with QueryStatisticsTestSupport {
   }
 
   @Test def delete_all_nodes_and_all_relationships() {
-    testQuery(
+    testRuleQuery(
       title = "Delete all nodes and relationships",
       text = "This query isn't for deleting large amounts of data, but is nice when playing around with small example data sets.",
       queryText = "MATCH (n) OPTIONAL MATCH (n)-[r]-() DELETE n,r",

@@ -144,20 +144,23 @@ trait DocumentationHelper extends GraphIcing {
 
 abstract class DocumentingTestBase extends JUnitSuite with DocumentationHelper with GraphIcing {
 
-  def testQuery(title: String, text: String, queryText: String, optionalResultExplanation: String, assertions: (InternalExecutionResult => Unit)*) {
-    internalTestQuery(title, text, queryText, optionalResultExplanation, None, None, assertions: _*)
+  def testQuery(title: String, text: String, queryText: String, optionalResultExplanation: String,
+                assertions: InternalExecutionResult => Unit, preParseOptions: String = "") {
+    internalTestQuery(title, text, queryText, optionalResultExplanation, None, None, assertions, preParseOptions)
   }
 
-  def testFailingQuery[T <: CypherException: ClassTag](title: String, text: String, queryText: String, optionalResultExplanation: String) {
+  def testFailingQuery[T <: CypherException: ClassTag](title: String, text: String, queryText: String,
+                                                       optionalResultExplanation: String, preParseOptions: String = "") {
     val classTag = implicitly[ClassTag[T]]
-    internalTestQuery(title, text, queryText, optionalResultExplanation, Some(classTag), None)
+    internalTestQuery(title, text, queryText, optionalResultExplanation, Some(classTag), None, _ => {}, preParseOptions)
   }
 
-  def prepareAndTestQuery(title: String, text: String, queryText: String, optionalResultExplanation: String, prepare: => Any, assertion: (InternalExecutionResult => Unit)) {
-    internalTestQuery(title, text, queryText, optionalResultExplanation, None, Some(() => prepare), assertion)
+  def prepareAndTestQuery(title: String, text: String, queryText: String, optionalResultExplanation: String,
+                          prepare: => Any, assertion: InternalExecutionResult => Unit, preParseOptions: String = "") {
+    internalTestQuery(title, text, queryText, optionalResultExplanation, None, Some(() => prepare), assertion, preParseOptions)
   }
 
-  def profileQuery(title: String, text: String, queryText: String, realQuery: Option[String] = None, assertion: (InternalExecutionResult => Unit)) {
+  def profileQuery(title: String, text: String, queryText: String, realQuery: Option[String] = None, assertion: InternalExecutionResult => Unit) {
     internalProfileQuery(title, text, queryText, realQuery, None, None, assertion)
   }
 
@@ -167,7 +170,7 @@ abstract class DocumentingTestBase extends JUnitSuite with DocumentationHelper w
                                    realQuery: Option[String],
                                    expectedException: Option[ClassTag[_ <: CypherException]],
                                    prepare: Option[() => Any],
-                                   assertions: (InternalExecutionResult => Unit)*) {
+                                   assertions: InternalExecutionResult => Unit) {
     parameters = null
     preparationQueries = List()
 
@@ -224,7 +227,7 @@ abstract class DocumentingTestBase extends JUnitSuite with DocumentationHelper w
 
 
       db.inTx {
-        assertions.foreach(_.apply(result))
+        assertions(result)
       }
 
     } catch {
@@ -239,7 +242,9 @@ abstract class DocumentingTestBase extends JUnitSuite with DocumentationHelper w
   }
 
 
-  private def internalTestQuery(title: String, text: String, queryText: String, optionalResultExplanation: String, expectedException: Option[ClassTag[_ <: CypherException]], prepare: Option[() => Any], assertions: (InternalExecutionResult => Unit)*) {
+  private def internalTestQuery(title: String, text: String, queryText: String, optionalResultExplanation: String,
+                                expectedException: Option[ClassTag[_ <: CypherException]], prepare: Option[() => Any],
+                                assertions: InternalExecutionResult => Unit, preParseOptions: String) {
     parameters = null
     preparationQueries = List()
     //dumpGraphViz(dir, graphvizOptions.trim)
@@ -282,30 +287,37 @@ abstract class DocumentingTestBase extends JUnitSuite with DocumentationHelper w
     val testQuery = filePaths.foldLeft(query)( (acc, entry) => acc.replace(entry._1, entry._2))
     val docQuery = urls.foldLeft(query)( (acc, entry) => acc.replace(entry._1, entry._2))
 
-      val result = executeWithAllPlannersAndAssert(testQuery, assertions, expectedException, dumpToFile(dir, writer, title, docQuery, optionalResultExplanation, text, _, consoleData))
-      if (expectedException.isDefined) {
-        fail(s"Expected the test to throw an exception: $expectedException")
-      }
+    executeWithAllPlannersAndAssert(testQuery, assertions, expectedException,
+      dumpToFile(dir, writer, title, docQuery, optionalResultExplanation, text, _, consoleData), preParseOptions) match {
+      case Some(result) =>dumpToFile(dir, writer, title, docQuery, optionalResultExplanation, text, result, consoleData)
+      case  None =>
+    }
 
-      dumpToFile(dir, writer, title, docQuery, optionalResultExplanation, text, result, consoleData)
+
+
       if (graphvizExecutedAfter) {
         dumpGraphViz(dir, graphvizOptions.trim)
       }
   }
 
-  private def executeWithAllPlannersAndAssert(query: String, assertions: Seq[(InternalExecutionResult => Unit)], expectedException: Option[ClassTag[_ <: CypherException]], expectedCaught: CypherException => Unit) = {
+  private def executeWithAllPlannersAndAssert(query: String, assertions: InternalExecutionResult => Unit,
+                                              expectedException: Option[ClassTag[_ <: CypherException]],
+                                              expectedCaught: CypherException => Unit, preParseOptions: String) = {
     val params = Option(parameters).getOrElse(Map.empty)
 
-    val results = Seq("CYPHER PLANNER=cost ", "CYPHER PLANNER=rule ").flatMap {
+    val planners = if(preParseOptions == "")
+      Seq("CYPHER PLANNER=cost ", "CYPHER PLANNER=rule ")
+    else
+      Seq(preParseOptions)
+
+    val results = planners.flatMap {
       case s if expectedException.isEmpty =>
-        val rewindable = RewindableExecutionResult(engine.execute(s + query, params))
-        db.inTx {
-          assertions.foreach(_.apply(rewindable))
-        }
+        val rewindable = RewindableExecutionResult(engine.execute(s"$s $query", params))
+        db.inTx(assertions(rewindable))
         Some(rewindable)
 
       case s =>
-        val e = intercept[CypherException](engine.execute(s + query, params))
+        val e = intercept[CypherException](engine.execute(s"$s $query", params))
         val expectedExceptionType = expectedException.get
         e match {
           case expectedExceptionType(typedE) => expectedCaught(typedE)
@@ -314,7 +326,7 @@ abstract class DocumentingTestBase extends JUnitSuite with DocumentationHelper w
         None
     }
 
-    results.head
+    results.headOption
   }
 
   var db: GraphDatabaseAPI = null
@@ -498,3 +510,24 @@ abstract class DocumentingTestBase extends JUnitSuite with DocumentationHelper w
   }
 }
 
+trait RuleOnlyTests {
+  self :DocumentingTestBase =>
+
+  val RULE = "planner rule"
+
+  def testRuleQuery(title: String, text: String, queryText: String, optionalResultExplanation: String,
+                assertions: InternalExecutionResult => Unit) {
+    testQuery(title, text, queryText, optionalResultExplanation, assertions, RULE)
+  }
+
+  def prepareAndTestRuleQuery(title: String, text: String, queryText: String, optionalResultExplanation: String,
+                          prepare: => Any, assertion: InternalExecutionResult => Unit) {
+    prepareAndTestQuery(title, text, queryText, optionalResultExplanation, prepare, assertion, RULE)
+  }
+
+  def testFailingRuleQuery[T <: CypherException: ClassTag](title: String, text: String, queryText: String,
+                                                       optionalResultExplanation: String) {
+    testFailingQuery[T](title, text, queryText, optionalResultExplanation, RULE)
+  }
+
+}

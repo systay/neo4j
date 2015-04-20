@@ -50,7 +50,7 @@ class HyperedgeTest extends DocumentingTestBase {
         "(hyperEdge)-[:hasRole]->(role) " +
         "return role.name",
       optionalResultExplanation = "The role of +User1+ is returned:",
-      (p) => assertEquals(Map("role.name" -> "Role1"), p.toList.head))
+      assertions = (p) => assertEquals(Map("role.name" -> "Role1"), p.toList.head))
   }
 
   @Test def findAllGroupsForAUser() {
@@ -63,7 +63,7 @@ class HyperedgeTest extends DocumentingTestBase {
         "return role.name, group.name " +
         "order by role.name asc",
       optionalResultExplanation = "The groups and roles of +User1+ are returned:",
-      (p) => {
+      assertions = (p) => {
         val result = p.toList
         assertEquals(Map("role.name" -> "Role1", "group.name" -> "Group2"), result.head)
         assertEquals(Map("role.name" -> "Role2", "group.name" -> "Group1"), result.tail.head)

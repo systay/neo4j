@@ -21,6 +21,7 @@ package org.neo4j.cypher.internal.compiler.v2_3.codegen.ir
 
 import org.neo4j.cypher.internal.compiler.v2_3.codegen.JavaUtils.JavaTypes.{DOUBLE, LIST, LONG, MAP, NUMBER, OBJECT, STRING}
 import org.neo4j.cypher.internal.compiler.v2_3.codegen.JavaUtils.{JavaString, JavaSymbol}
+import org.neo4j.cypher.internal.compiler.v2_3.codegen.experiment._
 import org.neo4j.cypher.internal.compiler.v2_3.codegen.{CodeGenerator, KernelExceptionCodeGen, Namer}
 
 sealed trait ProjectionInstruction extends Instruction {
@@ -51,6 +52,14 @@ case class ProjectNodeProperty(id: String, token: Option[Int], propName: String,
          |}
        """.stripMargin
       else ""
+
+  override def generateInitStatement(): Statement = if (token.isEmpty)
+    If(
+      Equals(Variable(propKeyVar), LiteralInt(-1)),
+      VariableAssignment(propKeyVar, InstanceMethodCall(Variable("ro"), "propertyKeyGetForName", Seq(LiteralString(propName)))),
+      NOP)
+  else
+    NOP
 
   override def _importedClasses() =
     Set("org.neo4j.kernel.api.properties.Property", "org.neo4j.kernel.api.exceptions.EntityNotFoundException")
@@ -94,6 +103,15 @@ case class ProjectRelProperty(token: Option[Int], propName: String, relIdVar: St
          |}""".stripMargin
     else ""
 
+  override def generateInitStatement(): Statement = if (token.isEmpty)
+    If(
+      Equals(Variable(propKeyVar), LiteralInt(-1)),
+      VariableAssignment(propKeyVar, InstanceMethodCall(Variable("ro"), "propertyKeyGetForName", Seq(LiteralString(propName)))),
+      NOP)
+  else
+    NOP
+
+
   override def _importedClasses() =
     Set("org.neo4j.kernel.api.properties.Property")
 
@@ -113,7 +131,15 @@ case class ProjectParameter(key: String) extends ProjectionInstruction {
       |}
     """.stripMargin
 
-  def projectedVariable = JavaSymbol( s"""params.get( "${key.toJava}" )""", OBJECT)
+
+  override def generateInitStatement(): Statement =
+    If(
+      Not(InstanceMethodCall(Variable("params"), "containsKey", Seq(LiteralString(key.toJava)))),
+      Throw("org.neo4j.cypher.internal.compiler.v2_3.ParameterNotFoundException", Seq(LiteralString(s"Expected a parameter named ${key.toJava}"))),
+      NOP
+    )
+
+  def projectedVariable = JavaSymbol(s"""params.get( "${key.toJava}" )""", OBJECT)
 
   def members() = ""
 
@@ -121,10 +147,12 @@ case class ProjectParameter(key: String) extends ProjectionInstruction {
 }
 
 trait NeedsNoInit {
-  self: ProjectionInstruction =>
+  self: Instruction =>
   override def generateInit() = ""
 
   override def members() = ""
+
+  override def generateInitStatement(): Statement = NOP
 }
 
 case class ProjectLiteral(projectedVariable: JavaSymbol) extends ProjectionInstruction with NeedsNoInit
@@ -224,6 +252,8 @@ case class Project(projections: Seq[ProjectionInstruction], parent: Instruction)
   override def members() = generate(_.members())
 
   override def generateInit() = generate(_.generateInit())
+
+  override def generateInitStatement(): Statement = ???
 
   private def generate(f: Instruction => String) = projections.
                                                    map(f).

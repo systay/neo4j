@@ -20,6 +20,8 @@
 package org.neo4j.cypher.internal.compiler.v2_3.codegen.ir
 
 import org.neo4j.cypher.internal.compiler.v2_3.codegen.CodeGenerator.n
+import org.neo4j.cypher.internal.compiler.v2_3.codegen.experiment.Statement
+import org.neo4j.cypher.internal.compiler.v2_3.codegen.experiment.Statement.NOP
 import org.neo4j.cypher.internal.compiler.v2_3.codegen.{ExceptionCodeGen, KernelExceptionCodeGen}
 
 case class MethodInvocation(override val operatorId: Option[String],
@@ -45,12 +47,12 @@ case class MethodInvocation(override val operatorId: Option[String],
 
   def generateInit() = ""
 
+  override def generateInitStatement(): Statement = NOP
+
   override protected def _method = Some(new Method {
     def generateCode = {
       val init = statements.map(_.generateInit()).reduce(_ + n + _)
       val methodBody = statements.map(_.generateCode()).reduce(_ + n + _)
-      val exceptions = statements.flatMap(_.exceptions).map(_.throwClause)
-      val throwClause = if (exceptions.isEmpty) "" else exceptions.mkString("throws ", ",", "")
 
       s"""private $resultType $methodName() throws KernelException
          |{

@@ -20,6 +20,7 @@
 package org.neo4j.cypher.internal.compiler.v2_3.codegen.ir
 
 import org.neo4j.cypher.internal.compiler.v2_3.codegen.ExceptionCodeGen
+import org.neo4j.cypher.internal.compiler.v2_3.codegen.experiment.Statement
 
 trait Instruction {
   // Actual code produced by element
@@ -32,6 +33,7 @@ trait Instruction {
 
   //Initialises necessary data-structures. Is inserted at the top of the generated method
   def generateInit(): String
+  def generateInitStatement(): Statement
 
   def methods: Seq[Method] = {
     (allLeafs :+ this).flatMap(_._method)
@@ -64,12 +66,8 @@ trait Instruction {
 }
 
 object Instruction {
-  val empty = new Instruction {
+  val empty = new Instruction with NeedsNoInit {
     override def generateCode() = ""
-
-    override def members() = ""
-
-    override def generateInit() = ""
 
     override def exceptions: Set[ExceptionCodeGen] = Set.empty
 

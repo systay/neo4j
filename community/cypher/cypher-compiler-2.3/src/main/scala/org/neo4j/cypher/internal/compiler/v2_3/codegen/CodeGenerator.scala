@@ -44,7 +44,7 @@ object CodeGenerator {
   def generateClass(instructions: Seq[Instruction]) = {
     val className = Namer.newClassName()
     val source = generateCodeFromInstructions(className, instructions)
-    //println(indentNicely(source))
+    println(indentNicely(source))
     (Javac.compile(s"$packageName.$className", source), source)
   }
 

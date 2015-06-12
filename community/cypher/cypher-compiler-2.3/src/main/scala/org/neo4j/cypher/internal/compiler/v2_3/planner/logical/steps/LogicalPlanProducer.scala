@@ -392,13 +392,11 @@ case class LogicalPlanProducer(cardinalityModel: CardinalityModel) extends Colle
      */
   }
 
-  def planDistinct(left: LogicalPlan)(implicit context: LogicalPlanningContext): LogicalPlan = {
-    val returnAll = QueryProjection.forIds(left.availableSymbols) map {
-      case AliasedReturnItem(e, Identifier(key)) => key -> e // This smells awful.
-    }
-
-    Aggregation(left, returnAll.toMap, Map.empty)(left.solved)
-  }
+  def planDistinct(left: LogicalPlan)(implicit context: LogicalPlanningContext): LogicalPlan =
+    Distinct(left)(left.solved.updateQueryProjection {
+      case rqp: RegularQueryProjection => rqp.copy(distinct = true)
+      case p => p
+    })
 
   private implicit def estimatePlannerQuery(plannerQuery: PlannerQuery)(implicit context: LogicalPlanningContext): PlannerQuery with CardinalityEstimation = {
     val cardinality = cardinalityModel(plannerQuery, context.input, context.semanticTable)

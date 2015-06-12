@@ -59,7 +59,7 @@ class UnionPlanningIntegrationTest extends CypherFunSuite with LogicalPlanningTe
 
     logicalPlan should equal(
       ProduceResult(Seq("a"), Seq.empty, Seq.empty,
-        Aggregation(
+        Distinct(
           left = Union(
             Projection(
               NodeByLabelScan("  a@7", LazyLabel(LabelName("A") _), Set.empty)(solved),
@@ -69,9 +69,7 @@ class UnionPlanningIntegrationTest extends CypherFunSuite with LogicalPlanningTe
               NodeByLabelScan("  a@39", LazyLabel(LabelName("B") _), Set.empty)(solved),
               Map("a" -> Identifier("  a@39") _)
             )(solved)
-          )(solved),
-          groupingExpressions = Map("a" -> ident("a")),
-          aggregationExpression = Map.empty
+          )(solved)
         )(solved)
       )
     )

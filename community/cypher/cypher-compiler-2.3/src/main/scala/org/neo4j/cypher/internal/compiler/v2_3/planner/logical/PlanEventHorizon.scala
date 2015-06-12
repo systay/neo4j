@@ -19,9 +19,10 @@
  */
 package org.neo4j.cypher.internal.compiler.v2_3.planner.logical
 
-import org.neo4j.cypher.internal.compiler.v2_3.planner.logical.steps.{projection, sortSkipAndLimit, aggregation}
+import org.neo4j.cypher.internal.compiler.v2_3.ast.Expression
 import org.neo4j.cypher.internal.compiler.v2_3.planner._
 import org.neo4j.cypher.internal.compiler.v2_3.planner.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.compiler.v2_3.planner.logical.steps.{aggregation, sortSkipAndLimit}
 
 /*
 Planning event horizons means planning the WITH clauses between query patterns. Some of these clauses are inlined
@@ -38,9 +39,13 @@ case class PlanEventHorizon(config: QueryPlannerConfiguration = QueryPlannerConf
         val aggregationPlan = aggregation(selectedPlan, aggregatingProjection)
         sortSkipAndLimit(aggregationPlan, query)
 
-      case queryProjection: RegularQueryProjection =>
+      case RegularQueryProjection(projections, _, false) =>
         val sortedAndLimited = sortSkipAndLimit(selectedPlan, query)
-        projection(sortedAndLimited, queryProjection.projections)
+        projection(sortedAndLimited, projections)
+
+      case RegularQueryProjection(projections, _, true) =>
+        val projected = distinct(projection(plan, projections))
+        sortSkipAndLimit(projected, query)
 
       case UnwindProjection(identifier, expression) =>
         context.logicalPlanProducer.planUnwind(plan, identifier, expression)
@@ -51,4 +56,11 @@ case class PlanEventHorizon(config: QueryPlannerConfiguration = QueryPlannerConf
 
     projectedPlan
   }
+
+  private def projection(plan: LogicalPlan, projectionsMap: Map[String, Expression])
+                        (implicit context: LogicalPlanningContext) =
+    context.logicalPlanProducer.planRegularProjection(plan, projectionsMap)
+
+  private def distinct(plan: LogicalPlan)(implicit context: LogicalPlanningContext) =
+    context.logicalPlanProducer.planDistinct(plan)
 }

@@ -59,10 +59,10 @@ object ClauseConverters {
       if (projectionMap.values.exists(containsAggregate))
         throw new InternalException("Grouping keys contains aggregation. AST has not been rewritten?")
 
-      if (aggregationsMap.nonEmpty || distinct)
+      if (aggregationsMap.nonEmpty)
         AggregatingQueryProjection(groupingKeys = projectionMap, aggregationExpressions = aggregationsMap)
       else
-        RegularQueryProjection(projections = projectionMap)
+        RegularQueryProjection(projections = projectionMap, distinct = distinct)
     }
   }
 

@@ -25,13 +25,22 @@ import org.neo4j.cypher.internal.compiler.v2_3.planner.{CardinalityEstimation, P
 
 case class Projection(left: LogicalPlan, expressions: Map[String, Expression])
                      (val solved: PlannerQuery with CardinalityEstimation) extends LogicalPlan with LazyLogicalPlan {
-  val lhs = Some(left)
-  val rhs = None
+  override val lhs = Some(left)
+  override val rhs = None
 
-  def numExpressions = expressions.size
-
-  val availableSymbols = left.availableSymbols ++ expressions.keySet.map(IdName(_))
+  override val availableSymbols = left.availableSymbols ++ expressions.keySet.map(IdName(_))
 
   override def mapExpressions(f: (Set[IdName], Expression) => Expression): LogicalPlan =
     copy(expressions = Eagerly.immutableMapValues[String, Expression, Expression](expressions, f(left.availableSymbols, _)))(solved)
+}
+
+case class Distinct(left: LogicalPlan)(val solved: PlannerQuery with CardinalityEstimation)
+  extends LogicalPlan with LazyLogicalPlan {
+  override val lhs = Some(left)
+
+  override def availableSymbols = left.availableSymbols
+
+  override def rhs = None
+
+  override def mapExpressions(f: (Set[IdName], Expression) => Expression) = this
 }

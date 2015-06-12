@@ -39,11 +39,11 @@ class StatisticsBackedCardinalityModel(queryGraphCardinalityModel: QueryGraphCar
 
   private def calculateCardinalityForQueryHorizon(in: Cardinality, horizon: QueryHorizon): Cardinality = horizon match {
     // Normal projection with LIMIT
-    case RegularQueryProjection(_, QueryShuffle(_, None, Some(limit: IntegerLiteral))) =>
+    case RegularQueryProjection(_, QueryShuffle(_, None, Some(limit: IntegerLiteral)), _) =>
       Cardinality.min(in, limit.value.toDouble)
 
     // Distinct
-    case projection: AggregatingQueryProjection if projection.aggregationExpressions.isEmpty =>
+    case RegularQueryProjection(_, _, true) =>
       in * Selectivity(0.95)
 
     // Aggregates

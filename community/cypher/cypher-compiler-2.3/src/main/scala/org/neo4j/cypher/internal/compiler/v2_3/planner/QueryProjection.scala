@@ -104,7 +104,8 @@ object QueryShuffle {
 }
 
 final case class RegularQueryProjection(projections: Map[String, Expression] = Map.empty,
-                                        shuffle: QueryShuffle = QueryShuffle.empty) extends QueryProjection {
+                                        shuffle: QueryShuffle = QueryShuffle.empty, distinct: Boolean = false)
+  extends QueryProjection {
   def keySet: Set[String] = projections.keySet
 
   def ++(other: RegularQueryProjection) =

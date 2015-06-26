@@ -132,7 +132,7 @@ final class TransactionBoundQueryContext(graph: GraphDatabaseAPI,
   }
 
   def exactIndexSearch(index: IndexDescriptor, value: Any) =
-    JavaConversionSupport.mapToScala(statement.readOperations().nodesGetFromIndexLookup(index, value))(nodeOps.getById)
+    JavaConversionSupport.mapToScalaENFXSafe(statement.readOperations().nodesGetFromIndexLookup(index, value))(nodeOps.getById)
 
   override def rangeIndexSearch(index: IndexDescriptor, value: Any) = {
     // TODO: Push this down into kernel
@@ -191,8 +191,10 @@ final class TransactionBoundQueryContext(graph: GraphDatabaseAPI,
     def propertyKeyIds(id: Long): Iterator[Int] =
       JavaConversionSupport.asScala(statement.readOperations().nodeGetAllPropertiesKeys(id))
 
-    def getProperty(id: Long, propertyKeyId: Int): Any = {
+    def getProperty(id: Long, propertyKeyId: Int): Any = try {
       statement.readOperations().nodeGetProperty(id, propertyKeyId).value(null)
+    } catch {
+      case _: org.neo4j.kernel.api.exceptions.EntityNotFoundException => null
     }
 
     def hasProperty(id: Long, propertyKey: Int) =

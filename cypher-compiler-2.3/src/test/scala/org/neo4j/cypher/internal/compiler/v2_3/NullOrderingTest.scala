@@ -19,10 +19,20 @@
  */
 package org.neo4j.cypher.internal.compiler.v2_3
 
-import org.neo4j.kernel.impl.api.PropertyValue
+import org.neo4j.cypher.internal.compiler.v2_3.test_helpers.CypherFunSuite
+import org.neo4j.kernel.impl.api.PropertyValueComparison
 
-object CypherNumberOrdering extends Ordering[Number] {
+class NullOrderingTest extends CypherFunSuite {
 
-  override def compare(x: Number, y: Number) =
-    PropertyValue.NUMBER_COMPARATOR.compare(x, y)
+  import org.neo4j.cypher.internal.compiler.v2_3.MinMaxOrdering._
+
+  val ordering = Ordering.comparatorToOrdering(PropertyValueComparison.COMPARE_NUMBERS)
+
+  test("Should be able to put nulls first") {
+    Seq[Number](null, 4.0d, -3, null, 12).sorted(ordering.withNullsFirst) should equal(Seq[Number](null, null, -3, 4.0d, 12))
+  }
+
+  test("Should be able to put nulls last") {
+    Seq[Number](null, 4.0d, -3, null, 12).sorted(ordering.withNullsLast) should equal(Seq[Number](-3, 4.0d, 12, null, null))
+  }
 }

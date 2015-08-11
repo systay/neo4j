@@ -19,6 +19,7 @@
  */
 package org.neo4j.graphdb.impl.notification;
 
+import java.util.List;
 import java.util.Set;
 
 public interface NotificationDetail
@@ -35,10 +36,25 @@ public interface NotificationDetail
                     String.format( "index on :%s(%s)", labelName, propertyKeyName ), true );
         }
 
-        public static NotificationDetail join( String identifier )
+        public static NotificationDetail join( List<String> identifiers )
         {
-            return createNotificationDetail( "hinted hash join",
-                    String.format( "on node identifier %s", identifier ), true );
+            boolean singular = identifiers.size() == 1;
+            StringBuilder builder = new StringBuilder();
+            builder.append( singular ? "on node identifier " : "on node identifiers " );
+            boolean first = true;
+            for ( String identifier : identifiers )
+            {
+                if ( first )
+                {
+                    first = false;
+                }
+                else
+                {
+                    builder.append( ", " );
+                }
+                builder.append( identifier );
+            }
+            return createNotificationDetail( "hinted hash join", builder.toString(), singular );
         }
 
         public static NotificationDetail cartesianProduct( Set<String> identifiers )

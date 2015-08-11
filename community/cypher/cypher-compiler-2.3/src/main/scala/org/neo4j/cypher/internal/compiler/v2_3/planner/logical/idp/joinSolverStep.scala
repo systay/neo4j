@@ -29,27 +29,52 @@ case class joinSolverStep(qg: QueryGraph) extends IDPSolverStep[PatternRelations
 
   override def apply(registry: IdRegistry[PatternRelationship], goal: Goal, table: IDPCache[LogicalPlan])
                     (implicit context: LogicalPlanningContext): Iterator[LogicalPlan] = {
-    val goalSize = goal.size / 2
 
-    val result: Iterator[Iterator[NodeHashJoin]] =
-      for (
-        leftGoal <- goal.subsets() if leftGoal.size <= goalSize;
-        lhs <- table(leftGoal);
-        leftNodes = lhs.solved.graph.patternNodes -- qg.argumentIds;
-        rightGoal = goal &~ leftGoal; // bit set -- operator
-        rhs <- table(rightGoal);
-        rightNodes = rhs.solved.graph.patternNodes;
-        overlap = leftNodes intersect rightNodes if overlap.nonEmpty
-      ) yield {
-        planJoins(lhs, rhs, overlap, qg)
+    if (VERBOSE) {
+      println(s"\n>>>> start solving ${show(goal, symbols(goal, registry))}")
+    }
+
+    val arguments = qg.argumentIds
+    val result = for (
+       leftGoal <- goal.subsets();
+       lhs <- table(leftGoal).toSeq;
+       leftNodes = lhs.solved.graph.patternNodes -- arguments;
+       // TODO: Size bound
+       rightGoal <- goal.subsets() if (leftGoal | rightGoal) == goal && (leftGoal != rightGoal);
+       rhs <- table(rightGoal);
+       rightNodes = rhs.solved.graph.patternNodes -- arguments;
+       overlappingNodes = leftNodes intersect rightNodes if overlappingNodes.nonEmpty;
+       leftSymbols = lhs.availableSymbols;
+       rightSymbols = rhs.availableSymbols;
+       overlappingSymbols = (leftSymbols intersect rightSymbols) -- arguments if overlappingSymbols == overlappingNodes
+    ) yield {
+      if (VERBOSE) {
+        println(s"${show(leftGoal, leftNodes)} overlap ${show(rightGoal, rightNodes)} on ${showNames(overlappingNodes)}")
       }
+      // This loop is expected to find both LHS and RHS plans, so no need to generate them swapped here
+      planJoin(lhs, rhs, overlappingNodes, qg)
+    }
 
     // This should be (and is) lazy
-    result.flatten
+    result
   }
+
+  private def show(goal: Goal, symbols: Set[IdName]) =
+    s"${showIds(goal.toSet)}: ${showNames(symbols)}"
+
+  private def symbols(goal: Goal, registry: IdRegistry[PatternRelationship]) =
+    registry.explode(goal).flatMap(_.coveredIds)
+
+  private def showIds(ids: Set[Int]) =
+    ids.toSeq.sorted.mkString("{", ", ", "}")
+
+  private def showNames(ids: Set[IdName]) =
+    ids.map(_.name).toSeq.sorted.mkString("[", ", ", "]")
 }
 
 object joinSolverStep {
+
+  val VERBOSE = false
 
   def planJoinsOnTopOfExpands(qg: QueryGraph, lhsOpt: Option[LogicalPlan], rhsSet: Set[LogicalPlan])
                              (implicit context: LogicalPlanningContext): Iterator[LogicalPlan] = {
@@ -69,7 +94,10 @@ object joinSolverStep {
           overlap = lhs.solved.graph.patternNodes intersect rhs.solved.graph.patternNodes
           if overlap.nonEmpty
         } yield {
-          planJoins(lhs, rhs, overlap, qg)
+          Iterator(
+            planJoin(lhs, rhs, overlap, qg),
+            planJoin(rhs, lhs, overlap, qg)
+          )
         }
 
       result.flatten.iterator
@@ -78,16 +106,13 @@ object joinSolverStep {
       Iterator.empty
   }
 
-  private def planJoins(lhs: LogicalPlan, rhs: LogicalPlan, overlap: Set[IdName], qg: QueryGraph)
-                       (implicit context: LogicalPlanningContext) = {
+  private def planJoin(lhs: LogicalPlan, rhs: LogicalPlan, overlap: Set[IdName], qg: QueryGraph)
+                      (implicit context: LogicalPlanningContext) = {
     val hints = qg.hints.collect {
-      case hint@UsingJoinHint(identifier) if overlap contains IdName(identifier.name) => hint
+      case hint@UsingJoinHint(identifiers) if identifiers.forall(identifier => overlap contains IdName(identifier.name)) => hint
     }
 
-    Iterator(
-      context.logicalPlanProducer.planNodeHashJoin(overlap, lhs, rhs, hints),
-      context.logicalPlanProducer.planNodeHashJoin(overlap, rhs, lhs, hints)
-    )
+    context.logicalPlanProducer.planNodeHashJoin(overlap, lhs, rhs, hints)
   }
 }
 

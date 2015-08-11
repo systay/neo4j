@@ -42,7 +42,7 @@ object join extends CandidateGenerator[GreedyPlanTable] {
         if (shared.nonEmpty && shared.forall(isApplicable)) {
 
           val hints = queryGraph.hints.collect {
-            case hint@UsingJoinHint(identifier) if shared contains IdName(identifier.name) => hint
+            case hint@UsingJoinHint(identifiers) if identifiers.forall(identifier => shared contains IdName(identifier.name)) => hint
           }
 
           joinPlans += context.logicalPlanProducer.planNodeHashJoin(shared, left, right, hints)

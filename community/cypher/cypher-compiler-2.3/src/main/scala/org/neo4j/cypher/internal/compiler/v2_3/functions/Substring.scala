@@ -35,8 +35,8 @@ case object Substring extends Function with SimpleTypedFunction {
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
     commandexpressions.SubstringFunction(
-      invocation.arguments(0).asCommandExpression,
-      invocation.arguments(1).asCommandExpression,
-      invocation.arguments.lift(2).asCommandExpression
+      toCommandExpression(invocation.arguments.head),
+      toCommandExpression(invocation.arguments(1)),
+      toCommandExpression(invocation.arguments.lift(2))
     )
 }

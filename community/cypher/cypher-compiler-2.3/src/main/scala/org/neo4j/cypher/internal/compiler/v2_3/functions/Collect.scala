@@ -36,7 +36,7 @@ case object Collect extends AggregatingFunction  {
     }
 
   def asCommandExpression(invocation: ast.FunctionInvocation) = {
-    val inner = invocation.arguments(0).asCommandExpression
+    val inner = toCommandExpression(invocation.arguments.head)
     val command = commandexpressions.Collect(inner)
     if (invocation.distinct)
       commandexpressions.Distinct(command, inner)

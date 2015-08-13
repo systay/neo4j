@@ -33,5 +33,5 @@ case object Sin extends Function with SimpleTypedFunction {
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
-    commandexpressions.SinFunction(invocation.arguments(0).asCommandExpression)
+    commandexpressions.SinFunction(toCommandExpression(invocation.arguments.head))
 }

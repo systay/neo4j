@@ -33,5 +33,5 @@ case object StartNode extends Function with SimpleTypedFunction {
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
-    commandexpressions.RelationshipEndPoints(invocation.arguments(0).asCommandExpression, start = true)
+    commandexpressions.RelationshipEndPoints(toCommandExpression(invocation.arguments.head), start = true)
 }

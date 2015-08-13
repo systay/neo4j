@@ -33,5 +33,5 @@ case object Labels extends Function with SimpleTypedFunction {
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
-    commandexpressions.LabelsFunction(invocation.arguments(0).asCommandExpression)
+    commandexpressions.LabelsFunction(toCommandExpression(invocation.arguments.head))
 }

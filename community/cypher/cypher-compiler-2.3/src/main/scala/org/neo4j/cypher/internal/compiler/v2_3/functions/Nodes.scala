@@ -33,5 +33,5 @@ case object Nodes extends Function with SimpleTypedFunction {
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
-    commandexpressions.NodesFunction(invocation.arguments(0).asCommandExpression)
+    commandexpressions.NodesFunction(toCommandExpression(invocation.arguments.head))
 }

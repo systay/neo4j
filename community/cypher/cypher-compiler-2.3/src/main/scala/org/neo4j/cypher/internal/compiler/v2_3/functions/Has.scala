@@ -39,6 +39,6 @@ case object Has extends Function {
 
   def asCommandExpression(invocation: ast.FunctionInvocation) = {
     val property = invocation.arguments(0).asInstanceOf[ast.Property]
-    commands.PropertyExists(property.map.asCommandExpression, PropertyKey(property.propertyKey.name))
+    commands.PropertyExists(toCommandExpression(property.map), PropertyKey(property.propertyKey.name))
   }
 }

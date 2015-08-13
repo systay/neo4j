@@ -33,5 +33,5 @@ case object Relationships extends Function with SimpleTypedFunction {
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
-    commandexpressions.RelationshipFunction(invocation.arguments(0).asCommandExpression)
+    commandexpressions.RelationshipFunction(toCommandExpression(invocation.arguments.head))
 }

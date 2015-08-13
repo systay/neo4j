@@ -33,5 +33,5 @@ case object Asin extends Function with SimpleTypedFunction {
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
-    commandexpressions.AsinFunction(invocation.arguments(0).asCommandExpression)
+    commandexpressions.AsinFunction(toCommandExpression(invocation.arguments.head))
 }

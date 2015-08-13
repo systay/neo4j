@@ -33,5 +33,5 @@ case object LTrim extends Function with SimpleTypedFunction {
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
-    commandexpressions.LTrimFunction(invocation.arguments(0).asCommandExpression)
+    commandexpressions.LTrimFunction(toCommandExpression(invocation.arguments.head))
 }

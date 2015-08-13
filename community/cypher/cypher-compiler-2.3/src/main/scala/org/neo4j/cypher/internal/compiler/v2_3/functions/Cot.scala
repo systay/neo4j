@@ -33,5 +33,5 @@ case object Cot extends Function with SimpleTypedFunction {
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
-    commandexpressions.CotFunction(invocation.arguments(0).asCommandExpression)
+    commandexpressions.CotFunction(toCommandExpression(invocation.arguments.head))
 }

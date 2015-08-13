@@ -33,5 +33,5 @@ case object Upper extends Function with SimpleTypedFunction {
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
-    commandexpressions.UpperFunction(invocation.arguments(0).asCommandExpression)
+    commandexpressions.UpperFunction(toCommandExpression(invocation.arguments.head))
 }

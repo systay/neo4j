@@ -34,5 +34,5 @@ case object Size extends Function with SimpleTypedFunction {
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
-    commandexpressions.SizeFunction(invocation.arguments(0).asCommandExpression)
+    commandexpressions.SizeFunction(toCommandExpression(invocation.arguments.head))
 }

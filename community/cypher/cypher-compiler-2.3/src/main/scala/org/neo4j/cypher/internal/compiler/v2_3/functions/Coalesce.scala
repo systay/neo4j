@@ -34,5 +34,5 @@ case object Coalesce extends Function {
     invocation.specifyType(invocation.arguments.leastUpperBoundsOfTypes)
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
-    commandexpressions.CoalesceFunction(invocation.arguments.asCommandExpressions:_*)
+    commandexpressions.CoalesceFunction(toCommandExpression(invocation.arguments):_*)
 }

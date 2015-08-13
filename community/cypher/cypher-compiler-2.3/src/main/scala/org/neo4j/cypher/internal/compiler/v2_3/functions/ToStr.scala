@@ -33,5 +33,5 @@ case object ToStr extends Function with SimpleTypedFunction {
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
-    commandexpressions.StrFunction(invocation.arguments(0).asCommandExpression)
+    commandexpressions.StrFunction(toCommandExpression(invocation.arguments.head))
 }

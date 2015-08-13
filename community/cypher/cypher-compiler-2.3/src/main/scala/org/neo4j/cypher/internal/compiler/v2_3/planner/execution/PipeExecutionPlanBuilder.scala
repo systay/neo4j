@@ -180,15 +180,15 @@ class PipeExecutionPlanBuilder(clock: Clock, monitors: Monitors) {
           LimitPipe(buildPipe(lhs), buildExpression(count))()
 
         case SortedLimit(lhs, exp, sortItems) =>
-          TopPipe(buildPipe(lhs), sortItems.map(_.asCommandSortItem).toList, exp.asCommandExpression)()
+          TopPipe(buildPipe(lhs), sortItems.map(_.asCommandSortItem).toList, toCommandExpression(exp))()
 
         // TODO: Maybe we shouldn't encode distinct as an empty aggregation.
         case Aggregation(Projection(source, expressions), groupingExpressions, aggregatingExpressions)
           if aggregatingExpressions.isEmpty && expressions == groupingExpressions =>
-          DistinctPipe(buildPipe(source), groupingExpressions.mapValues(_.asCommandExpression))()
+          DistinctPipe(buildPipe(source), groupingExpressions.mapValues(toCommandExpression))()
 
         case Aggregation(source, groupingExpressions, aggregatingExpressions) if aggregatingExpressions.isEmpty =>
-          DistinctPipe(buildPipe(source), groupingExpressions.mapValues(_.asCommandExpression))()
+          DistinctPipe(buildPipe(source), groupingExpressions.mapValues(toCommandExpression))()
 
         case Aggregation(source, groupingExpressions, aggregatingExpressions) =>
           EagerAggregationPipe(
@@ -206,7 +206,7 @@ class PipeExecutionPlanBuilder(clock: Clock, monitors: Monitors) {
           NewUnionPipe(buildPipe(lhs), buildPipe(rhs))()
 
         case UnwindCollection(lhs, identifier, collection) =>
-          UnwindPipe(buildPipe(lhs), collection.asCommandExpression, identifier.name)()
+          UnwindPipe(buildPipe(lhs), toCommandExpression(collection), identifier.name)()
 
         case LegacyIndexSeek(id, hint: NodeStartItem, _) =>
           val source = new SingleRowPipe()
@@ -248,13 +248,13 @@ class PipeExecutionPlanBuilder(clock: Clock, monitors: Monitors) {
     def buildExpression(expr: ast.Expression): CommandExpression = {
       val rewrittenExpr = expr.endoRewrite(buildPipeExpressions)
 
-      rewrittenExpr.asCommandExpression.rewrite(resolver.resolveExpressions(_, planContext))
+      toCommandExpression(rewrittenExpr).rewrite(resolver.resolveExpressions(_, planContext))
     }
 
     def buildPredicate(expr: ast.Expression): CommandPredicate = {
       val rewrittenExpr: Expression = expr.endoRewrite(buildPipeExpressions)
 
-      rewrittenExpr.asCommandPredicate.rewrite(resolver.resolveExpressions(_, planContext)).asInstanceOf[CommandPredicate]
+      toCommandPredicate(rewrittenExpr).rewrite(resolver.resolveExpressions(_, planContext)).asInstanceOf[CommandPredicate]
     }
 
     val topLevelPipe = buildPipe(plan)

@@ -33,5 +33,5 @@ case object Exp extends Function with SimpleTypedFunction {
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
-    commandexpressions.ExpFunction(invocation.arguments(0).asCommandExpression)
+    commandexpressions.ExpFunction(toCommandExpression(invocation.arguments.head))
 }

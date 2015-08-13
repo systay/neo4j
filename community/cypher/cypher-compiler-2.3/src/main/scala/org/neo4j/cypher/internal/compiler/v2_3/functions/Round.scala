@@ -33,5 +33,5 @@ case object Round extends Function with SimpleTypedFunction {
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
-    commandexpressions.RoundFunction(invocation.arguments(0).asCommandExpression)
+    commandexpressions.RoundFunction(toCommandExpression(invocation.arguments.head))
 }

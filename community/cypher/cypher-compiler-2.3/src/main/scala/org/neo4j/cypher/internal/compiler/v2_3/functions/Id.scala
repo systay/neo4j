@@ -34,5 +34,5 @@ case object Id extends Function with SimpleTypedFunction {
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
-    commandexpressions.IdFunction(invocation.arguments(0).asCommandExpression)
+    commandexpressions.IdFunction(toCommandExpression(invocation.arguments.head))
 }

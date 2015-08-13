@@ -35,5 +35,5 @@ case object ToFloat extends Function with SimpleTypedFunction {
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
-    commandexpressions.ToFloatFunction(invocation.arguments(0).asCommandExpression)
+    commandexpressions.ToFloatFunction(toCommandExpression(invocation.arguments.head))
 }

@@ -35,5 +35,5 @@ case object ToInt extends Function with SimpleTypedFunction {
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
-    commandexpressions.ToIntFunction(invocation.arguments(0).asCommandExpression)
+    commandexpressions.ToIntFunction(toCommandExpression(invocation.arguments.head))
 }

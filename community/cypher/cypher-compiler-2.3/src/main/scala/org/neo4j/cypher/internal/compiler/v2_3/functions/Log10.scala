@@ -33,5 +33,5 @@ case object Log10 extends Function with SimpleTypedFunction {
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
-    commandexpressions.Log10Function(invocation.arguments(0).asCommandExpression)
+    commandexpressions.Log10Function(toCommandExpression(invocation.arguments.head))
 }

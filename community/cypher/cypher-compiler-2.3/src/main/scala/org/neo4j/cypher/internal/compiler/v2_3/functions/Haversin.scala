@@ -33,5 +33,5 @@ case object Haversin extends Function with SimpleTypedFunction {
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
-    commandexpressions.HaversinFunction(invocation.arguments(0).asCommandExpression)
+    commandexpressions.HaversinFunction(toCommandExpression(invocation.arguments.head))
 }

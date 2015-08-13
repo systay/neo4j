@@ -33,5 +33,5 @@ case object Sqrt extends Function with SimpleTypedFunction {
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
-    commandexpressions.SqrtFunction(invocation.arguments(0).asCommandExpression)
+    commandexpressions.SqrtFunction(toCommandExpression(invocation.arguments.head))
 }

@@ -33,5 +33,5 @@ case object Tan extends Function with SimpleTypedFunction {
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
-    commandexpressions.TanFunction(invocation.arguments(0).asCommandExpression)
+    commandexpressions.TanFunction(toCommandExpression(invocation.arguments.head))
 }

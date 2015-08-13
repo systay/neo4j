@@ -34,5 +34,5 @@ case object Abs extends Function with SimpleTypedFunction {
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
-    commandexpressions.AbsFunction(invocation.arguments(0).asCommandExpression)
+    commandexpressions.AbsFunction(toCommandExpression(invocation.arguments.head))
 }

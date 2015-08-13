@@ -33,5 +33,5 @@ case object Cos extends Function with SimpleTypedFunction {
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
-    commandexpressions.CosFunction(invocation.arguments(0).asCommandExpression)
+    commandexpressions.CosFunction(toCommandExpression(invocation.arguments.head))
 }

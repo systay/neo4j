@@ -36,8 +36,8 @@ case object Range extends Function with SimpleTypedFunction {
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
     commandexpressions.RangeFunction(
-      invocation.arguments(0).asCommandExpression,
-      invocation.arguments(1).asCommandExpression,
-      invocation.arguments.lift(2).asCommandExpression.getOrElse(commandexpressions.Literal(1))
+      toCommandExpression(invocation.arguments.head),
+      toCommandExpression(invocation.arguments(1)),
+      toCommandExpression(invocation.arguments.lift(2)).getOrElse(commandexpressions.Literal(1))
     )
 }

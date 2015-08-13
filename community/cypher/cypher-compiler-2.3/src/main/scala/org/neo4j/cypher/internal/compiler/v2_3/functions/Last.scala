@@ -39,7 +39,7 @@ case object Last extends Function {
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
     commandexpressions.ContainerIndex(
-      invocation.arguments(0).asCommandExpression,
+      toCommandExpression(invocation.arguments.head),
       commandexpressions.Literal(-1)
     )
 }

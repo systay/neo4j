@@ -34,5 +34,5 @@ case object Sign extends Function with SimpleTypedFunction {
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
-    commandexpressions.SignFunction(invocation.arguments(0).asCommandExpression)
+    commandexpressions.SignFunction(toCommandExpression(invocation.arguments.head))
 }

@@ -33,5 +33,5 @@ case object Radians extends Function with SimpleTypedFunction {
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
-    commandexpressions.RadiansFunction(invocation.arguments(0).asCommandExpression)
+    commandexpressions.RadiansFunction(toCommandExpression(invocation.arguments.head))
 }

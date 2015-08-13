@@ -34,8 +34,8 @@ case object PercentileCont extends AggregatingFunction with SimpleTypedFunction 
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) = {
-    val firstArg = invocation.arguments(0).asCommandExpression
-    val secondArg = invocation.arguments(1).asCommandExpression
+    val firstArg = toCommandExpression(invocation.arguments.head)
+    val secondArg = toCommandExpression(invocation.arguments(1))
 
     val command = commandexpressions.PercentileCont(firstArg, secondArg)
     if (invocation.distinct)

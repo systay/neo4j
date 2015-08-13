@@ -34,8 +34,8 @@ case object Replace extends Function with SimpleTypedFunction {
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
     commandexpressions.ReplaceFunction(
-      invocation.arguments(0).asCommandExpression,
-      invocation.arguments(1).asCommandExpression,
-      invocation.arguments(2).asCommandExpression
+      toCommandExpression(invocation.arguments.head),
+      toCommandExpression(invocation.arguments(1)),
+      toCommandExpression(invocation.arguments(2))
     )
 }

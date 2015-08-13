@@ -34,5 +34,5 @@ case object Trim extends Function with SimpleTypedFunction {
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
-    commandexpressions.TrimFunction(invocation.arguments(0).asCommandExpression)
+    commandexpressions.TrimFunction(toCommandExpression(invocation.arguments.head))
 }

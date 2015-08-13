@@ -33,5 +33,5 @@ case object Acos extends Function with SimpleTypedFunction {
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
-    commandexpressions.AcosFunction(invocation.arguments(0).asCommandExpression)
+    commandexpressions.AcosFunction(toCommandExpression(invocation.arguments.head))
 }

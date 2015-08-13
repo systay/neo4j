@@ -35,5 +35,5 @@ case object Keys extends Function with SimpleTypedFunction {
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
-    commandexpressions.KeysFunction(invocation.arguments(0).asCommandExpression)
+    commandexpressions.KeysFunction(toCommandExpression(invocation.arguments.head))
 }

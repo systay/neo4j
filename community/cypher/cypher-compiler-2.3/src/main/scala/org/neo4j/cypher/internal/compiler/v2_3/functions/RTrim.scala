@@ -33,5 +33,5 @@ case object RTrim extends Function with SimpleTypedFunction {
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
-    commandexpressions.RTrimFunction(invocation.arguments(0).asCommandExpression)
+    commandexpressions.RTrimFunction(toCommandExpression(invocation.arguments.head))
 }

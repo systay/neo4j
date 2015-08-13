@@ -33,5 +33,5 @@ case object Degrees extends Function with SimpleTypedFunction {
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
-    commandexpressions.DegreesFunction(invocation.arguments(0).asCommandExpression)
+    commandexpressions.DegreesFunction(toCommandExpression(invocation.arguments.head))
 }

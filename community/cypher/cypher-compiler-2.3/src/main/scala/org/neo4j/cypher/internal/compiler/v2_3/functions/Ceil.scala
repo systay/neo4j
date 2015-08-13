@@ -33,5 +33,5 @@ case object Ceil extends Function with SimpleTypedFunction {
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
-    commandexpressions.CeilFunction(invocation.arguments(0).asCommandExpression)
+    commandexpressions.CeilFunction(toCommandExpression(invocation.arguments.head))
 }

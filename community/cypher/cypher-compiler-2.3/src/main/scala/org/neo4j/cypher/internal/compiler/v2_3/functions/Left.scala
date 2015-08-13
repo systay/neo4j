@@ -34,7 +34,7 @@ case object Left extends Function with SimpleTypedFunction {
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
     commandexpressions.LeftFunction(
-      invocation.arguments(0).asCommandExpression,
-      invocation.arguments(1).asCommandExpression
+      toCommandExpression(invocation.arguments.head),
+      toCommandExpression(invocation.arguments(1))
     )
 }

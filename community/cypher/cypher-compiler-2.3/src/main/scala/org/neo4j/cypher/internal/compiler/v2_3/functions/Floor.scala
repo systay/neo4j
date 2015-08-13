@@ -33,5 +33,5 @@ case object Floor extends Function with SimpleTypedFunction {
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
-    commandexpressions.FloorFunction(invocation.arguments(0).asCommandExpression)
+    commandexpressions.FloorFunction(toCommandExpression(invocation.arguments.head))
 }

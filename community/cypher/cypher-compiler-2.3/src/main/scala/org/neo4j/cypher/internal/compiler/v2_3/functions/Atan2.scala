@@ -34,7 +34,7 @@ case object Atan2 extends Function with SimpleTypedFunction {
 
   def asCommandExpression(invocation: ast.FunctionInvocation) =
     commandexpressions.Atan2Function(
-      invocation.arguments(0).asCommandExpression,
-      invocation.arguments(1).asCommandExpression
+      toCommandExpression(invocation.arguments.head),
+      toCommandExpression(invocation.arguments(1))
     )
 }

@@ -42,10 +42,10 @@ case object Exists extends Function {
   def asCommandExpression(invocation: ast.FunctionInvocation) =
     invocation.arguments(0) match {
       case property: ast.Property =>
-        commands.PropertyExists( property.map.asCommandExpression, PropertyKey( property.propertyKey.name ) )
+        commands.PropertyExists(toCommandExpression(property.map), PropertyKey(property.propertyKey.name))
       case expression: ast.PatternExpression =>
-        expression.asCommandPredicate
+        toCommandPredicate(expression)
       case expression: NestedPipeExpression =>
-        expression.asCommandPredicate
+        toCommandPredicate(expression)
     }
 }

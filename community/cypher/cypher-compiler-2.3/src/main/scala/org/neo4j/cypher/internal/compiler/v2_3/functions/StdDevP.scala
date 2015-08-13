@@ -34,7 +34,7 @@ case object StdDevP extends AggregatingFunction with SimpleTypedFunction {
   )
 
   def asCommandExpression(invocation: ast.FunctionInvocation) = {
-    val inner = invocation.arguments(0).asCommandExpression
+    val inner = toCommandExpression(invocation.arguments.head)
     val command = commandexpressions.StdevP(inner)
     if (invocation.distinct)
       commandexpressions.Distinct(command, inner)

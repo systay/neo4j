@@ -211,4 +211,104 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with NewPlanner
 
     executeWithAllPlanners(query).toList should equal(List(Map("res" -> 1)))
   }
+
+  test("finds shortest path that fulfills predicate on nodes") {
+    /* a-b-c-d */
+    relate(nodeA, nodeB)
+    relate(nodeB, nodeC)
+    relate(nodeC, nodeD)
+
+    /* a-x-d */
+    val nodeX = createLabeledNode("X")
+    relate(nodeA, nodeX)
+    relate(nodeX, nodeD)
+
+    val result = executeWithAllPlanners(
+      """MATCH p = shortestPath((src:A)-[*]->(dst:D))
+        | WHERE NONE(n in nodes(p) WHERE n:X)
+        |RETURN nodes(p) AS nodes""".stripMargin)
+      .columnAs[List[Node]]("nodes").toList
+
+    result should equal(List(List(nodeA, nodeB, nodeC, nodeD)))
+  }
+
+  test("finds shortest path that fulfills predicate on relationships 1") {
+    /* a-b-c-d */
+    relate(nodeA, nodeB)
+    relate(nodeB, nodeC)
+    relate(nodeC, nodeD)
+
+    /* a-x-d */
+    val nodeX = createLabeledNode("X")
+    relate(nodeA, nodeX, "blocked" -> true)
+    relate(nodeX, nodeD, "blocked" -> true)
+
+    val result = executeWithAllPlanners(
+      """MATCH p = shortestPath((src:A)-[*]->(dst:D))
+        | WHERE NONE(r in rels(p) WHERE r.blocked)
+        |RETURN nodes(p) AS nodes""".stripMargin)
+      .columnAs[List[Node]]("nodes").toList
+
+    result should equal(List(List(nodeA, nodeB, nodeC, nodeD)))
+  }
+
+  test("finds shortest path that fulfills predicate on relationships 2") {
+    /* a-b-c-d */
+    relate(nodeA, nodeB)
+    relate(nodeB, nodeC)
+    relate(nodeC, nodeD)
+
+    /* a-x-d */
+    val nodeX = createLabeledNode("X")
+    relate(nodeA, nodeX, "blocked" -> true)
+    relate(nodeX, nodeD, "blocked" -> true)
+
+    val result = executeWithAllPlanners(
+      """MATCH p = shortestPath((src:A)-[rs*]->(dst:D))
+        | WHERE NONE(r in rs WHERE r.blocked)
+        |RETURN nodes(p) AS nodes""".stripMargin)
+      .columnAs[List[Node]]("nodes").toList
+
+    result should equal(List(List(nodeA, nodeB, nodeC, nodeD)))
+  }
+
+  test("finds shortest path that fulfills predicate on path") {
+    /* a-b-c-d */
+    relate(nodeA, nodeB)
+    relate(nodeB, nodeC)
+    relate(nodeC, nodeD)
+
+    /* a-x-d */
+    val nodeX = createLabeledNode("X")
+    relate(nodeA, nodeX)
+    relate(nodeX, nodeD)
+
+    val result = executeWithAllPlanners(
+      """MATCH p = shortestPath((src:A)-[rs*]->(dst:D))
+        | WHERE length(p) % 2 = 1 // Only uneven paths wanted!
+        |RETURN nodes(p) AS nodes""".stripMargin)
+      .columnAs[List[Node]]("nodes").toList
+
+    result should equal(List(List(nodeA, nodeB, nodeC, nodeD)))
+  }
+
+  test("finds shortest path that fulfills predicate on all relationships") {
+    /* a-b-c-d */
+    relate(nodeA, nodeB, "X")
+    relate(nodeB, nodeC, "X")
+    relate(nodeC, nodeD, "X")
+
+    /* a-x-d */
+    val nodeX = createLabeledNode("X")
+    relate(nodeA, nodeX, "A")
+    relate(nodeX, nodeD, "B")
+
+    val result = executeWithAllPlanners(
+      """MATCH p = shortestPath((src:A)-[rs*]->(dst:D))
+        | WHERE ALL(r in rs WHERE type(rs[0]) = type(r) )
+        |RETURN nodes(p) AS nodes""".stripMargin)
+      .columnAs[List[Node]]("nodes").toList
+
+    result should equal(List(List(nodeA, nodeB, nodeC, nodeD)))
+  }
 }

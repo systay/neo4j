@@ -21,7 +21,7 @@ package org.neo4j.cypher.internal.frontend.v2_3.ast
 
 import org.neo4j.cypher.internal.frontend.v2_3._
 
-case class PeriodicCommitHint(size: Option[IntegerLiteral])(val position: InputPosition) extends ASTNode with ASTPhrase with SemanticCheckable {
+case class PeriodicCommitHint(size: Option[IntegerLiteral]) extends ASTNode with ASTPhrase with SemanticCheckable {
   def name = s"USING PERIODIC COMMIT $size"
 
   override def semanticCheck: SemanticCheck = size match {

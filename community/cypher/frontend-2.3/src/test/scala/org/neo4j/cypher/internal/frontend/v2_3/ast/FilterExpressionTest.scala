@@ -31,10 +31,10 @@ class FilterExpressionTest extends CypherFunSuite {
 
   test("shouldHaveCollectionTypesOfInnerExpression") {
     val filter = FilterExpression(
-      identifier = Identifier("x")(DummyPosition(5)),
+      identifier = Identifier("x"),
       expression = dummyExpression,
-      innerPredicate = Some(True()(DummyPosition(5)))
-    )(DummyPosition(0))
+      innerPredicate = Some(True())
+    )
     val result = filter.semanticCheck(Expression.SemanticContext.Simple)(SemanticState.clean)
     result.errors shouldBe empty
     filter.types(result.state) should equal(CTCollection(CTNode) | CTCollection(CTString))
@@ -42,10 +42,10 @@ class FilterExpressionTest extends CypherFunSuite {
 
   test("shouldRaiseSyntaxErrorIfMissingPredicate") {
     val filter = FilterExpression(
-      identifier = Identifier("x")(DummyPosition(5)),
+      identifier = Identifier("x"),
       expression = dummyExpression,
       innerPredicate = None
-    )(DummyPosition(0))
+    )
     val result = filter.semanticCheck(Expression.SemanticContext.Simple)(SemanticState.clean)
     result.errors should equal(Seq(SemanticError("filter(...) requires a WHERE predicate", DummyPosition(0))))
   }

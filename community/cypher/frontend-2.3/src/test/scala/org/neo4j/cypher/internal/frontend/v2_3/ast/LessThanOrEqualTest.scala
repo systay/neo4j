@@ -19,10 +19,9 @@
  */
 package org.neo4j.cypher.internal.frontend.v2_3.ast
 
-import org.neo4j.cypher.internal.frontend.v2_3.DummyPosition
 import org.neo4j.cypher.internal.frontend.v2_3.symbols._
 
-class LessThanOrEqualTest extends InfixExpressionTestBase(LessThanOrEqual(_, _)(DummyPosition(0))) {
+class LessThanOrEqualTest extends InfixExpressionTestBase(LessThanOrEqual) {
 
   test("shouldSupportComparingIntegers") {
     testValidTypes(CTInteger, CTInteger)(CTBoolean)

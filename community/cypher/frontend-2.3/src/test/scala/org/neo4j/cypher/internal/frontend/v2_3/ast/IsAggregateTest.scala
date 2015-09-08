@@ -24,31 +24,31 @@ import org.neo4j.cypher.internal.frontend.v2_3.test_helpers.CypherFunSuite
 class IsAggregateTest extends CypherFunSuite with AstConstructionTestSupport {
 
   test("count(*) is an aggregate expression") {
-    val expr: Expression = CountStar()_
+    val expr: Expression = CountStar()
 
     IsAggregate.unapply(expr) should equal(Some(expr))
   }
 
   test("max(null) is an aggregate expression") {
-    val expr: Expression = FunctionInvocation(FunctionName("max")_, Null()_)_
+    val expr: Expression = FunctionInvocation(FunctionName("max"), Null())
 
     IsAggregate.unapply(expr) should equal(Some(expr))
   }
 
   test("distinct id(null) an aggregate expression") {
-    val expr: Expression = new FunctionInvocation(FunctionName("id")_, distinct = true, Vector(Null()_))(pos)
+    val expr: Expression = new FunctionInvocation(FunctionName("id"), distinct = true, Vector(Null()))
 
     IsAggregate.unapply(expr) should equal(Some(expr))
   }
 
   test("id(null) is not an aggregate expression") {
-    val expr: Expression = new FunctionInvocation(FunctionName("id")_, distinct = false, Vector(Null()_))(pos)
+    val expr: Expression = new FunctionInvocation(FunctionName("id"), distinct = false, Vector(Null()))
 
     IsAggregate.unapply(expr) should equal(None)
   }
 
   test("1 is not an aggregate expression") {
-    val expr: Expression = SignedDecimalIntegerLiteral("1")_
+    val expr: Expression = SignedDecimalIntegerLiteral("1")
 
     IsAggregate.unapply(expr) should equal(None)
   }

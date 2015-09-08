@@ -25,11 +25,11 @@ import org.neo4j.cypher.internal.frontend.v2_3.symbols.CypherType
 
 sealed trait Command extends Statement
 
-case class CreateIndex(label: LabelName, property: PropertyKeyName)(val position: InputPosition) extends Command {
+case class CreateIndex(label: LabelName, property: PropertyKeyName) extends Command {
   def semanticCheck = Seq()
 }
 
-case class DropIndex(label: LabelName, property: PropertyKeyName)(val position: InputPosition) extends Command {
+case class DropIndex(label: LabelName, property: PropertyKeyName) extends Command {
   def semanticCheck = Seq()
 }
 
@@ -62,14 +62,14 @@ trait RelationshipPropertyConstraintCommand extends PropertyConstraintCommand {
   def relType: RelTypeName
 }
 
-case class CreateUniquePropertyConstraint(identifier: Identifier, label: LabelName, property: Property)(val position: InputPosition) extends NodePropertyConstraintCommand
+case class CreateUniquePropertyConstraint(identifier: Identifier, label: LabelName, property: Property) extends NodePropertyConstraintCommand
 
-case class DropUniquePropertyConstraint(identifier: Identifier, label: LabelName, property: Property)(val position: InputPosition) extends NodePropertyConstraintCommand
+case class DropUniquePropertyConstraint(identifier: Identifier, label: LabelName, property: Property) extends NodePropertyConstraintCommand
 
-case class CreateNodePropertyExistenceConstraint(identifier: Identifier, label: LabelName, property: Property)(val position: InputPosition) extends NodePropertyConstraintCommand
+case class CreateNodePropertyExistenceConstraint(identifier: Identifier, label: LabelName, property: Property) extends NodePropertyConstraintCommand
 
-case class DropNodePropertyExistenceConstraint(identifier: Identifier, label: LabelName, property: Property)(val position: InputPosition) extends NodePropertyConstraintCommand
+case class DropNodePropertyExistenceConstraint(identifier: Identifier, label: LabelName, property: Property) extends NodePropertyConstraintCommand
 
-case class CreateRelationshipPropertyExistenceConstraint(identifier: Identifier, relType: RelTypeName, property: Property)(val position: InputPosition) extends RelationshipPropertyConstraintCommand
+case class CreateRelationshipPropertyExistenceConstraint(identifier: Identifier, relType: RelTypeName, property: Property) extends RelationshipPropertyConstraintCommand
 
-case class DropRelationshipPropertyExistenceConstraint(identifier: Identifier, relType: RelTypeName, property: Property)(val position: InputPosition) extends RelationshipPropertyConstraintCommand
+case class DropRelationshipPropertyExistenceConstraint(identifier: Identifier, relType: RelTypeName, property: Property) extends RelationshipPropertyConstraintCommand

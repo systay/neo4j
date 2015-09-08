@@ -19,10 +19,9 @@
  */
 package org.neo4j.cypher.internal.frontend.v2_3.ast
 
-import org.neo4j.cypher.internal.frontend.v2_3.DummyPosition
 import org.neo4j.cypher.internal.frontend.v2_3.symbols._
 
-class AddTest extends InfixExpressionTestBase(Add(_, _)(DummyPosition(0))) {
+class AddTest extends InfixExpressionTestBase(Add) {
 
   // Infix specializations:
   // "a" + "b" => "ab"

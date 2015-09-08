@@ -43,12 +43,12 @@ object PredicateSplitter {
             if (withPredicates.isEmpty) {
               acc
             } else {
-              val newMatchClause = clause.copy(where = optWhere(where, matchPredicates))(clause.position)
+              val newMatchClause = clause.copy(where = optWhere(where, matchPredicates))
 
               val identifiersInScope = scopeLookup(clause)
               val returnItems = (identifiersInScope ++ namedPaths).map(_.asAlias).toSeq
               val newWithWhere = optWhere(where, withPredicates).endoRewrite(bottomUp(Rewriter.lift { case ident: Identifier if namedPaths(ident) => ident.copyId }))
-              val newWithClause = With(distinct = false, ReturnItems(includeExisting = false, returnItems)(where.position), None, None, None, newWithWhere)(where.position)
+              val newWithClause = With(distinct = false, ReturnItems(includeExisting = false, returnItems), None, None, None, newWithWhere)(where.position)
 
               acc + (Ref(clause) -> (newMatchClause -> newWithClause))
             }
@@ -67,8 +67,8 @@ object PredicateSplitter {
     if (expressions.isEmpty)
       None
     else {
-      val expr = if (expressions.size == 1) expressions.head else Ands(expressions)(where.expression.position)
-      Some(where.copy(expr)(where.position))
+      val expr = if (expressions.size == 1) expressions.head else Ands(expressions)
+      Some(where.copy(expr))
     }
 }
 
@@ -93,7 +93,7 @@ case class PredicateSplitter(rewrites: Map[Ref[Clause], Seq[Clause]]) {
           case clause: Match => rewrites.getOrElse(Ref(clause), Seq(clause))
           case clause        => Seq(clause)
         }
-        query.copy(clauses = newClauses)(query.position)
+        query.copy(clauses = newClauses)
     })
 
     override def apply(in: AnyRef): AnyRef = {

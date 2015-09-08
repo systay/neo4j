@@ -25,28 +25,28 @@ import org.neo4j.cypher.internal.frontend.v2_3.{DummyPosition, SemanticError, Se
 
 class DecimalDoubleLiteralTest extends CypherFunSuite {
   test("correctly parses decimal numbers") {
-    assert(DecimalDoubleLiteral("22.34")(DummyPosition(0)).value === 22.34)
-    assert(DecimalDoubleLiteral("-2342.34")(DummyPosition(0)).value === -2342.34)
-    assert(DecimalDoubleLiteral("0.34")(DummyPosition(0)).value === 0.34)
-    assert(DecimalDoubleLiteral("-.23")(DummyPosition(0)).value === -.23)
-    assert(DecimalDoubleLiteral("0.0")(DummyPosition(0)).value === 0.0)
-    assert(DecimalDoubleLiteral("-0.0")(DummyPosition(0)).value === 0.0)
-    assert(DecimalDoubleLiteral("1E23")(DummyPosition(0)).value === 1E23)
-    assert(DecimalDoubleLiteral("1e23")(DummyPosition(0)).value === 1E23)
-    assert(DecimalDoubleLiteral("-134E233")(DummyPosition(0)).value === -134E233)
-    assert(DecimalDoubleLiteral("-134e233")(DummyPosition(0)).value === -134E233)
-    assert(DecimalDoubleLiteral("1E-99")(DummyPosition(0)).value === 1E-99)
-    assert(DecimalDoubleLiteral("1e-99")(DummyPosition(0)).value === 1E-99)
-    assert(DecimalDoubleLiteral("-4E-593")(DummyPosition(0)).value === -4E-593)
-    assert(DecimalDoubleLiteral("-4e-593")(DummyPosition(0)).value === -4E-593)
-    assert(DecimalDoubleLiteral("3.42E34")(DummyPosition(0)).value === 3.42E34)
-    assert(DecimalDoubleLiteral("3.42e34")(DummyPosition(0)).value === 3.42E34)
-    assert(DecimalDoubleLiteral("-65.342546547E33")(DummyPosition(0)).value === -65.342546547E33)
-    assert(DecimalDoubleLiteral("-65.342546547e33")(DummyPosition(0)).value === -65.342546547E33)
-    assert(DecimalDoubleLiteral("73.234E-235")(DummyPosition(0)).value === 73.234E-235)
-    assert(DecimalDoubleLiteral("73.234e-235")(DummyPosition(0)).value === 73.234E-235)
-    assert(DecimalDoubleLiteral("-73.234E-235")(DummyPosition(0)).value === -73.234E-235)
-    assert(DecimalDoubleLiteral("-73.234e-235")(DummyPosition(0)).value === -73.234E-235)
+    assert(DecimalDoubleLiteral("22.34").value === 22.34)
+    assert(DecimalDoubleLiteral("-2342.34").value === -2342.34)
+    assert(DecimalDoubleLiteral("0.34").value === 0.34)
+    assert(DecimalDoubleLiteral("-.23").value === -.23)
+    assert(DecimalDoubleLiteral("0.0").value === 0.0)
+    assert(DecimalDoubleLiteral("-0.0").value === 0.0)
+    assert(DecimalDoubleLiteral("1E23").value === 1E23)
+    assert(DecimalDoubleLiteral("1e23").value === 1E23)
+    assert(DecimalDoubleLiteral("-134E233").value === -134E233)
+    assert(DecimalDoubleLiteral("-134e233").value === -134E233)
+    assert(DecimalDoubleLiteral("1E-99").value === 1E-99)
+    assert(DecimalDoubleLiteral("1e-99").value === 1E-99)
+    assert(DecimalDoubleLiteral("-4E-593").value === -4E-593)
+    assert(DecimalDoubleLiteral("-4e-593").value === -4E-593)
+    assert(DecimalDoubleLiteral("3.42E34").value === 3.42E34)
+    assert(DecimalDoubleLiteral("3.42e34").value === 3.42E34)
+    assert(DecimalDoubleLiteral("-65.342546547E33").value === -65.342546547E33)
+    assert(DecimalDoubleLiteral("-65.342546547e33").value === -65.342546547E33)
+    assert(DecimalDoubleLiteral("73.234E-235").value === 73.234E-235)
+    assert(DecimalDoubleLiteral("73.234e-235").value === 73.234E-235)
+    assert(DecimalDoubleLiteral("-73.234E-235").value === -73.234E-235)
+    assert(DecimalDoubleLiteral("-73.234e-235").value === -73.234E-235)
   }
 
   test("throws error for invalid decimal numbers") {
@@ -71,7 +71,7 @@ class DecimalDoubleLiteralTest extends CypherFunSuite {
   }
 
   private def assertSemanticError(stringValue: String, errorMessage: String) {
-    val literal = DecimalDoubleLiteral(stringValue)(DummyPosition(4))
+    val literal = DecimalDoubleLiteral(stringValue)
     val result = literal.semanticCheck(SemanticContext.Simple)(SemanticState.clean)
     assert(result.errors === Vector(SemanticError(errorMessage, DummyPosition(4))))
   }

@@ -38,7 +38,7 @@ class CaseExpressionTest extends CypherFunSuite {
         )
       ),
       default = Some(DummyExpression(CTFloat))
-    )(DummyPosition(2))
+    )
 
     val result = caseExpression.semanticCheck(Expression.SemanticContext.Simple)(SemanticState.clean)
     result.errors shouldBe empty
@@ -58,7 +58,7 @@ class CaseExpressionTest extends CypherFunSuite {
         )
       ),
       Some(DummyExpression(CTFloat | CTNode))
-    )(DummyPosition(2))
+    )
 
     val result = caseExpression.semanticCheck(Expression.SemanticContext.Simple)(SemanticState.clean)
     result.errors shouldBe empty
@@ -73,12 +73,12 @@ class CaseExpressionTest extends CypherFunSuite {
           DummyExpression(CTBoolean),
           DummyExpression(CTFloat)
         ), (
-          DummyExpression(CTString, DummyPosition(12)),
+          DummyExpression(CTString).setPos(DummyPosition(12)),
           DummyExpression(CTInteger)
         )
       ),
       Some(DummyExpression(CTFloat))
-    )(DummyPosition(2))
+    )
 
     val result = caseExpression.semanticCheck(Expression.SemanticContext.Simple)(SemanticState.clean)
     result.errors should have size 1

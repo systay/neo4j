@@ -44,19 +44,15 @@ class MatchPredicateNormalization(normalizer: MatchPredicateNormalizer) extends 
         val predOpt: Option[Expression] = rewrittenPredicates match {
           case Nil => None
           case exp :: Nil => Some(exp)
-          case list => Some(list.reduce(And(_, _)(m.position)))
+          case list => Some(list.reduce(And))
         }
 
-        val newWhere: Option[Where] = predOpt.map {
-          exp =>
-            val pos: InputPosition = where.fold(m.position)(_.position)
-            Where(exp)(pos)
-        }
+        val newWhere: Option[Where] = predOpt.map(Where)
 
         m.copy(
           pattern = pattern.endoRewrite(topDown(Rewriter.lift(normalizer.replace))),
           where = newWhere
-        )(m.position)
+        )
       }
 
     case astNode =>

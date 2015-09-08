@@ -25,10 +25,10 @@ import org.neo4j.cypher.internal.frontend.v2_3.{DummyPosition, SemanticError, Se
 
 class OctalIntegerLiteralTest extends CypherFunSuite {
   test("correctly parses octal numbers") {
-    assert(SignedOctalIntegerLiteral("022")(DummyPosition(0)).value === 0x12)
-    assert(SignedOctalIntegerLiteral("00")(DummyPosition(0)).value === 0x0)
-    assert(SignedOctalIntegerLiteral("0734")(DummyPosition(0)).value === 0x1dc)
-    assert(SignedOctalIntegerLiteral("0034")(DummyPosition(0)).value === 0x1c)
+    assert(SignedOctalIntegerLiteral("022").value === 0x12)
+    assert(SignedOctalIntegerLiteral("00").value === 0x0)
+    assert(SignedOctalIntegerLiteral("0734").value === 0x1dc)
+    assert(SignedOctalIntegerLiteral("0034").value === 0x1c)
   }
 
   test("throws error for invalid octal numbers") {
@@ -42,7 +42,7 @@ class OctalIntegerLiteralTest extends CypherFunSuite {
   }
 
   private def assertSemanticError(stringValue: String, errorMessage: String) {
-    val literal = SignedOctalIntegerLiteral(stringValue)(DummyPosition(4))
+    val literal = SignedOctalIntegerLiteral(stringValue)
     val result = literal.semanticCheck(SemanticContext.Simple)(SemanticState.clean)
     assert(result.errors === Vector(SemanticError(errorMessage, DummyPosition(4))))
   }

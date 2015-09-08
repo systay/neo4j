@@ -21,12 +21,36 @@ package org.neo4j.cypher.internal.frontend.v2_3.ast
 
 import org.neo4j.cypher.internal.frontend.v2_3.Rewritable._
 import org.neo4j.cypher.internal.frontend.v2_3.perty.PageDocFormatting
-import org.neo4j.cypher.internal.frontend.v2_3.{Foldable, InputPosition, Rewritable}
+import org.neo4j.cypher.internal.frontend.v2_3.{InternalException, Foldable, InputPosition, Rewritable}
+
+trait Positionable {
+  // Points to where in the string this AST object comes from. Used for error messages
+  protected var _position: InputPosition = null
+
+  // Copies position to other AST node if set
+  def copyPosTo[T <: Positionable](other: T): T = {
+    if (_position != null)
+      other.setPos(_position)
+    other
+  }
+
+  def setPos(position: InputPosition): this.type = {
+    if (_position != null) throw new InternalException("Position cannot be changed")
+    _position = position
+    this
+  }
+
+  def position: InputPosition = {
+    if (_position != null) throw new InternalException("Position has not been set for this AST node")
+    _position
+  }
+}
 
 trait ASTNode
   extends Product
   with Foldable
   with Rewritable
+  with Positionable
   with PageDocFormatting /* multi line */
   // with LineDocFormatting  /* single line */
 //  with ToPrettyString[ASTNode]
@@ -38,8 +62,11 @@ trait ASTNode
 ////    toPrettyString(formatter)(DefaultDocHandler.docGen) /* scala like */
 //    toPrettyString(formatter)(InternalDocHandler.docGen) /* see there for more choices */
 
-  def position: InputPosition
-
+  /**
+   * Handles deep copying of AST and still remembers the original InputPosition
+   * @param children Arguments to the constructor
+   * @return An AST node of same type, but with the new children given in arguments
+   */
   def dup(children: Seq[AnyRef]): this.type =
     if (children.iterator eqElements this.children)
       this
@@ -51,6 +78,7 @@ trait ASTNode
       val lastParamIsPos = params.last.isAssignableFrom(classOf[InputPosition])
       val ctorArgs = if (hasExtraParam && lastParamIsPos) args :+ this.position else args
       val duped = constructor.invoke(this, ctorArgs: _*)
+      duped.asInstanceOf[ASTNode].setPos(_position)
       duped.asInstanceOf[self.type]
     }
 }

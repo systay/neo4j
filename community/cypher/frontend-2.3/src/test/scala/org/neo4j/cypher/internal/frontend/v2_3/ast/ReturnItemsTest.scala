@@ -25,10 +25,10 @@ import org.neo4j.cypher.internal.frontend.v2_3.test_helpers.CypherFunSuite
 class ReturnItemsTest extends CypherFunSuite with AstConstructionTestSupport {
 
   test("should forbid aliased projections collisions, e.g., projecting more than one value to the same id") {
-    val item1 = AliasedReturnItem(StringLiteral("a")_, ident("n"))_
-    val item2 = AliasedReturnItem(StringLiteral("b")_, ident("n"))_
+    val item1 = AliasedReturnItem(StringLiteral("a"), ident("n"))
+    val item2 = AliasedReturnItem(StringLiteral("b"), ident("n"))
 
-    val items = ReturnItems(includeExisting = false, Seq(item1, item2))_
+    val items = ReturnItems(includeExisting = false, Seq(item1, item2))
 
     val result = items.semanticCheck(SemanticState.clean)
 
@@ -37,10 +37,10 @@ class ReturnItemsTest extends CypherFunSuite with AstConstructionTestSupport {
   }
 
   test("should forbid unaliased projections collisions, e.g., projecting more than one value to the same id") {
-    val item1 = UnaliasedReturnItem(StringLiteral("a")_, "a")_
-    val item2 = UnaliasedReturnItem(StringLiteral("a")_, "a")_
+    val item1 = UnaliasedReturnItem(StringLiteral("a"), "a")
+    val item2 = UnaliasedReturnItem(StringLiteral("a"), "a")
 
-    val items = ReturnItems(includeExisting = false, Seq(item1, item2))_
+    val items = ReturnItems(includeExisting = false, Seq(item1, item2))
 
     val result = items.semanticCheck(SemanticState.clean)
 
@@ -49,10 +49,10 @@ class ReturnItemsTest extends CypherFunSuite with AstConstructionTestSupport {
   }
 
   test("should not forbid aliased projections of the same expression with different names") {
-    val item1 = AliasedReturnItem(StringLiteral("a")_, ident("n"))_
-    val item2 = AliasedReturnItem(StringLiteral("a")_, ident("m"))_
+    val item1 = AliasedReturnItem(StringLiteral("a"), ident("n"))
+    val item2 = AliasedReturnItem(StringLiteral("a"), ident("m"))
 
-    val items = ReturnItems(includeExisting = false, Seq(item1, item2))_
+    val items = ReturnItems(includeExisting = false, Seq(item1, item2))
 
     val result = items.semanticCheck(SemanticState.clean)
 

@@ -44,11 +44,11 @@ case class deMorganRewriter()(implicit monitor: AstRewritingMonitor) extends Rew
 
   private val step = Rewriter.lift {
     case p@Xor(expr1, expr2) =>
-      And(Or(expr1, expr2)(p.position), Not(And(expr1.endoRewrite(copyIdentifiers), expr2.endoRewrite(copyIdentifiers))(p.position))(p.position))(p.position)
+      And(Or(expr1, expr2), Not(And(expr1.endoRewrite(copyIdentifiers), expr2.endoRewrite(copyIdentifiers))))
     case p@Not(And(exp1, exp2)) =>
-      Or(Not(exp1)(p.position), Not(exp2)(p.position))(p.position)
+      Or(Not(exp1), Not(exp2))
     case p@Not(Or(exp1, exp2)) =>
-      And(Not(exp1)(p.position), Not(exp2)(p.position))(p.position)
+      And(Not(exp1), Not(exp2))
   }
 
   private val instance: Rewriter = repeatWithSizeLimit(bottomUp(step))(monitor)
@@ -58,8 +58,8 @@ case class distributeLawsRewriter()(implicit monitor: AstRewritingMonitor) exten
   def apply(that: AnyRef): AnyRef = instance(that)
 
   private val step = Rewriter.lift {
-    case p@Or(exp1, And(exp2, exp3)) => And(Or(exp1, exp2)(p.position), Or(exp1.endoRewrite(copyIdentifiers), exp3)(p.position))(p.position)
-    case p@Or(And(exp1, exp2), exp3) => And(Or(exp1, exp3)(p.position), Or(exp2, exp3.endoRewrite(copyIdentifiers))(p.position))(p.position)
+    case p@Or(exp1, And(exp2, exp3)) => And(Or(exp1, exp2), Or(exp1.endoRewrite(copyIdentifiers), exp3))
+    case p@Or(And(exp1, exp2), exp3) => And(Or(exp1, exp3), Or(exp2, exp3.endoRewrite(copyIdentifiers)))
   }
 
   private val instance: Rewriter = repeatWithSizeLimit(bottomUp(step))(monitor)
@@ -69,19 +69,19 @@ object flattenBooleanOperators extends Rewriter {
   def apply(that: AnyRef): AnyRef = instance.apply(that)
 
   private val firstStep: Rewriter = Rewriter.lift {
-    case p@And(lhs, rhs) => Ands(Set(lhs, rhs))(p.position)
-    case p@Or(lhs, rhs)  => Ors(Set(lhs, rhs))(p.position)
+    case p@And(lhs, rhs) => Ands(Set(lhs, rhs))
+    case p@Or(lhs, rhs)  => Ors(Set(lhs, rhs))
   }
 
   private val secondStep: Rewriter = Rewriter.lift {
     case p@Ands(exprs) => Ands(exprs.flatMap {
       case Ands(inner) => inner
       case x => Set(x)
-    })(p.position)
+    })
     case p@Ors(exprs) => Ors(exprs.flatMap {
       case Ors(inner) => inner
       case x => Set(x)
-    })(p.position)
+    })
   }
 
   private val instance = inSequence(bottomUp(firstStep), repeat(bottomUp(secondStep)))
@@ -90,15 +90,15 @@ object flattenBooleanOperators extends Rewriter {
 object simplifyPredicates extends Rewriter {
   def apply(that: AnyRef): AnyRef = instance.apply(that)
 
-  private val T = True()(null)
-  private val F = False()(null)
+  private val T = True()
+  private val F = False()
 
   private val step: Rewriter = Rewriter.lift {
     case Not(Not(exp))                    => exp
-    case p@Ands(exps) if exps.contains(T) => Ands(exps.filterNot(T == _))(p.position)
-    case p@Ors(exps) if exps.contains(F)  => Ors(exps.filterNot(F == _))(p.position)
-    case p@Ors(exps) if exps.contains(T)  => True()(p.position)
-    case p@Ands(exps) if exps.contains(F) => False()(p.position)
+    case p@Ands(exps) if exps.contains(T) => Ands(exps.filterNot(T == _))
+    case p@Ors(exps) if exps.contains(F)  => Ors(exps.filterNot(F == _))
+    case p@Ors(exps) if exps.contains(T)  => True()
+    case p@Ands(exps) if exps.contains(F) => False()
     case p@Ands(exps) if exps.size == 1   => exps.head
     case p@Ors(exps) if exps.size == 1    => exps.head
   }

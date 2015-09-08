@@ -19,10 +19,9 @@
  */
 package org.neo4j.cypher.internal.frontend.v2_3.ast
 
-import org.neo4j.cypher.internal.frontend.v2_3.DummyPosition
 import org.neo4j.cypher.internal.frontend.v2_3.symbols._
 
-class GreaterThanTest extends InfixExpressionTestBase(GreaterThan(_, _)(DummyPosition(0))) {
+class GreaterThanTest extends InfixExpressionTestBase(GreaterThan) {
 
   test("shouldSupportComparingIntegers") {
     testValidTypes(CTInteger, CTInteger)(CTBoolean)

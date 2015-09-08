@@ -23,9 +23,9 @@ import org.neo4j.cypher.internal.frontend.v2_3.test_helpers.CypherFunSuite
 
 class FunctionNameTest extends CypherFunSuite {
   test("equality should ignore case") {
-    FunctionName("foo")(null) should equal(FunctionName("FOO")(null))
+    FunctionName("foo") should equal(FunctionName("FOO"))
   }
   test("equality should respect the name") {
-    FunctionName("foo")(null) should not equal FunctionName("FOOB")(null)
+    FunctionName("foo") should not equal FunctionName("FOOB")
   }
 }

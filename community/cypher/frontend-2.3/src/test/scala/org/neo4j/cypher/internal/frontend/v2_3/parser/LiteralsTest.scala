@@ -19,31 +19,30 @@
  */
 package org.neo4j.cypher.internal.frontend.v2_3.parser
 
-import org.neo4j.cypher.internal.frontend.v2_3.{DummyPosition, ast}
+import org.neo4j.cypher.internal.frontend.v2_3.ast
 import org.parboiled.scala._
 
 class LiteralsTest extends ParserTest[Any, Any] with Literals {
 
   def Expression: Rule1[ast.Expression] = ???
-  val t = DummyPosition(0)
 
   test("testIdentifierCanContainASCII") {
     implicit val parserToTest = Identifier
 
-    parsing("abc") shouldGive ast.Identifier("abc")(t)
-    parsing("a123") shouldGive ast.Identifier("a123")(t)
-    parsing("ABC") shouldGive ast.Identifier("ABC")(t)
-    parsing("_abc") shouldGive ast.Identifier("_abc")(t)
-    parsing("abc_de") shouldGive ast.Identifier("abc_de")(t)
+    parsing("abc") shouldGive ast.Identifier("abc")
+    parsing("a123") shouldGive ast.Identifier("a123")
+    parsing("ABC") shouldGive ast.Identifier("ABC")
+    parsing("_abc") shouldGive ast.Identifier("_abc")
+    parsing("abc_de") shouldGive ast.Identifier("abc_de")
   }
 
   test("testIdentifierCanContainUTF8") {
     implicit val parserToTest = Identifier
 
-    parsing("aé") shouldGive ast.Identifier("aé")(t)
-    parsing("⁔") shouldGive ast.Identifier("⁔")(t)
-    parsing("＿test") shouldGive ast.Identifier("＿test")(t)
-    parsing("a＿test") shouldGive ast.Identifier("a＿test")(t)
+    parsing("aé") shouldGive ast.Identifier("aé")
+    parsing("⁔") shouldGive ast.Identifier("⁔")
+    parsing("＿test") shouldGive ast.Identifier("＿test")
+    parsing("a＿test") shouldGive ast.Identifier("a＿test")
   }
 
   test("testIdentifierCannotStartWithNumber") {
@@ -55,28 +54,28 @@ class LiteralsTest extends ParserTest[Any, Any] with Literals {
   test("testCanParseNumbers") {
     implicit val parserToTest = NumberLiteral
 
-    parsing("123") shouldGive ast.SignedDecimalIntegerLiteral("123")(t)
-    parsing("0") shouldGive ast.SignedDecimalIntegerLiteral("0")(t)
-    parsing("-23") shouldGive ast.SignedDecimalIntegerLiteral("-23")(t)
-    parsing("-0") shouldGive ast.SignedDecimalIntegerLiteral("-0")(t)
+    parsing("123") shouldGive ast.SignedDecimalIntegerLiteral("123")
+    parsing("0") shouldGive ast.SignedDecimalIntegerLiteral("0")
+    parsing("-23") shouldGive ast.SignedDecimalIntegerLiteral("-23")
+    parsing("-0") shouldGive ast.SignedDecimalIntegerLiteral("-0")
 
-    parsing("0234") shouldGive ast.SignedOctalIntegerLiteral("0234")(t)
-    parsing("-0234") shouldGive ast.SignedOctalIntegerLiteral("-0234")(t)
+    parsing("0234") shouldGive ast.SignedOctalIntegerLiteral("0234")
+    parsing("-0234") shouldGive ast.SignedOctalIntegerLiteral("-0234")
 
-    parsing("0x1") shouldGive ast.SignedHexIntegerLiteral("0x1")(t)
-    parsing("0xffff") shouldGive ast.SignedHexIntegerLiteral("0xffff")(t)
-    parsing("-0x45FG") shouldGive ast.SignedHexIntegerLiteral("-0x45FG")(t)
+    parsing("0x1") shouldGive ast.SignedHexIntegerLiteral("0x1")
+    parsing("0xffff") shouldGive ast.SignedHexIntegerLiteral("0xffff")
+    parsing("-0x45FG") shouldGive ast.SignedHexIntegerLiteral("-0x45FG")
 
-    parsing("1.23") shouldGive ast.DecimalDoubleLiteral("1.23")(t)
-    parsing("13434.23399") shouldGive ast.DecimalDoubleLiteral("13434.23399")(t)
-    parsing(".3454") shouldGive ast.DecimalDoubleLiteral(".3454")(t)
-    parsing("-0.0") shouldGive ast.DecimalDoubleLiteral("-0.0")(t)
-    parsing("-54366.4") shouldGive ast.DecimalDoubleLiteral("-54366.4")(t)
-    parsing("-0.3454") shouldGive ast.DecimalDoubleLiteral("-0.3454")(t)
+    parsing("1.23") shouldGive ast.DecimalDoubleLiteral("1.23")
+    parsing("13434.23399") shouldGive ast.DecimalDoubleLiteral("13434.23399")
+    parsing(".3454") shouldGive ast.DecimalDoubleLiteral(".3454")
+    parsing("-0.0") shouldGive ast.DecimalDoubleLiteral("-0.0")
+    parsing("-54366.4") shouldGive ast.DecimalDoubleLiteral("-54366.4")
+    parsing("-0.3454") shouldGive ast.DecimalDoubleLiteral("-0.3454")
 
-    parsing("1E23") shouldGive ast.DecimalDoubleLiteral("1E23")(t)
-    parsing("1.34E99") shouldGive ast.DecimalDoubleLiteral("1.34E99")(t)
-    parsing("9E-443") shouldGive ast.DecimalDoubleLiteral("9E-443")(t)
+    parsing("1E23") shouldGive ast.DecimalDoubleLiteral("1E23")
+    parsing("1.34E99") shouldGive ast.DecimalDoubleLiteral("1.34E99")
+    parsing("9E-443") shouldGive ast.DecimalDoubleLiteral("9E-443")
   }
 
   def convert(result: Any): Any = result

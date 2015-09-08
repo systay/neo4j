@@ -19,6 +19,7 @@
  */
 package org.neo4j.cypher.internal.frontend.v2_3.parser
 
+import org.neo4j.cypher.internal.frontend.v2_3.ast.Positionable
 import org.neo4j.cypher.internal.frontend.v2_3.{InputPosition, InternalException, SyntaxException}
 import org.parboiled.Context
 import org.parboiled.errors.{InvalidInputError, ParseError}
@@ -95,7 +96,7 @@ trait Base extends Parser {
   }
   def operator(string: String) = group(string ~ !OpCharTail)
 
-  def push[R](f: InputPosition => R): Rule1[R] = pushFromContext(ctx => f(ContextPosition(ctx)))
+  def put[R <: Positionable](obj: R ): Rule1[R] = pushFromContext(ctx => obj.setPos(ContextPosition(ctx)))
 
   def position = withContext((_: IndexRange, ctx: Context[Any]) => ContextPosition(ctx))
 
@@ -156,11 +157,11 @@ trait Base extends Parser {
     def ~~[A, B](other: ReductionRule1[A, B]): ReductionRule1[A, B] = r ~ WS ~ other
     def ~~[A, B, C](other: ReductionRule2[A, B, C]): ReductionRule2[A, B, C] = r ~ WS ~ other
 
-    def ~>>>[R](f: String => InputPosition => R): Rule1[R] = r ~> withContext((s: String, ctx) => f(s)(ContextPosition(ctx)))
-    def ~~>>[Z, R](f: (Z) => (InputPosition => R)): ReductionRule1[Z, R] =
-      r ~~> withContext((z: Z, ctx) => f(z)(ContextPosition(ctx)))
-    def ~~>>[Y, Z, R](f: (Y, Z) => (InputPosition => R)): ReductionRule2[Y, Z, R] =
-      r ~~> withContext((y: Y, z: Z, ctx) => f(y, z)(ContextPosition(ctx)))
+    def ~>>>[R <: Positionable](f: String => R): Rule1[R] = r ~> withContext((s: String, ctx) => f(s).setPos(ContextPosition(ctx)))
+    def ~~>>[Z, R <: Positionable](f: (Z) => R): ReductionRule1[Z, R] =
+      r ~~> withContext((z: Z, ctx) => f(z).setPos(ContextPosition(ctx)))
+    def ~~>>[Y, Z, R <: Positionable](f: (Y, Z) => R): ReductionRule2[Y, Z, R] =
+      r ~~> withContext((y: Y, z: Z, ctx) => f(y, z).setPos(ContextPosition(ctx)))
   }
 
   implicit class RichString(s: String) {
@@ -189,12 +190,12 @@ trait Base extends Parser {
 
     def ~~[B](other: ReductionRule1[A, B]): Rule1[B] = r ~ WS ~ other
 
-    def ~~>>[R](f: (A) => (InputPosition => R)): Rule1[R] =
-      r ~~> withContext((a: A, ctx) => f(a)(ContextPosition(ctx)))
-    def ~~>>[Z, R](f: (Z, A) => (InputPosition => R)): ReductionRule1[Z, R] =
-      r ~~> withContext((z: Z, a: A, ctx) => f(z, a)(ContextPosition(ctx)))
-    def ~~>>[Y, Z, R](f: (Y, Z, A) => (InputPosition => R)): ReductionRule2[Y, Z, R] =
-      r ~~> withContext((y: Y, z: Z, a: A, ctx) => f(y, z, a)(ContextPosition(ctx)))
+    def ~~>>[R <: Positionable](f: (A) => R): Rule1[R] =
+      r ~~> withContext((a: A, ctx) => f(a).setPos(ContextPosition(ctx)))
+    def ~~>>[Z, R <: Positionable](f: (Z, A) => R): ReductionRule1[Z, R] =
+      r ~~> withContext((z: Z, a: A, ctx) => f(z, a).setPos(ContextPosition(ctx)))
+    def ~~>>[Y, Z, R <: Positionable](f: (Y, Z, A) => R): ReductionRule2[Y, Z, R] =
+      r ~~> withContext((y: Y, z: Z, a: A, ctx) => f(y, z, a).setPos(ContextPosition(ctx)))
   }
 
   implicit class RichRule2[+A, +B](r: Rule2[A, B]) {
@@ -208,12 +209,12 @@ trait Base extends Parser {
     def ~~[BB >: B, C](other: ReductionRule1[BB, C]): Rule2[A, C] = r ~ WS ~ other
     def ~~[AA >: A, BB >: B, C](other: ReductionRule2[AA, BB, C]): Rule1[C] = r ~ WS ~ other
 
-    def ~~>>[R](f: (A, B) => InputPosition => R): Rule1[R] =
-      r ~~> withContext((a: A, b: B, ctx) => f(a, b)(ContextPosition(ctx)))
-    def ~~>>[Z, R](f: (Z, A, B) => InputPosition => R): ReductionRule1[Z, R] =
-      r ~~> withContext((z: Z, a: A, b: B, ctx) => f(z, a, b)(ContextPosition(ctx)))
-    def ~~>>[Y, Z, R](f: (Y, Z, A, B) => InputPosition => R): ReductionRule2[Y, Z, R] =
-      r ~~> withContext((y: Y, z: Z, a: A, b: B, ctx) => f(y, z, a, b)(ContextPosition(ctx)))
+    def ~~>>[R <: Positionable](f: (A, B) => R): Rule1[R] =
+      r ~~> withContext((a: A, b: B, ctx) => f(a, b).setPos(ContextPosition(ctx)))
+    def ~~>>[Z, R <: Positionable](f: (Z, A, B) => R): ReductionRule1[Z, R] =
+      r ~~> withContext((z: Z, a: A, b: B, ctx) => f(z, a, b).setPos(ContextPosition(ctx)))
+    def ~~>>[Y, Z, R <: Positionable](f: (Y, Z, A, B) => R): ReductionRule2[Y, Z, R] =
+      r ~~> withContext((y: Y, z: Z, a: A, b: B, ctx) => f(y, z, a, b).setPos(ContextPosition(ctx)))
   }
 
   implicit class RichRule3[+A, +B, +C](r: Rule3[A, B, C]) {
@@ -223,8 +224,8 @@ trait Base extends Parser {
     def ~~[D, E, F](other: Rule3[D, E, F]): Rule6[A, B, C, D, E, F] = r ~ WS ~ other
     def ~~[D, E, F, G](other: Rule4[D, E, F, G]): Rule7[A, B, C, D, E, F, G] = r ~ WS ~ other
 
-    def ~~>>[R](f: (A, B, C) => InputPosition => R): Rule1[R] =
-      r ~~> withContext((a: A, b: B, c: C, ctx) => f(a, b, c)(ContextPosition(ctx)))
+    def ~~>>[R <: Positionable](f: (A, B, C) => R): Rule1[R] =
+      r ~~> withContext((a: A, b: B, c: C, ctx) => f(a, b, c).setPos(ContextPosition(ctx)))
   }
 
   implicit class RichRule4[+A, +B, +C, +D](r: Rule4[A, B, C, D]) {
@@ -233,8 +234,8 @@ trait Base extends Parser {
     def ~~[E, F](other: Rule2[E, F]): Rule6[A, B, C, D, E, F] = r ~ WS ~ other
     def ~~[E, F, G](other: Rule3[E, F, G]): Rule7[A, B, C, D, E, F, G] = r ~ WS ~ other
 
-    def ~~>>[R](f: (A, B, C, D) => InputPosition => R): Rule1[R] =
-      r ~~> withContext((a: A, b: B, c: C, d: D, ctx) => f(a, b, c, d)(ContextPosition(ctx)))
+    def ~~>>[R <: Positionable](f: (A, B, C, D) => R): Rule1[R] =
+      r ~~> withContext((a: A, b: B, c: C, d: D, ctx) => f(a, b, c, d).setPos(ContextPosition(ctx)))
   }
 
   implicit class RichRule5[+A, +B, +C, +D, +E](r: Rule5[A, B, C, D, E]) {
@@ -242,16 +243,16 @@ trait Base extends Parser {
     def ~~[F](other: Rule1[F]): Rule6[A, B, C, D, E, F] = r ~ WS ~ other
     def ~~[F, G](other: Rule2[F, G]): Rule7[A, B, C, D, E, F, G] = r ~ WS ~ other
 
-    def ~~>>[R](f: (A, B, C, D, E) => (InputPosition => R)): Rule1[R] =
-      r ~~> withContext((a: A, b: B, c: C, d: D, e: E, ctx) => f(a, b, c, d, e)(ContextPosition(ctx)))
+    def ~~>>[R <: Positionable](f: (A, B, C, D, E) => R): Rule1[R] =
+      r ~~> withContext((a: A, b: B, c: C, d: D, e: E, ctx) => f(a, b, c, d, e).setPos(ContextPosition(ctx)))
   }
 
   implicit class RichRule6[+A, +B, +C, +D, +E, +F](r: Rule6[A, B, C, D, E, F]) {
     def ~~(other: Rule0): Rule6[A, B, C, D, E, F] = r ~ WS ~ other
     def ~~[G](other: Rule1[G]): Rule7[A, B, C, D, E, F, G] = r ~ WS ~ other
 
-    def ~~>>[R](func: (A, B, C, D, E, F) => (InputPosition => R)): Rule1[R] =
-      r ~~> withContext((a: A, b: B, c: C, d: D, e: E, f: F, ctx) => func(a, b, c, d, e, f)(ContextPosition(ctx)))
+    def ~~>>[R <: Positionable](func: (A, B, C, D, E, F) => R): Rule1[R] =
+      r ~~> withContext((a: A, b: B, c: C, d: D, e: E, f: F, ctx) => func(a, b, c, d, e, f).setPos(ContextPosition(ctx)))
   }
 
   implicit class RichRule7[+A, +B, +C, +D, +E, +F, +G](r: Rule7[A, B, C, D, E, F, G]) {

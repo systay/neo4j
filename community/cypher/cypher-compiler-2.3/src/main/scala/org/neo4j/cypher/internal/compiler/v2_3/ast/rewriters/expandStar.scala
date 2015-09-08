@@ -35,13 +35,13 @@ case class expandStar(state: SemanticState) extends Rewriter {
     case astNode =>
       replacer.expand(astNode) match {
         case clause@With(_, ri, _, _, _, _) if ri.includeExisting =>
-          clause.copy(returnItems = returnItems(clause, ri.items))(clause.position)
+          clause.copy(returnItems = returnItems(clause, ri.items))
 
         case clause: PragmaWithout =>
-          With(distinct = false, returnItems = returnItems(clause, Seq.empty, clause.excludedNames), orderBy = None, skip = None, limit = None, where = None)(clause.position)
+          With(distinct = false, returnItems = returnItems(clause, Seq.empty, clause.excludedNames), orderBy = None, skip = None, limit = None, where = None)
 
         case clause@Return(_, ri, _, _, _) if ri.includeExisting =>
-          clause.copy(returnItems = returnItems(clause, ri.items))(clause.position)
+          clause.copy(returnItems = returnItems(clause, ri.items))
 
         case expandedAstNode =>
           expandedAstNode
@@ -57,11 +57,11 @@ case class expandStar(state: SemanticState) extends Rewriter {
     val symbolNames = scope.symbolNames -- excludedNames
     val expandedItems = symbolNames.toSeq.sorted.map { id =>
       val idPos = scope.symbolTable(id).definition.position
-      val expr = Identifier(id)(idPos)
+      val expr = Identifier(id)
       val alias = expr.copyId
-      AliasedReturnItem(expr, alias)(clausePos)
+      AliasedReturnItem(expr, alias)
     }
 
-    ReturnItems(includeExisting = false, expandedItems ++ listedItems)(clausePos)
+    ReturnItems(includeExisting = false, expandedItems ++ listedItems)
   }
 }

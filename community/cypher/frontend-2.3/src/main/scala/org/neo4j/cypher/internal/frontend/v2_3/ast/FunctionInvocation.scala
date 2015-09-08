@@ -19,21 +19,20 @@
  */
 package org.neo4j.cypher.internal.frontend.v2_3.ast
 
-import org.neo4j.cypher.internal.frontend.v2_3.{SemanticError, _}
 import org.neo4j.cypher.internal.frontend.v2_3.ast.Expression.SemanticContext
-import org.neo4j.cypher.internal.frontend.v2_3.InputPosition
+import org.neo4j.cypher.internal.frontend.v2_3.{SemanticError, _}
 
 object FunctionInvocation {
-  def apply(name: FunctionName, argument: Expression)(position: InputPosition): FunctionInvocation =
-    FunctionInvocation(name, distinct = false, IndexedSeq(argument))(position)
+  def apply(name: FunctionName, argument: Expression): FunctionInvocation =
+    FunctionInvocation(name, distinct = false, IndexedSeq(argument))
   def apply(left: Expression, name: FunctionName, right: Expression): FunctionInvocation =
-    FunctionInvocation(name, distinct = false, IndexedSeq(left, right))(name.position)
+    FunctionInvocation(name, distinct = false, IndexedSeq(left, right))
   def apply(expression: Expression, name: FunctionName): FunctionInvocation =
-    FunctionInvocation(name, distinct = false, IndexedSeq(expression))(name.position)
+    FunctionInvocation(name, distinct = false, IndexedSeq(expression))
 }
 
 case class FunctionInvocation(functionName: FunctionName, distinct: Boolean, args: IndexedSeq[Expression])
-                             (val position: InputPosition) extends Expression {
+                              extends Expression {
   val name = functionName.name
   val function = Function.lookup.get(name.toLowerCase)
 
@@ -43,7 +42,7 @@ case class FunctionInvocation(functionName: FunctionName, distinct: Boolean, arg
   }
 }
 
-case class FunctionName(name: String)(val position: InputPosition) extends SymbolicName {
+case class FunctionName(name: String) extends SymbolicName {
   override def equals(x: Any): Boolean = x match {
     case FunctionName(other) => other.toLowerCase == name.toLowerCase
     case _ => false

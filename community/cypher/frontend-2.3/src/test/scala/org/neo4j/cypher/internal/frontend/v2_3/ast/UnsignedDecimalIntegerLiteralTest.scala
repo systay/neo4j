@@ -25,8 +25,8 @@ import org.neo4j.cypher.internal.frontend.v2_3.{DummyPosition, SemanticError, Se
 
 class UnsignedDecimalIntegerLiteralTest extends CypherFunSuite {
   test("correctly parses decimal numbers") {
-    assert(UnsignedDecimalIntegerLiteral("22")(DummyPosition(0)).value === 22)
-    assert(UnsignedDecimalIntegerLiteral("0")(DummyPosition(0)).value === 0)
+    assert(UnsignedDecimalIntegerLiteral("22").value === 22)
+    assert(UnsignedDecimalIntegerLiteral("0").value === 0)
   }
 
   test("throws error for invalid decimal numbers") {
@@ -39,7 +39,7 @@ class UnsignedDecimalIntegerLiteralTest extends CypherFunSuite {
   }
 
   private def assertSemanticError(stringValue: String, errorMessage: String) {
-    val literal = UnsignedDecimalIntegerLiteral(stringValue)(DummyPosition(4))
+    val literal = UnsignedDecimalIntegerLiteral(stringValue)
     val result = literal.semanticCheck(SemanticContext.Simple)(SemanticState.clean)
     assert(result.errors === Vector(SemanticError(errorMessage, DummyPosition(4))))
   }

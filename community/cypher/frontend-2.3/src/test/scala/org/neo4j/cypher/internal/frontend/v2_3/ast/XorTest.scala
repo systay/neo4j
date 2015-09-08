@@ -19,10 +19,9 @@
  */
 package org.neo4j.cypher.internal.frontend.v2_3.ast
 
-import org.neo4j.cypher.internal.frontend.v2_3.DummyPosition
 import org.neo4j.cypher.internal.frontend.v2_3.symbols._
 
-class XorTest extends InfixExpressionTestBase(Xor(_, _)(DummyPosition(0))) {
+class XorTest extends InfixExpressionTestBase(Xor) {
 
   test("shouldCombineBooleans") {
     testValidTypes(CTBoolean, CTBoolean)(CTBoolean)

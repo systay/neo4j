@@ -25,17 +25,17 @@ import org.neo4j.cypher.internal.frontend.v2_3.{DummyPosition, SemanticError, Se
 
 class LoadCSVTest extends CypherFunSuite {
 
-  val literalURL = StringLiteral("file:///tmp/foo.csv")(DummyPosition(4))
-  val identifier = Identifier("a")(DummyPosition(4))
+  val literalURL = StringLiteral("file:///tmp/foo.csv")
+  val identifier = Identifier("a")
 
   test("cannot overwrite existing identifier") {
-    val loadCSV = LoadCSV(withHeaders = true, literalURL, identifier, None)(DummyPosition(6))
+    val loadCSV = LoadCSV(withHeaders = true, literalURL, identifier, None)
     val result = loadCSV.semanticCheck(SemanticState.clean)
     assert(result.errors === Seq())
   }
 
   test("when expecting headers, the identifier has a map type") {
-    val loadCSV = LoadCSV(withHeaders = true, literalURL, identifier, None)(DummyPosition(6))
+    val loadCSV = LoadCSV(withHeaders = true, literalURL, identifier, None)
     val result = loadCSV.semanticCheck(SemanticState.clean)
     val expressionType = result.state.expressionType(identifier).actual
 
@@ -43,7 +43,7 @@ class LoadCSVTest extends CypherFunSuite {
   }
 
   test("when not expecting headers, the identifier has a collection type") {
-    val loadCSV = LoadCSV(withHeaders = false, literalURL, identifier, None)(DummyPosition(6))
+    val loadCSV = LoadCSV(withHeaders = false, literalURL, identifier, None)
     val result = loadCSV.semanticCheck(SemanticState.clean)
     val expressionType = result.state.expressionType(identifier).actual
 
@@ -51,15 +51,15 @@ class LoadCSVTest extends CypherFunSuite {
   }
 
   test("should accept one-character wide field terminators") {
-    val literal = StringLiteral("http://example.com/foo.csv")(DummyPosition(4))
-    val loadCSV = LoadCSV(withHeaders = false, literal, identifier, Some(StringLiteral("\t")(DummyPosition(0))))(DummyPosition(6))
+    val literal = StringLiteral("http://example.com/foo.csv")
+    val loadCSV = LoadCSV(withHeaders = false, literal, identifier, Some(StringLiteral("\t")))
     val result = loadCSV.semanticCheck(SemanticState.clean)
     assert(result.errors === Vector.empty)
   }
 
   test("should reject more-than-one-character wide field terminators") {
-    val literal = StringLiteral("http://example.com/foo.csv")(DummyPosition(4))
-    val loadCSV = LoadCSV(withHeaders = false, literal, identifier, Some(StringLiteral("  ")(DummyPosition(0))))(DummyPosition(6))
+    val literal = StringLiteral("http://example.com/foo.csv")
+    val loadCSV = LoadCSV(withHeaders = false, literal, identifier, Some(StringLiteral("  ")))
     val result = loadCSV.semanticCheck(SemanticState.clean)
     assert(result.errors === Vector(SemanticError("CSV field terminator can only be one character wide", DummyPosition(0))))
   }

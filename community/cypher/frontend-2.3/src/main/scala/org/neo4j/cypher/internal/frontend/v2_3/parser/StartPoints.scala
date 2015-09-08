@@ -40,18 +40,18 @@ trait StartPoints extends Parser
 
   private def NodeIdLookup: ReductionRule2[ast.Identifier, InputPosition, ast.StartItem] = rule {
     "(" ~~ (
-        LiteralIds ~~> ((i: ast.Identifier, p: InputPosition, ids) => ast.NodeByIds(i, ids)(p))
-      | Parameter ~~> ((i: ast.Identifier, p: InputPosition, param) => ast.NodeByParameter(i, param)(p))
-      | "*" ~~> ((i: ast.Identifier, p: InputPosition) => ast.AllNodes(i)(p))
+        LiteralIds ~~> ((i: ast.Identifier, p: InputPosition, ids) => ast.NodeByIds(i, ids).setPos(p))
+      | Parameter ~~> ((i: ast.Identifier, p: InputPosition, param) => ast.NodeByParameter(i, param).setPos(p))
+      | "*" ~~> ((i: ast.Identifier, p: InputPosition) => ast.AllNodes(i).setPos(p))
     ) ~~ ")"
   }
 
   private def NodeIndexLookup: ReductionRule2[ast.Identifier, InputPosition, ast.NodeByIdentifiedIndex] = {
-    IdentifiedIndexLookup ~~> ((i, p, index, key, value) => ast.NodeByIdentifiedIndex(i, index, key, value)(p))
+    IdentifiedIndexLookup ~~> ((i, p, index, key, value) => ast.NodeByIdentifiedIndex(i, index, key, value).setPos(p))
   }
 
   private def NodeIndexQuery: ReductionRule2[ast.Identifier, InputPosition, ast.NodeByIndexQuery] = rule {
-    IndexQuery ~~> ((i: ast.Identifier, p: InputPosition, index, query) => ast.NodeByIndexQuery(i, index, query)(p))
+    IndexQuery ~~> ((i: ast.Identifier, p: InputPosition, index, query) => ast.NodeByIndexQuery(i, index, query).setPos(p))
   }
 
   private def RelationshipLookup: ReductionRule2[ast.Identifier, InputPosition, ast.StartItem] = {
@@ -60,18 +60,18 @@ trait StartPoints extends Parser
 
   private def RelationshipIdLookup: ReductionRule2[ast.Identifier, InputPosition, ast.StartItem] = rule {
     "(" ~~ (
-        LiteralIds ~~> ((i: ast.Identifier, p: InputPosition, ids) => ast.RelationshipByIds(i, ids)(p))
-      | Parameter ~~> ((i: ast.Identifier, p: InputPosition, param) => ast.RelationshipByParameter(i, param)(p))
-      | "*" ~~> ((i: ast.Identifier, p: InputPosition) => ast.AllRelationships(i)(p))
+        LiteralIds ~~> ((i: ast.Identifier, p: InputPosition, ids) => ast.RelationshipByIds(i, ids).setPos(p))
+      | Parameter ~~> ((i: ast.Identifier, p: InputPosition, param) => ast.RelationshipByParameter(i, param).setPos(p))
+      | "*" ~~> ((i: ast.Identifier, p: InputPosition) => ast.AllRelationships(i).setPos(p))
     ) ~~ ")"
   }
 
   private def RelationshipIndexLookup: ReductionRule2[ast.Identifier, InputPosition, ast.RelationshipByIdentifiedIndex] = {
-    IdentifiedIndexLookup ~~> ((i, p, index, key, value) => ast.RelationshipByIdentifiedIndex(i, index, key, value)(p))
+    IdentifiedIndexLookup ~~> ((i, p, index, key, value) => ast.RelationshipByIdentifiedIndex(i, index, key, value).setPos(p))
   }
 
   private def RelationshipIndexQuery: ReductionRule2[ast.Identifier, InputPosition, ast.RelationshipByIndexQuery] = rule {
-    IndexQuery ~~> ((i: ast.Identifier, p: InputPosition, index, query) => ast.RelationshipByIndexQuery(i, index, query)(p))
+    IndexQuery ~~> ((i: ast.Identifier, p: InputPosition, index, query) => ast.RelationshipByIndexQuery(i, index, query).setPos(p))
   }
 
   private def IdentifiedIndexLookup: Rule3[String, String, ast.Expression] = rule {

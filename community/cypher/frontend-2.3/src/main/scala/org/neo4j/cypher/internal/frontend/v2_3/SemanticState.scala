@@ -32,7 +32,7 @@ import scala.language.postfixOps
 case class SymbolUse(name: String, position: InputPosition) {
   override def toString = s"SymbolUse($nameWithPosition)"
 
-  def asIdentifier = Identifier(name)(position)
+  def asIdentifier = Identifier(name).setPos(position)
   def nameWithPosition = s"$name@${position.toOffsetString}"
 }
 

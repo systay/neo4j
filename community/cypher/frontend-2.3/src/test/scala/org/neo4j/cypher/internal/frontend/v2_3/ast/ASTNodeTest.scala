@@ -24,9 +24,7 @@ import org.neo4j.cypher.internal.frontend.v2_3.test_helpers.CypherFunSuite
 
 class ASTNodeTest extends CypherFunSuite {
 
-  trait Exp extends ASTNode with ASTExpression {
-    val position = DummyPosition(0)
-  }
+  trait Exp extends ASTNode with ASTExpression
 
   case class Val(int: Int) extends Exp
   case class Add(lhs: Exp, rhs: Exp) extends Exp
@@ -56,14 +54,14 @@ class ASTNodeTest extends CypherFunSuite {
   }
 
   test("rewrite should duplicate ASTNode carrying InputPosition") {
-    case class AddWithPos(lhs: Exp, rhs: Exp)(override val position: InputPosition) extends Exp
+    case class AddWithPos(lhs: Exp, rhs: Exp) extends Exp
 
-    val ast = Add(Val(1), AddWithPos(Val(2), Val(3))(DummyPosition(0)))
+    val ast = Add(Val(1), AddWithPos(Val(2), Val(3)))
 
     val result = ast.rewrite(topDown(Rewriter.lift {
       case Val(_) => Val(99)
     }))
 
-    assert(result === Add(Val(99), AddWithPos(Val(99), Val(99))(DummyPosition(0))))
+    assert(result === Add(Val(99), AddWithPos(Val(99), Val(99))))
   }
 }

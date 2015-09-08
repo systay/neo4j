@@ -23,10 +23,10 @@ import org.neo4j.cypher.internal.frontend.v2_3.{SemanticCheck, SemanticCheckable
 
 sealed trait MergeAction extends ASTNode with ASTPhrase with SemanticCheckable
 
-case class OnCreate(action: SetClause)(val position: InputPosition) extends MergeAction {
+case class OnCreate(action: SetClause) extends MergeAction {
   def semanticCheck: SemanticCheck = action.semanticCheck
 }
 
-case class OnMatch(action: SetClause)(val position: InputPosition) extends MergeAction {
+case class OnMatch(action: SetClause) extends MergeAction {
   def semanticCheck: SemanticCheck = action.semanticCheck
 }

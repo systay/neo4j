@@ -22,7 +22,7 @@ package org.neo4j.cypher.internal.frontend.v2_3.ast
 import org.neo4j.cypher.internal.frontend.v2_3.{SemanticCheckable, InputPosition}
 import org.neo4j.cypher.internal.frontend.v2_3.symbols._
 
-case class Skip(expression: Expression)(val position: InputPosition) extends ASTNode with ASTSlicingPhrase with SemanticCheckable {
+case class Skip(expression: Expression) extends ASTNode with ASTSlicingPhrase with SemanticCheckable {
 
   def dependencies = expression.dependencies
 

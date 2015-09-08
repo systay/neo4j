@@ -39,14 +39,14 @@ case object addUniquenessPredicates extends Rewriter {
         val maybePredicate: Option[Expression] = createPredicateFor(uniqueRels, m.position)
         val newWhere: Option[Where] = (where, maybePredicate) match {
           case (Some(oldWhere), Some(newPredicate)) =>
-            Some(oldWhere.copy(expression = And(oldWhere.expression, newPredicate)(m.position))(m.position))
+            Some(oldWhere.copy(expression = And(oldWhere.expression, newPredicate)))
 
           case (None,           Some(newPredicate)) =>
-            Some(Where(expression = newPredicate)(m.position))
+            Some(Where(expression = newPredicate))
 
           case (oldWhere,       None)               => oldWhere
         }
-        m.copy(where = newWhere)(m.position)
+        m.copy(where = newWhere)
       }
 
     case astNode =>
@@ -66,7 +66,7 @@ case object addUniquenessPredicates extends Rewriter {
     }
 
   private def createPredicateFor(uniqueRels: Seq[UniqueRel], pos: InputPosition): Option[Expression] = {
-    createPredicatesFor(uniqueRels, pos).reduceOption(And(_, _)(pos))
+    createPredicatesFor(uniqueRels, pos).reduceOption(And)
   }
 
   def createPredicatesFor(uniqueRels: Seq[UniqueRel], pos: InputPosition): Seq[Expression] =
@@ -74,20 +74,20 @@ case object addUniquenessPredicates extends Rewriter {
       x <- uniqueRels
       y <- uniqueRels if x.name < y.name && !x.isAlwaysDifferentFrom(y)
     } yield {
-      val equals = Equals(x.identifier.copyId, y.identifier.copyId)(pos)
+      val equals = Equals(x.identifier.copyId, y.identifier.copyId)
 
       (x.singleLength, y.singleLength) match {
         case (true, true) =>
-          Not(equals)(pos)
+          Not(equals)
 
         case (true, false) =>
-          NoneIterablePredicate(y.identifier.copyId, y.identifier.copyId, Some(equals))(pos)
+          NoneIterablePredicate(y.identifier.copyId, y.identifier.copyId, Some(equals))
 
         case (false, true) =>
-          NoneIterablePredicate(x.identifier.copyId, x.identifier.copyId, Some(equals))(pos)
+          NoneIterablePredicate(x.identifier.copyId, x.identifier.copyId, Some(equals))
 
         case (false, false) =>
-          NoneIterablePredicate(x.identifier.copyId, x.identifier.copyId, Some(AnyIterablePredicate(y.identifier.copyId, y.identifier.copyId, Some(equals))(pos)))(pos)
+          NoneIterablePredicate(x.identifier.copyId, x.identifier.copyId, Some(AnyIterablePredicate(y.identifier.copyId, y.identifier.copyId, Some(equals))))
       }
     }
 

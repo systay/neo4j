@@ -23,9 +23,9 @@ import org.neo4j.cypher.internal.frontend.v2_3.test_helpers.CypherFunSuite
 
 class ConstantExpressionTest extends CypherFunSuite {
   test("tests") {
-    assertIsConstant(SignedDecimalIntegerLiteral("42")(null))
-    assertIsConstant(Parameter("42")(null))
-    assertIsConstant(Collection(Seq(SignedDecimalIntegerLiteral("42")(null)))(null))
+    assertIsConstant(SignedDecimalIntegerLiteral("42"))
+    assertIsConstant(Parameter("42"))
+    assertIsConstant(Collection(Seq(SignedDecimalIntegerLiteral("42"))))
   }
 
   private def assertIsConstant(e: Expression) = {

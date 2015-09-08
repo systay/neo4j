@@ -64,7 +64,7 @@ object Pattern {
 
 import org.neo4j.cypher.internal.frontend.v2_3.ast.Pattern._
 
-case class Pattern(patternParts: Seq[PatternPart])(val position: InputPosition) extends ASTNode with ASTParticle {
+case class Pattern(patternParts: Seq[PatternPart]) extends ASTNode with ASTParticle {
 
   lazy val length = this.fold(0) {
     case RelationshipChain(_, _, _) => _ + 1
@@ -87,7 +87,7 @@ case class Pattern(patternParts: Seq[PatternPart])(val position: InputPosition) 
   }
 }
 
-case class RelationshipsPattern(element: RelationshipChain)(val position: InputPosition) extends ASTNode with ASTParticle {
+case class RelationshipsPattern(element: RelationshipChain) extends ASTNode with ASTParticle {
   def semanticCheck(ctx: SemanticContext): SemanticCheck =
     element.declareIdentifiers(ctx) chain
     element.semanticCheck(ctx)
@@ -101,7 +101,7 @@ sealed abstract class PatternPart extends ASTNode with ASTParticle {
   def element: PatternElement
 }
 
-case class NamedPatternPart(identifier: Identifier, patternPart: AnonymousPatternPart)(val position: InputPosition) extends PatternPart {
+case class NamedPatternPart(identifier: Identifier, patternPart: AnonymousPatternPart) extends PatternPart {
   def declareIdentifiers(ctx: SemanticContext) = patternPart.declareIdentifiers(ctx) chain identifier.declare(CTPath)
   def semanticCheck(ctx: SemanticContext) = patternPart.semanticCheck(ctx)
 
@@ -112,8 +112,6 @@ case class NamedPatternPart(identifier: Identifier, patternPart: AnonymousPatter
 sealed trait AnonymousPatternPart extends PatternPart
 
 case class EveryPath(element: PatternElement) extends AnonymousPatternPart {
-  def position = element.position
-
   def declareIdentifiers(ctx: SemanticContext) = (element, ctx) match {
     case (n: NodePattern, SemanticContext.Match) =>
       element.declareIdentifiers(ctx) // single node identifier is allowed to be already bound in MATCH
@@ -126,7 +124,7 @@ case class EveryPath(element: PatternElement) extends AnonymousPatternPart {
   def semanticCheck(ctx: SemanticContext) = element.semanticCheck(ctx)
 }
 
-case class ShortestPaths(element: PatternElement, single: Boolean)(val position: InputPosition) extends AnonymousPatternPart {
+case class ShortestPaths(element: PatternElement, single: Boolean) extends AnonymousPatternPart {
   val name: String =
     if (single)
       "shortestPath"
@@ -208,7 +206,7 @@ sealed abstract class PatternElement extends ASTNode with ASTParticle {
   def isSingleNode = false
 }
 
-case class RelationshipChain(element: PatternElement, relationship: RelationshipPattern, rightNode: NodePattern)(val position: InputPosition)
+case class RelationshipChain(element: PatternElement, relationship: RelationshipPattern, rightNode: NodePattern)
   extends PatternElement {
 
   def identifier: Option[Identifier] = relationship.identifier
@@ -229,7 +227,7 @@ case class NodePattern(
   identifier: Option[Identifier],
   labels: Seq[LabelName],
   properties: Option[Expression],
-  naked: Boolean)(val position: InputPosition) extends PatternElement with SemanticChecking {
+  naked: Boolean) extends PatternElement with SemanticChecking {
 
   def declareIdentifiers(ctx: SemanticContext): SemanticCheck =
     identifier.fold(SemanticCheckResult.success) {
@@ -271,7 +269,7 @@ case class RelationshipPattern(
     types: Seq[RelTypeName],
     length: Option[Option[Range]],
     properties: Option[Expression],
-    direction: SemanticDirection)(val position: InputPosition) extends ASTNode with ASTParticle with SemanticChecking {
+    direction: SemanticDirection) extends ASTNode with ASTParticle with SemanticChecking {
 
   def declareIdentifiers(ctx: SemanticContext): SemanticCheck =
     identifier.fold(SemanticCheckResult.success) {

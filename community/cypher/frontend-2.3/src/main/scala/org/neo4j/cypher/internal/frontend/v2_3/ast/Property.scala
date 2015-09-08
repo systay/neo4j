@@ -23,7 +23,7 @@ import org.neo4j.cypher.internal.frontend.v2_3.ast.Expression.SemanticContext
 import org.neo4j.cypher.internal.frontend.v2_3.{InputPosition, InternalException, SemanticCheck, SemanticError}
 import org.neo4j.cypher.internal.frontend.v2_3.symbols._
 
-case class Property(map: Expression, propertyKey: PropertyKeyName)(val position: InputPosition) extends Expression with SimpleTyping {
+case class Property(map: Expression, propertyKey: PropertyKeyName) extends Expression with SimpleTyping {
   protected def possibleTypes = CTAny.covariant
 
   override def semanticCheck(ctx: SemanticContext) =
@@ -33,8 +33,8 @@ case class Property(map: Expression, propertyKey: PropertyKeyName)(val position:
 }
 
 object LegacyProperty {
-  def apply(map: Expression, propertyKey: PropertyKeyName, legacyOperator: String)(position: InputPosition) =
-    new Property(map, propertyKey)(position) {
+  def apply(map: Expression, propertyKey: PropertyKeyName, legacyOperator: String) =
+    new Property(map, propertyKey) {
       override def semanticCheck(ctx: SemanticContext): SemanticCheck = legacyOperator match {
         case "?" => SemanticError(s"This syntax is no longer supported (missing properties are now returned as null). Please use (not(has(<ident>.${propertyKey.name})) OR <ident>.${propertyKey.name}=<value>) if you really need the old behavior.", position)
         case "!" => SemanticError(s"This syntax is no longer supported (missing properties are now returned as null).", position)

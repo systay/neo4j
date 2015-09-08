@@ -53,13 +53,13 @@ case object collapseInCollections extends Rewriter {
       val flattenConst: Iterable[In] = groupedINPredicates.map {
         case (lhs, values) =>
           val pos = lhs.position
-          In(lhs, Collection(values.map(_.expr).toSeq)(pos))(pos)
+          In(lhs, Collection(values.map(_.expr).toSeq))
       }
 
       // Return the original non-rewritten predicates with our new ones
       nonRewritable ++ flattenConst match {
         case head :: Nil => head
-        case l => Ors(l.toSet)(predicate.position)
+        case l => Ors(l.toSet)
       }
   }
 }

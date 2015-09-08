@@ -34,7 +34,7 @@ sealed trait Clause extends ASTNode with ASTPhrase with SemanticCheckable {
 
 sealed trait UpdateClause extends Clause
 
-case class LoadCSV(withHeaders: Boolean, urlString: Expression, identifier: Identifier, fieldTerminator: Option[StringLiteral])(val position: InputPosition) extends Clause with SemanticChecking {
+case class LoadCSV(withHeaders: Boolean, urlString: Expression, identifier: Identifier, fieldTerminator: Option[StringLiteral]) extends Clause with SemanticChecking {
   val name = "LOAD CSV"
 
   def semanticCheck: SemanticCheck =
@@ -61,13 +61,13 @@ case class LoadCSV(withHeaders: Boolean, urlString: Expression, identifier: Iden
   }
 }
 
-case class Start(items: Seq[StartItem], where: Option[Where])(val position: InputPosition) extends Clause {
+case class Start(items: Seq[StartItem], where: Option[Where]) extends Clause {
   val name = "START"
 
   def semanticCheck = items.semanticCheck chain where.semanticCheck
 }
 
-case class Match(optional: Boolean, pattern: Pattern, hints: Seq[UsingHint], where: Option[Where])(val position: InputPosition) extends Clause with SemanticChecking {
+case class Match(optional: Boolean, pattern: Pattern, hints: Seq[UsingHint], where: Option[Where]) extends Clause with SemanticChecking {
   def name = "MATCH"
 
   def semanticCheck =
@@ -207,7 +207,7 @@ case class Match(optional: Boolean, pattern: Pattern, hints: Seq[UsingHint], whe
   }
 }
 
-case class Merge(pattern: Pattern, actions: Seq[MergeAction])(val position: InputPosition) extends UpdateClause {
+case class Merge(pattern: Pattern, actions: Seq[MergeAction]) extends UpdateClause {
   def name = "MERGE"
 
   def semanticCheck =
@@ -215,25 +215,25 @@ case class Merge(pattern: Pattern, actions: Seq[MergeAction])(val position: Inpu
     actions.semanticCheck
 }
 
-case class Create(pattern: Pattern)(val position: InputPosition) extends UpdateClause {
+case class Create(pattern: Pattern) extends UpdateClause {
   def name = "CREATE"
 
   def semanticCheck = pattern.semanticCheck(Pattern.SemanticContext.Create)
 }
 
-case class CreateUnique(pattern: Pattern)(val position: InputPosition) extends UpdateClause {
+case class CreateUnique(pattern: Pattern) extends UpdateClause {
   def name = "CREATE UNIQUE"
 
   def semanticCheck = pattern.semanticCheck(Pattern.SemanticContext.CreateUnique)
 }
 
-case class SetClause(items: Seq[SetItem])(val position: InputPosition) extends UpdateClause {
+case class SetClause(items: Seq[SetItem]) extends UpdateClause {
   def name = "SET"
 
   def semanticCheck = items.semanticCheck
 }
 
-case class Delete(expressions: Seq[Expression], forced: Boolean)(val position: InputPosition) extends UpdateClause {
+case class Delete(expressions: Seq[Expression], forced: Boolean) extends UpdateClause {
   def name = "DELETE"
 
   def semanticCheck =
@@ -247,13 +247,13 @@ case class Delete(expressions: Seq[Expression], forced: Boolean)(val position: I
     }
 }
 
-case class Remove(items: Seq[RemoveItem])(val position: InputPosition) extends UpdateClause {
+case class Remove(items: Seq[RemoveItem]) extends UpdateClause {
   def name = "REMOVE"
 
   def semanticCheck = items.semanticCheck
 }
 
-case class Foreach(identifier: Identifier, expression: Expression, updates: Seq[Clause])(val position: InputPosition) extends UpdateClause with SemanticChecking {
+case class Foreach(identifier: Identifier, expression: Expression, updates: Seq[Clause]) extends UpdateClause with SemanticChecking {
   def name = "FOREACH"
 
   def semanticCheck =
@@ -266,7 +266,7 @@ case class Foreach(identifier: Identifier, expression: Expression, updates: Seq[
     }
 }
 
-case class Unwind(expression: Expression, identifier: Identifier)(val position: InputPosition) extends Clause {
+case class Unwind(expression: Expression, identifier: Identifier) extends Clause {
   def name = "UNWIND"
 
   override def semanticCheck =
@@ -321,7 +321,7 @@ sealed trait ProjectionClause extends HorizonClause with SemanticChecking {
     // Except when we are doing DISTINCT or aggregation, in which case we only see the scope introduced by the
     // projecting clause
     val includePreviousScope = !(returnItems.containsAggregate || distinct)
-    val specialReturnItems = returnItems.copy(includeExisting = includePreviousScope)(returnItems.position)
+    val specialReturnItems = returnItems.copy(includeExisting = includePreviousScope).setPos(returnItems.position)
     specialReturnItems
   }
 
@@ -349,7 +349,7 @@ case class With(
     orderBy: Option[OrderBy],
     skip: Option[Skip],
     limit: Option[Limit],
-    where: Option[Where])(val position: InputPosition) extends ProjectionClause {
+    where: Option[Where]) extends ProjectionClause {
 
   def name = "WITH"
 
@@ -372,7 +372,7 @@ case class Return(
     returnItems: ReturnItems,
     orderBy: Option[OrderBy],
     skip: Option[Skip],
-    limit: Option[Limit])(val position: InputPosition) extends ProjectionClause {
+    limit: Option[Limit]) extends ProjectionClause {
 
   def name = "RETURN"
 
@@ -385,7 +385,7 @@ case class Return(
       Seq()
 }
 
-case class PragmaWithout(excluded: Seq[Identifier])(val position: InputPosition) extends HorizonClause {
+case class PragmaWithout(excluded: Seq[Identifier]) extends HorizonClause {
   def name = "_PRAGMA WITHOUT"
   val excludedNames = excluded.map(_.name).toSet
 

@@ -61,8 +61,8 @@ sealed abstract class DecimalIntegerLiteral(stringVal: String) extends IntegerLi
 
 }
 
-case class SignedDecimalIntegerLiteral(stringVal: String)(val position: InputPosition) extends DecimalIntegerLiteral(stringVal) with SignedIntegerLiteral
-case class UnsignedDecimalIntegerLiteral(stringVal: String)(val position: InputPosition) extends DecimalIntegerLiteral(stringVal) with UnsignedIntegerLiteral
+case class SignedDecimalIntegerLiteral(stringVal: String) extends DecimalIntegerLiteral(stringVal) with SignedIntegerLiteral
+case class UnsignedDecimalIntegerLiteral(stringVal: String) extends DecimalIntegerLiteral(stringVal) with UnsignedIntegerLiteral
 
 sealed abstract class OctalIntegerLiteral(stringVal: String) extends IntegerLiteral with SimpleTyping {
   lazy val value: java.lang.Long = java.lang.Long.parseLong(stringVal, 8)
@@ -82,7 +82,7 @@ sealed abstract class OctalIntegerLiteral(stringVal: String) extends IntegerLite
     } chain super.semanticCheck(ctx)
 }
 
-case class SignedOctalIntegerLiteral(stringVal: String)(val position: InputPosition) extends OctalIntegerLiteral(stringVal) with SignedIntegerLiteral
+case class SignedOctalIntegerLiteral(stringVal: String) extends OctalIntegerLiteral(stringVal) with SignedIntegerLiteral
 
 sealed abstract class HexIntegerLiteral(stringVal: String) extends IntegerLiteral with SimpleTyping {
   lazy val value: java.lang.Long =
@@ -106,14 +106,14 @@ sealed abstract class HexIntegerLiteral(stringVal: String) extends IntegerLitera
     } chain super.semanticCheck(ctx)
 }
 
-case class SignedHexIntegerLiteral(stringVal: String)(val position: InputPosition) extends HexIntegerLiteral(stringVal) with SignedIntegerLiteral
+case class SignedHexIntegerLiteral(stringVal: String) extends HexIntegerLiteral(stringVal) with SignedIntegerLiteral
 
 
 sealed trait DoubleLiteral extends NumberLiteral {
   def value: java.lang.Double
 }
 
-case class DecimalDoubleLiteral(stringVal: String)(val position: InputPosition) extends DoubleLiteral with SimpleTyping {
+case class DecimalDoubleLiteral(stringVal: String) extends DoubleLiteral with SimpleTyping {
   lazy val value: java.lang.Double = java.lang.Double.parseDouble(stringVal)
 
   protected def possibleTypes = CTFloat
@@ -130,13 +130,13 @@ case class DecimalDoubleLiteral(stringVal: String)(val position: InputPosition) 
     } chain super.semanticCheck(ctx)
 }
 
-case class StringLiteral(value: String)(val position: InputPosition) extends Literal with SimpleTyping {
+case class StringLiteral(value: String) extends Literal with SimpleTyping {
   protected def possibleTypes = CTString
 
   def asCanonicalStringVal = quoteString(value)
 }
 
-case class Null()(val position: InputPosition) extends Literal with SimpleTyping {
+case class Null() extends Literal with SimpleTyping {
   val value = null
 
   def asCanonicalStringVal = "NULL"
@@ -146,7 +146,7 @@ case class Null()(val position: InputPosition) extends Literal with SimpleTyping
 
 sealed trait BooleanLiteral extends Literal
 
-case class True()(val position: InputPosition) extends BooleanLiteral with SimpleTyping {
+case class True() extends BooleanLiteral with SimpleTyping {
   val value: java.lang.Boolean = true
 
   def asCanonicalStringVal = "true"
@@ -154,7 +154,7 @@ case class True()(val position: InputPosition) extends BooleanLiteral with Simpl
   protected def possibleTypes = CTBoolean
 }
 
-case class False()(val position: InputPosition) extends BooleanLiteral with SimpleTyping {
+case class False() extends BooleanLiteral with SimpleTyping {
   val value: java.lang.Boolean = false
 
   def asCanonicalStringVal = "false"

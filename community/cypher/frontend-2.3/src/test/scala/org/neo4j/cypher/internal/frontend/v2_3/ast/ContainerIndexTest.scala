@@ -34,7 +34,7 @@ class ContainerIndexTest extends CypherFunSuite {
   test("should detect collection lookup") {
     val lhs = dummyCollection
     val rhs = dummyInteger
-    val index = ContainerIndex(lhs, rhs)(DummyPosition(10))
+    val index = ContainerIndex(lhs, rhs)
 
     val result = index.semanticCheck(Expression.SemanticContext.Simple)(SemanticState.clean)
     result.errors shouldBe empty
@@ -46,7 +46,7 @@ class ContainerIndexTest extends CypherFunSuite {
   test("should detect node lookup") {
     val lhs = dummyNode
     val rhs = dummyString
-    val index = ContainerIndex(lhs, rhs)(DummyPosition(10))
+    val index = ContainerIndex(lhs, rhs)
 
     val result = index.semanticCheck(Expression.SemanticContext.Simple)(SemanticState.clean)
     result.errors shouldBe empty
@@ -58,7 +58,7 @@ class ContainerIndexTest extends CypherFunSuite {
   test("should type as any if given untyped lookup arguments") {
     val lhs = dummyAny
     val rhs = dummyAny
-    val index = ContainerIndex(lhs, rhs)(DummyPosition(10))
+    val index = ContainerIndex(lhs, rhs)
 
     val result = index.semanticCheck(Expression.SemanticContext.Simple)(SemanticState.clean)
     result.errors shouldBe empty
@@ -69,8 +69,8 @@ class ContainerIndexTest extends CypherFunSuite {
 
   test("should return collection inner types of expression") {
     val index = ContainerIndex(dummyCollection,
-      SignedDecimalIntegerLiteral("1")(DummyPosition(5))
-    )(DummyPosition(4))
+      SignedDecimalIntegerLiteral("1")
+    )
 
     val result = index.semanticCheck(Expression.SemanticContext.Simple)(SemanticState.clean)
     result.errors shouldBe empty
@@ -79,8 +79,8 @@ class ContainerIndexTest extends CypherFunSuite {
 
   test("should raise error if indexing by fraction") {
     val index = ContainerIndex(dummyCollection,
-      DecimalDoubleLiteral("1.3")(DummyPosition(5))
-    )(DummyPosition(4))
+      DecimalDoubleLiteral("1.3")
+    )
 
     val result = index.semanticCheck(Expression.SemanticContext.Simple)(SemanticState.clean)
     result.errors should equal(Seq(SemanticError("Type mismatch: expected Integer but was Float", index.idx.position)))

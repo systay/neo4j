@@ -30,14 +30,14 @@ trait SymbolicNameWithId[+ID <: NameId] extends SymbolicName {
   def id(implicit semanticTable: SemanticTable): Option[ID]
 }
 
-case class LabelName(name: String)(val position: InputPosition) extends SymbolicNameWithId[LabelId] {
+case class LabelName(name: String) extends SymbolicNameWithId[LabelId] {
   def id(implicit semanticTable: SemanticTable): Option[LabelId] = semanticTable.resolvedLabelIds.get(name)
 }
 
-case class PropertyKeyName(name: String)(val position: InputPosition) extends SymbolicNameWithId[PropertyKeyId] {
+case class PropertyKeyName(name: String) extends SymbolicNameWithId[PropertyKeyId] {
   def id(implicit semanticTable: SemanticTable): Option[PropertyKeyId] = semanticTable.resolvedPropertyKeyNames.get(name)
 }
 
-case class RelTypeName(name: String)(val position: InputPosition) extends SymbolicNameWithId[RelTypeId] {
+case class RelTypeName(name: String) extends SymbolicNameWithId[RelTypeId] {
   def id(implicit semanticTable: SemanticTable): Option[RelTypeId] = semanticTable.resolvedRelTypeNames.get(name)
 }

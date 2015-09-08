@@ -246,7 +246,7 @@ object ExpressionConverters {
     case e: ast.RegexMatch => regexMatch(e)
     case e: ast.In => in(e)
     case e: ast.Like => like(e)
-    case e: ast.NotLike => predicates.Not(toCommandPredicate(ast.Like(e.lhs, e.pattern, e.caseInsensitive)(e.position)))
+    case e: ast.NotLike => predicates.Not(toCommandPredicate(ast.Like(e.lhs, e.pattern, e.caseInsensitive)))
     case e: ast.IsNull => predicates.IsNull(toCommandExpression(e.lhs))
     case e: ast.IsNotNull => predicates.Not(predicates.IsNull(toCommandExpression(e.lhs)))
     case e: ast.InequalityExpression => inequalityExpression(e)

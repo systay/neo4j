@@ -21,7 +21,7 @@ package org.neo4j.cypher.internal.frontend.v2_3.ast
 
 import org.neo4j.cypher.internal.frontend.v2_3._
 
-case class ReturnItems(includeExisting: Boolean, items: Seq[ReturnItem])(val position: InputPosition) extends ASTNode with ASTPhrase with SemanticCheckable with SemanticChecking {
+case class ReturnItems(includeExisting: Boolean, items: Seq[ReturnItem]) extends ASTNode with ASTPhrase with SemanticCheckable with SemanticChecking {
   def semanticCheck =
     items.semanticCheck chain
     ensureProjectedToUniqueIds
@@ -32,7 +32,7 @@ case class ReturnItems(includeExisting: Boolean, items: Seq[ReturnItem])(val pos
     case item => item.alias.collect { case ident if ident == item.expression => ident }
   }.flatten.toSet
 
-  def mapItems(f: Seq[ReturnItem] => Seq[ReturnItem]) = copy(items = f(items))(position)
+  def mapItems(f: Seq[ReturnItem] => Seq[ReturnItem]) = copyPosTo(copy(items = f(items)))
 
   def declareIdentifiers(previousScope: Scope) =
     when (includeExisting) {
@@ -66,9 +66,9 @@ sealed trait ReturnItem extends ASTNode with ASTPhrase with SemanticCheckable {
   def semanticCheck = expression.semanticCheck(Expression.SemanticContext.Results)
 }
 
-case class UnaliasedReturnItem(expression: Expression, inputText: String)(val position: InputPosition) extends ReturnItem {
+case class UnaliasedReturnItem(expression: Expression, inputText: String) extends ReturnItem {
   val alias = expression match {
-    case i: Identifier => Some(i.bumpId)
+    case i: Identifier => Some(i)
     case _ => None
   }
   val name = alias.map(_.name) getOrElse { inputText.trim }
@@ -77,7 +77,7 @@ case class UnaliasedReturnItem(expression: Expression, inputText: String)(val po
     throw new InternalException("Should have been aliased before this step")
 }
 
-case class AliasedReturnItem(expression: Expression, identifier: Identifier)(val position: InputPosition) extends ReturnItem {
+case class AliasedReturnItem(expression: Expression, identifier: Identifier) extends ReturnItem {
   val alias = Some(identifier)
   val name = identifier.name
 

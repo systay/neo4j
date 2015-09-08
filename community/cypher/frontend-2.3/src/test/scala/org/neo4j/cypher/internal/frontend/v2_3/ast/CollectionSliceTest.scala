@@ -29,9 +29,9 @@ class CollectionSliceTest extends CypherFunSuite {
 
   test("shouldReturnCollectionTypesOfExpression") {
     val slice = CollectionSlice(dummyCollection,
-      Some(SignedDecimalIntegerLiteral("1")(DummyPosition(5))),
-      Some(SignedDecimalIntegerLiteral("2")(DummyPosition(7)))
-    )(DummyPosition(4))
+      Some(SignedDecimalIntegerLiteral("1")),
+      Some(SignedDecimalIntegerLiteral("2"))
+    )
 
     val result = slice.semanticCheck(Expression.SemanticContext.Simple)(SemanticState.clean)
     result.errors shouldBe empty
@@ -42,18 +42,18 @@ class CollectionSliceTest extends CypherFunSuite {
     val slice = CollectionSlice(dummyCollection,
       None,
       None
-    )(DummyPosition(4))
+    )
 
     val result = slice.semanticCheck(Expression.SemanticContext.Simple)(SemanticState.clean)
     result.errors should equal(Seq(SemanticError("The start or end (or both) is required for a collection slice", slice.position)))
   }
 
   test("shouldRaiseErrorIfStartingFromFraction") {
-    val to = DecimalDoubleLiteral("1.3")(DummyPosition(5))
+    val to = DecimalDoubleLiteral("1.3")
     val slice = CollectionSlice(dummyCollection,
       None,
       Some(to)
-    )(DummyPosition(4))
+    )
 
     val result = slice.semanticCheck(Expression.SemanticContext.Simple)(SemanticState.clean)
     result.errors should equal(Seq(SemanticError("Type mismatch: expected Integer but was Float", to.position)))

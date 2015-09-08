@@ -25,44 +25,44 @@ import org.neo4j.cypher.internal.frontend.v2_3.{DummyPosition, SemanticDirection
 class FindDuplicateRelationshipsTest extends CypherFunSuite {
 
   val pos = DummyPosition(0)
-  val node = NodePattern(None, Seq.empty, None, naked = true)(pos)
-  val relR = Identifier("r")(pos)
-  val relS = Identifier("s")(pos)
+  val node = NodePattern(None, Seq.empty, None, naked = true)
+  val relR = Identifier("r")
+  val relS = Identifier("s")
 
   test("find duplicate relationships across pattern parts") {
-    val relPath = EveryPath(RelationshipChain(node, relPattern(relR), node)(pos))
-    val pattern = Pattern(Seq(relPath, relPath))(pos)
+    val relPath = EveryPath(RelationshipChain(node, relPattern(relR), node))
+    val pattern = Pattern(Seq(relPath, relPath))
 
     Pattern.findDuplicateRelationships(pattern) should equal(Set(Seq(relR, relR)))
   }
 
   test("find duplicate relationships in a long rel chain") {
     val relPath = EveryPath(relChain(relR, relS, relR))
-    val pattern = Pattern(Seq(relPath))(pos)
+    val pattern = Pattern(Seq(relPath))
 
     Pattern.findDuplicateRelationships(pattern) should equal(Set(Seq(relR, relR)))
   }
 
   test("does not find duplicate relationships across pattern parts if there is none") {
-    val relPath = EveryPath(RelationshipChain(node, relPattern(relR), node)(pos))
-    val otherRelPath = EveryPath(RelationshipChain(node, relPattern(relS), node)(pos))
-    val pattern = Pattern(Seq(relPath, otherRelPath))(pos)
+    val relPath = EveryPath(RelationshipChain(node, relPattern(relR), node))
+    val otherRelPath = EveryPath(RelationshipChain(node, relPattern(relS), node))
+    val pattern = Pattern(Seq(relPath, otherRelPath))
 
     Pattern.findDuplicateRelationships(pattern) should equal(Set.empty)
   }
 
   test("does not find duplicate relationships in a long rel chain if there is none") {
     val relPath = EveryPath(relChain(relS, relR))
-    val pattern = Pattern(Seq(relPath))(pos)
+    val pattern = Pattern(Seq(relPath))
 
     Pattern.findDuplicateRelationships(pattern) should equal(Set.empty)
   }
 
   private def relChain(ids: Identifier*) =
     ids.foldRight(node.asInstanceOf[PatternElement]) {
-      (id, n) => RelationshipChain(n, relPattern(id), node)(pos)
+      (id, n) => RelationshipChain(n, relPattern(id), node)
     }
 
   private def relPattern(id: Identifier) =
-    RelationshipPattern(Some(id), optional = false, Seq(), None, None, SemanticDirection.OUTGOING)(pos)
+    RelationshipPattern(Some(id), optional = false, Seq(), None, None, SemanticDirection.OUTGOING)
 }

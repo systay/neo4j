@@ -30,16 +30,16 @@ class ListComprehensionTest extends CypherFunSuite {
     CTCollection(CTNode) | CTBoolean | CTCollection(CTString))
 
   test("withoutExtractExpressionShouldHaveCollectionTypesOfInnerExpression") {
-    val filter = ListComprehension(Identifier("x")(DummyPosition(5)), dummyExpression, None, None)(DummyPosition(0))
+    val filter = ListComprehension(Identifier("x"), dummyExpression, None, None)
     val result = filter.semanticCheck(Expression.SemanticContext.Simple)(SemanticState.clean)
     result.errors shouldBe empty
     filter.types(result.state) should equal(CTCollection(CTNode) | CTCollection(CTString))
   }
 
   test("shouldHaveCollectionWithInnerTypesOfExtractExpression") {
-    val extractExpression = DummyExpression(CTNode | CTNumber, DummyPosition(2))
+    val extractExpression = DummyExpression(CTNode | CTNumber)
 
-    val filter = ListComprehension(Identifier("x")(DummyPosition(5)), dummyExpression, None, Some(extractExpression))(DummyPosition(0))
+    val filter = ListComprehension(Identifier("x"), dummyExpression, None, Some(extractExpression))
     val result = filter.semanticCheck(Expression.SemanticContext.Simple)(SemanticState.clean)
     result.errors shouldBe empty
     filter.types(result.state) should equal(CTCollection(CTNode) | CTCollection(CTNumber))
@@ -47,14 +47,14 @@ class ListComprehensionTest extends CypherFunSuite {
 
   test("shouldSemanticCheckPredicateInStateContainingTypedIdentifier") {
     val error = SemanticError("dummy error", DummyPosition(8))
-    val predicate = new DummyExpression(CTAny, DummyPosition(7)) {
+    val predicate = new DummyExpression(CTAny) {
       override def semanticCheck(ctx: SemanticContext) = s => {
         s.symbolTypes("x") should equal(CTNode | CTString)
         SemanticCheckResult.error(s, error)
       }
-    }
+    }.setPos(DummyPosition(7))
 
-    val filter = ListComprehension(Identifier("x")(DummyPosition(2)), dummyExpression, Some(predicate), None)(DummyPosition(0))
+    val filter = ListComprehension(Identifier("x"), dummyExpression, Some(predicate), None)
     val result = filter.semanticCheck(Expression.SemanticContext.Simple)(SemanticState.clean)
     result.errors should equal(Seq(error))
     result.state.symbol("x") should equal(None)

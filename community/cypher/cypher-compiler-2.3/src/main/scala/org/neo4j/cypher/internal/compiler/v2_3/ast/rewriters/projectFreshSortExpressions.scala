@@ -61,9 +61,12 @@ case object projectFreshSortExpressions extends Rewriter {
         val passedItems = dependenciesFromPreviousScope.map(_.asAlias)
         val outputItems = allAliases.toSeq.map(_.asAlias)
 
+        val first: With = clause.copy(returnItems = ri.mapItems(originalItems => originalItems ++ passedItems), orderBy = None, skip = None, limit = None, where = None)
+        val second: With = clause.copy(distinct = false, returnItems = ri.mapItems(_ => outputItems))
+
         val result = Seq(
-          clause.copy(returnItems = ri.mapItems(originalItems => originalItems ++ passedItems), orderBy = None, skip = None, limit = None, where = None)(clause.position),
-          clause.copy(distinct = false, returnItems = ri.mapItems(_ => outputItems))(clause.position)
+          clause.copyPosTo(first),
+          clause.copyPosTo(second)
         )
         result
       }

@@ -22,6 +22,6 @@ package org.neo4j.cypher.internal.frontend.v2_3.ast
 import org.neo4j.cypher.internal.frontend.v2_3.InputPosition
 import org.neo4j.cypher.internal.frontend.v2_3.symbols._
 
-case class CountStar()(val position: InputPosition) extends Expression with SimpleTyping {
+case class CountStar() extends Expression with SimpleTyping {
   protected def possibleTypes = CTInteger
 }

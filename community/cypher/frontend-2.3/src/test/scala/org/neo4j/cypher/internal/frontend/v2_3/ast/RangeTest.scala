@@ -19,16 +19,14 @@
  */
 package org.neo4j.cypher.internal.frontend.v2_3.ast
 
-import org.neo4j.cypher.internal.frontend.v2_3.DummyPosition
 import org.neo4j.cypher.internal.frontend.v2_3.test_helpers.CypherFunSuite
 
 class RangeTest extends CypherFunSuite {
 
   test("shouldBeSingleLengthOnlyWhenUpperAndLowerAre1") {
-    val position = DummyPosition(0)
-    Range(Some(UnsignedDecimalIntegerLiteral("1")(DummyPosition(0))), Some(UnsignedDecimalIntegerLiteral("1")(DummyPosition(4))))(position).isSingleLength should equal(true)
-    Range(None, Some(UnsignedDecimalIntegerLiteral("1")(DummyPosition(4))))(position).isSingleLength should equal(false)
-    Range(Some(UnsignedDecimalIntegerLiteral("1")(DummyPosition(0))), None)(position).isSingleLength should equal(false)
-    Range(Some(UnsignedDecimalIntegerLiteral("1")(DummyPosition(0))), Some(UnsignedDecimalIntegerLiteral("2")(DummyPosition(4))))(position).isSingleLength should equal(false)
+    Range(Some(UnsignedDecimalIntegerLiteral("1")), Some(UnsignedDecimalIntegerLiteral("1"))).isSingleLength should equal(true)
+    Range(None, Some(UnsignedDecimalIntegerLiteral("1"))).isSingleLength should equal(false)
+    Range(Some(UnsignedDecimalIntegerLiteral("1")), None).isSingleLength should equal(false)
+    Range(Some(UnsignedDecimalIntegerLiteral("1")), Some(UnsignedDecimalIntegerLiteral("2"))).isSingleLength should equal(false)
   }
 }

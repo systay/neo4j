@@ -32,14 +32,14 @@ trait ScopeExpression extends Expression {
   override def semanticCheck(ctx: SemanticContext) = SemanticCheckResult.success
 }
 
-case class FilterScope(identifier: Identifier, innerPredicate: Option[Expression])(val position: InputPosition) extends ScopeExpression {
+case class FilterScope(identifier: Identifier, innerPredicate: Option[Expression]) extends ScopeExpression {
   val identifiers = Set(identifier)
 }
 
-case class ExtractScope(identifier: Identifier, innerPredicate: Option[Expression], extractExpression: Option[Expression])(val position: InputPosition) extends ScopeExpression {
+case class ExtractScope(identifier: Identifier, innerPredicate: Option[Expression], extractExpression: Option[Expression]) extends ScopeExpression {
   val identifiers = Set(identifier)
 }
 
-case class ReduceScope(accumulator: Identifier, identifier: Identifier, expression: Expression)(val position: InputPosition) extends ScopeExpression {
+case class ReduceScope(accumulator: Identifier, identifier: Identifier, expression: Expression) extends ScopeExpression {
   val identifiers = Set(accumulator, identifier)
 }

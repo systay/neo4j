@@ -27,9 +27,9 @@ class ProjectionClauseTest extends CypherFunSuite with AstConstructionTestSuppor
 
   test("should introduce identifiers into scope") {
     // GIVEN WITH "a" as n
-    val returnItem = AliasedReturnItem(StringLiteral("a")_, ident("n"))_
-    val listedReturnItems = ReturnItems(includeExisting = false, Seq(returnItem))_
-    val withObj = With(distinct = false, listedReturnItems, None, None, None, None)_
+    val returnItem = AliasedReturnItem(StringLiteral("a"), ident("n"))
+    val listedReturnItems = ReturnItems(includeExisting = false, Seq(returnItem))
+    val withObj = With(distinct = false, listedReturnItems, None, None, None, None)
 
     // WHEN
     val beforeState = SemanticState.clean.newChildScope
@@ -43,9 +43,9 @@ class ProjectionClauseTest extends CypherFunSuite with AstConstructionTestSuppor
 
   test("should remove identifiers from scope") {
     // GIVEN n WITH "a" as X
-    val returnItem = AliasedReturnItem(StringLiteral("a")_, ident("X"))_
-    val listedReturnItems = ReturnItems(includeExisting = false, Seq(returnItem))_
-    val withObj = With(distinct = false, listedReturnItems, None, None, None, None)_
+    val returnItem = AliasedReturnItem(StringLiteral("a"), ident("X"))
+    val listedReturnItems = ReturnItems(includeExisting = false, Seq(returnItem))
+    val withObj = With(distinct = false, listedReturnItems, None, None, None, None)
 
     val beforeState = SemanticState.clean.newChildScope.declareIdentifier(ident("n"), CTNode).right.get
     val middleState = withObj.semanticCheck(beforeState).state
@@ -62,13 +62,13 @@ class ProjectionClauseTest extends CypherFunSuite with AstConstructionTestSuppor
   test("test order by scoping") {
     // GIVEN MATCH n WITH n AS X ORDER BY X.prop1, X.prop2
     val orderBy: OrderBy = OrderBy(Seq(
-      AscSortItem(Property(ident("X"), PropertyKeyName("prop1")_)_)_,
-      AscSortItem(Property(ident("X"), PropertyKeyName("prop2")_)_)_
-    ))_
+      AscSortItem(Property(ident("X"), PropertyKeyName("prop1"))),
+      AscSortItem(Property(ident("X"), PropertyKeyName("prop2")))
+    ))
 
-    val returnItem = AliasedReturnItem(ident("n"), ident("X"))_
-    val listedReturnItems = ReturnItems(includeExisting = false, Seq(returnItem))_
-    val withObj = With(distinct = false, listedReturnItems, Some(orderBy), None, None, None)_
+    val returnItem = AliasedReturnItem(ident("n"), ident("X"))
+    val listedReturnItems = ReturnItems(includeExisting = false, Seq(returnItem))
+    val withObj = With(distinct = false, listedReturnItems, Some(orderBy), None, None, None)
 
     // WHEN
     val beforeState = SemanticState.clean.newChildScope.declareIdentifier(ident("n"), CTNode).right.get
@@ -84,12 +84,12 @@ class ProjectionClauseTest extends CypherFunSuite with AstConstructionTestSuppor
   test("test order by scoping 2") {
     // GIVEN MATCH n WITH n.prop AS introducedIdentifier ORDER BY introducedIdentifier + 2
     val orderBy: OrderBy = OrderBy(Seq(
-      AscSortItem(Add(ident("introducedIdentifier"), SignedDecimalIntegerLiteral("2")_)_)_
-    ))_
+      AscSortItem(Add(ident("introducedIdentifier"), SignedDecimalIntegerLiteral("2")))
+    ))
 
-    val returnItem = AliasedReturnItem(Property(ident("n"), PropertyKeyName("prop")_)_, ident("introducedIdentifier"))_
-    val listedReturnItems = ReturnItems(includeExisting = false, Seq(returnItem))_
-    val withObj = With(distinct = false, listedReturnItems, Some(orderBy), None, None, None)_
+    val returnItem = AliasedReturnItem(Property(ident("n"), PropertyKeyName("prop")), ident("introducedIdentifier"))
+    val listedReturnItems = ReturnItems(includeExisting = false, Seq(returnItem))
+    val withObj = With(distinct = false, listedReturnItems, Some(orderBy), None, None, None)
 
     // WHEN
     val beforeState = SemanticState.clean.newChildScope.declareIdentifier(ident("n"), CTNode).right.get
@@ -104,12 +104,12 @@ class ProjectionClauseTest extends CypherFunSuite with AstConstructionTestSuppor
   test("test order by scoping & shadowing 2") {
     // GIVEN MATCH n WITH n AS n ORDER BY n + 2
     val orderBy: OrderBy = OrderBy(Seq(
-      AscSortItem(Add(ident("n"), SignedDecimalIntegerLiteral("2")_)_)_
-    ))_
+      AscSortItem(Add(ident("n"), SignedDecimalIntegerLiteral("2")))
+    ))
 
-    val returnItem = AliasedReturnItem(ident("n"), ident("n"))_
-    val listedReturnItems = ReturnItems(includeExisting = false, Seq(returnItem))_
-    val withObj = With(distinct = false, listedReturnItems, Some(orderBy), None, None, None)_
+    val returnItem = AliasedReturnItem(ident("n"), ident("n"))
+    val listedReturnItems = ReturnItems(includeExisting = false, Seq(returnItem))
+    val withObj = With(distinct = false, listedReturnItems, Some(orderBy), None, None, None)
 
     // WHEN
     val beforeState = SemanticState.clean.newChildScope.declareIdentifier(ident("n"), CTNode).right.get
@@ -122,7 +122,7 @@ class ProjectionClauseTest extends CypherFunSuite with AstConstructionTestSuppor
 
   test("WITH * allowed when no identifiers in scope") {
     // GIVEN CREATE () WITH * CREATE ()
-    val withObj = With(distinct = false, ReturnItems(includeExisting = true, Seq())_, None, None, None, None)_
+    val withObj = With(distinct = false, ReturnItems(includeExisting = true, Seq()), None, None, None, None)
 
     // WHEN
     val beforeState = SemanticState.clean.newChildScope
@@ -135,7 +135,7 @@ class ProjectionClauseTest extends CypherFunSuite with AstConstructionTestSuppor
 
   test("RETURN * not allowed when no identifiers in scope") {
     // GIVEN CREATE () WITH * CREATE ()
-    val withObj = Return(distinct = false, ReturnItems(includeExisting = true, Seq())_, None, None, None)_
+    val withObj = Return(distinct = false, ReturnItems(includeExisting = true, Seq()), None, None, None)
 
     // WHEN
     val beforeState = SemanticState.clean.newChildScope
@@ -148,15 +148,15 @@ class ProjectionClauseTest extends CypherFunSuite with AstConstructionTestSuppor
   test("Aggregating queries remove identifiers from scope") {
     // GIVEN MATCH n WITH n.prop as x, count(*) ORDER BY n.bar
     val orderBy: OrderBy = OrderBy(Seq(
-      AscSortItem(Property(ident("n"), PropertyKeyName("bar")_)_)_
-    ))_
+      AscSortItem(Property(ident("n"), PropertyKeyName("bar")))
+    ))
 
     val returnItems: Seq[AliasedReturnItem] = Seq(
-      AliasedReturnItem(Property(ident("n"), PropertyKeyName("prop")_)_, ident("x"))_,
-      AliasedReturnItem(CountStar()_, ident("count"))_
+      AliasedReturnItem(Property(ident("n"), PropertyKeyName("prop")), ident("x")),
+      AliasedReturnItem(CountStar(), ident("count"))
     )
-    val listedReturnItems = ReturnItems(includeExisting = false, returnItems)_
-    val withObj = With(distinct = false, listedReturnItems, Some(orderBy), None, None, None)_
+    val listedReturnItems = ReturnItems(includeExisting = false, returnItems)
+    val withObj = With(distinct = false, listedReturnItems, Some(orderBy), None, None, None)
 
     // WHEN
     val beforeState = SemanticState.clean.newChildScope.declareIdentifier(ident("n"), CTNode).right.get
@@ -170,14 +170,14 @@ class ProjectionClauseTest extends CypherFunSuite with AstConstructionTestSuppor
   test("order by a property that isn't projected") {
     // GIVEN MATCH n WITH n.prop as x ORDER BY n.bar
     val orderBy: OrderBy = OrderBy(Seq(
-      AscSortItem(Property(ident("n"), PropertyKeyName("bar")_)_)_
-    ))_
+      AscSortItem(Property(ident("n"), PropertyKeyName("bar")))
+    ))
 
     val returnItems: Seq[AliasedReturnItem] = Seq(
-      AliasedReturnItem(Property(ident("n"), PropertyKeyName("prop")_)_, ident("x"))_
+      AliasedReturnItem(Property(ident("n"), PropertyKeyName("prop")), ident("x"))
     )
-    val listedReturnItems = ReturnItems(includeExisting = false, returnItems)_
-    val withObj = With(distinct = false, listedReturnItems, Some(orderBy), None, None, None)_
+    val listedReturnItems = ReturnItems(includeExisting = false, returnItems)
+    val withObj = With(distinct = false, listedReturnItems, Some(orderBy), None, None, None)
 
     // WHEN
     val beforeState = SemanticState.clean.newChildScope.declareIdentifier(ident("n"), CTNode).right.get

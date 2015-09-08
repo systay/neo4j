@@ -19,10 +19,9 @@
  */
 package org.neo4j.cypher.internal.frontend.v2_3.ast
 
-import org.neo4j.cypher.internal.frontend.v2_3.DummyPosition
 import org.neo4j.cypher.internal.frontend.v2_3.symbols._
 
-class AndTest extends InfixExpressionTestBase(And(_, _)(DummyPosition(0))) {
+class AndTest extends InfixExpressionTestBase(And) {
 
   test("shouldCombineBooleans") {
     testValidTypes(CTBoolean, CTBoolean)(CTBoolean)

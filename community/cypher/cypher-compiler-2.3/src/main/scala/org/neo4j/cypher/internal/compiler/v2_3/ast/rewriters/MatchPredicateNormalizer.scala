@@ -42,8 +42,8 @@ object PropertyPredicateNormalizer extends MatchPredicateNormalizer {
   }
 
   override val replace: PartialFunction[AnyRef, AnyRef] = {
-    case p@NodePattern(Some(_) ,_, Some(props), false) if !isParameter(props)           => p.copy(properties = None)(p.position)
-    case p@RelationshipPattern(Some(_), _, _, _, Some(props), _) if !isParameter(props) => p.copy(properties = None)(p.position)
+    case p@NodePattern(Some(_) ,_, Some(props), false) if !isParameter(props)           => p.copy(properties = None)
+    case p@RelationshipPattern(Some(_), _, _, _, Some(props), _) if !isParameter(props) => p.copy(properties = None)
   }
 
   private def isParameter(expr: Expression) = expr match {
@@ -55,36 +55,36 @@ object PropertyPredicateNormalizer extends MatchPredicateNormalizer {
     case mapProps: MapExpression =>
       mapProps.items.map {
         // MATCH (a {a: 1, b: 2}) => MATCH (a) WHERE a.a = 1 AND a.b = 2
-        case (propId, expression) => Equals(Property(id.copyId, propId)(mapProps.position), expression)(mapProps.position)
+        case (propId, expression) => Equals(Property(id.copyId, propId), expression)(mapProps.position)
       }.toVector
     case expr: Expression =>
-      Vector(Equals(id.copyId, expr)(expr.position))
+      Vector(Equals(id.copyId, expr))
     case _ =>
       Vector.empty
   }
 
   private def varLengthPropertyPredicates(id: Identifier, props: Expression, patternPosition: InputPosition): Expression = {
     val idName = FreshIdNameGenerator.name(patternPosition)
-    val newId = Identifier(idName)(id.position)
+    val newId = Identifier(idName)
     val expressions = propertyPredicates(newId, props)
     val conjunction = conjunct(expressions)
-    AllIterablePredicate(newId, id.copyId, Some(conjunction))(props.position)
+    AllIterablePredicate(newId, id.copyId, Some(conjunction))
   }
 
   private def conjunct(exprs: Seq[Expression]): Expression = exprs match {
     case Nil           => throw new ThisShouldNotHappenError("Davide", "There should be at least one predicate to be rewritten")
     case expr +: Nil   => expr
-    case expr +: tail  => And(expr, conjunct(tail))(expr.position)
+    case expr +: tail  => And(expr, conjunct(tail))
   }
 }
 
 object LabelPredicateNormalizer extends MatchPredicateNormalizer {
   override val extract: PartialFunction[AnyRef, Vector[Expression]] = {
-    case p@NodePattern(Some(id), labels, _, false) if labels.nonEmpty => Vector(HasLabels(id.copyId, labels)(p.position))
+    case p@NodePattern(Some(id), labels, _, false) if labels.nonEmpty => Vector(HasLabels(id.copyId, labels))
   }
 
   override val replace: PartialFunction[AnyRef, AnyRef] = {
-    case p@NodePattern(Some(id), labels, _, false) if labels.nonEmpty => p.copy(identifier = Some(id.copyId), labels = Seq.empty)(p.position)
+    case p@NodePattern(Some(id), labels, _, false) if labels.nonEmpty => p.copy(identifier = Some(id.copyId), labels = Seq.empty)
   }
 }
 

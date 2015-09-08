@@ -19,9 +19,9 @@
  */
 package org.neo4j.cypher.internal.frontend.v2_3.ast
 
-import org.neo4j.cypher.internal.frontend.v2_3.{InputPosition, SemanticCheckable}
+import org.neo4j.cypher.internal.frontend.v2_3.SemanticCheckable
 
-case class OrderBy(sortItems: Seq[SortItem])(val position: InputPosition) extends ASTNode with ASTPhrase with SemanticCheckable {
+case class OrderBy(sortItems: Seq[SortItem]) extends ASTNode with ASTPhrase with SemanticCheckable {
   def semanticCheck = sortItems.semanticCheck
 
   def dependencies: Set[Identifier] =
@@ -35,11 +35,11 @@ sealed trait SortItem extends ASTNode with ASTPhrase with SemanticCheckable {
   def mapExpression(f: Expression => Expression): SortItem
 }
 
-case class AscSortItem(expression: Expression)(val position: InputPosition) extends SortItem {
-  override def mapExpression(f: Expression => Expression) = copy(expression = f(expression))(position)
+case class AscSortItem(expression: Expression) extends SortItem {
+  override def mapExpression(f: Expression => Expression) = copy(expression = f(expression))
 }
 
-case class DescSortItem(expression: Expression)(val position: InputPosition) extends SortItem {
-  override def mapExpression(f: Expression => Expression) = copy(expression = f(expression))(position)
+case class DescSortItem(expression: Expression) extends SortItem {
+  override def mapExpression(f: Expression => Expression) = copy(expression = f(expression))
 }
 

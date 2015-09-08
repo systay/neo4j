@@ -23,7 +23,7 @@ import org.neo4j.cypher.internal.frontend.v2_3.ast.Expression.SemanticContext
 import org.neo4j.cypher.internal.frontend.v2_3.symbols._
 import org.neo4j.cypher.internal.frontend.v2_3.{InputPosition, SemanticCheckResult, SemanticState, SymbolUse}
 
-case class Identifier(name: String)(val position: InputPosition) extends Expression {
+case class Identifier(name: String) extends Expression {
 
   def toSymbolUse = SymbolUse(name, position)
 
@@ -46,13 +46,11 @@ case class Identifier(name: String)(val position: InputPosition) extends Express
   def ensureDefined() =
     (_: SemanticState).ensureIdentifierDefined(this)
 
-  def copyId = copy()(position)
+  def copyId = copyPosTo(copy())
 
-  def renameId(newName: String) = copy(name = newName)(position)
+  def renameId(newName: String) = copyPosTo(copy(name = newName))
 
-  def bumpId = copy()(position.bumped())
-
-  def asAlias = AliasedReturnItem(this.copyId, this.copyId)(this.position)
+  def asAlias = copyPosTo(AliasedReturnItem(this.copyId, this.copyId))
 }
 
 object Identifier {

@@ -19,10 +19,9 @@
  */
 package org.neo4j.cypher.internal.frontend.v2_3.ast
 
-import org.neo4j.cypher.internal.frontend.v2_3.DummyPosition
 import org.neo4j.cypher.internal.frontend.v2_3.symbols._
 
-class MultiplyTest extends InfixExpressionTestBase(Multiply(_, _)(DummyPosition(0))) {
+class MultiplyTest extends InfixExpressionTestBase(Multiply) {
 
   // Infix specializations:
   // 1 * 1 => 1

@@ -42,6 +42,6 @@ case object NilPathStep extends PathStep {
   def dependencies = Set.empty[Identifier]
 }
 
-case class PathExpression(step: PathStep)(val position: InputPosition) extends Expression with SimpleTyping {
+case class PathExpression(step: PathStep) extends Expression with SimpleTyping {
   protected def possibleTypes: TypeSpec = CTPath
 }

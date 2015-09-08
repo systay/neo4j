@@ -20,21 +20,17 @@
 package org.neo4j.cypher.internal.frontend.v2_3.ast
 
 import org.neo4j.cypher.internal.frontend.v2_3.test_helpers.CypherTestSupport
-import org.neo4j.cypher.internal.frontend.v2_3.{DummyPosition, InputPosition}
 
 trait AstConstructionTestSupport extends CypherTestSupport {
-  protected val pos = DummyPosition(0)
 
-  implicit def withPos[T](expr: InputPosition => T): T = expr(pos)
-
-  def ident(name: String): Identifier = Identifier(name)(pos)
+  def ident(name: String): Identifier = Identifier(name)
 
   def hasLabels(identifier: String, label: String) =
-    HasLabels(ident(identifier), Seq(LabelName(label)(pos)))(pos)
+    HasLabels(ident(identifier), Seq(LabelName(label)))
 
   def propEquality(identifier: String, propKey: String, intValue: Int) = {
-    val prop: Expression = Property(ident(identifier), PropertyKeyName(propKey)(pos))(pos)
-    val literal: Expression = SignedDecimalIntegerLiteral(intValue.toString)(pos)
-    Equals(prop, literal)(pos)
+    val prop: Expression = Property(ident(identifier), PropertyKeyName(propKey))
+    val literal: Expression = SignedDecimalIntegerLiteral(intValue.toString)
+    Equals(prop, literal)
   }
 }

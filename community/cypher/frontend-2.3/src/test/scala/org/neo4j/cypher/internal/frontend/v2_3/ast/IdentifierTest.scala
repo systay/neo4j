@@ -19,15 +19,15 @@
  */
 package org.neo4j.cypher.internal.frontend.v2_3.ast
 
+import org.neo4j.cypher.internal.frontend.v2_3.{DummyPosition, SemanticState}
 import org.neo4j.cypher.internal.frontend.v2_3.symbols._
 import org.neo4j.cypher.internal.frontend.v2_3.test_helpers.CypherFunSuite
-import org.neo4j.cypher.internal.frontend.v2_3.{DummyPosition, SemanticState}
 
 class IdentifierTest extends CypherFunSuite {
 
   test("shouldDefineIdentifierDuringSemanticCheckWhenUndefined") {
-    val position = DummyPosition(0)
-    val identifier = Identifier("x")(position)
+    val position = DummyPosition(32)
+    val identifier = Identifier("x").setPos(position)
 
     val result = identifier.semanticCheck(Expression.SemanticContext.Simple)(SemanticState.clean)
     result.errors should have size 1

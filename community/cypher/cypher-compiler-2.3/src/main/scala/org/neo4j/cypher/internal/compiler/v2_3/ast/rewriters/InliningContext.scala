@@ -64,12 +64,12 @@ case class InliningContext(projections: Map[Identifier, Expression] = Map.empty,
   def patternRewriter: BottomUpRewriter = bottomUp(Rewriter.lift {
     case node @ NodePattern(Some(ident), _, _, _) if okToRewrite(ident) =>
       alias(ident) match {
-        case alias @ Some(_) => node.copy(identifier = alias)(node.position)
+        case alias @ Some(_) => node.copy(identifier = alias)
         case _               => node
       }
     case rel @ RelationshipPattern(Some(ident), _, _, _, _, _) if okToRewrite(ident) =>
       alias(ident) match {
-        case alias @ Some(_) => rel.copy(identifier = alias)(rel.position)
+        case alias @ Some(_) => rel.copy(identifier = alias)
         case _               => rel
       }
   })

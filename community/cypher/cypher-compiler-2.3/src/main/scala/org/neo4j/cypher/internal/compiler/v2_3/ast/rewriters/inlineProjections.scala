@@ -44,12 +44,12 @@ case object inlineProjections extends Rewriter {
         withClause.copy(
           returnItems = withClause.returnItems.rewrite(inlineReturnItemsInWith).asInstanceOf[ReturnItems],
           where = withClause.where.map(inlineIdentifiers.narrowed)
-        )(withClause.position)
+        )
 
       case returnClause: Return =>
         returnClause.copy(
           returnItems = returnClause.returnItems.rewrite(inlineReturnItemsInReturn).asInstanceOf[ReturnItems]
-        )(returnClause.position)
+        )
 
       case m @ Match(_, mPattern, mHints, mOptWhere) =>
         val newOptWhere = mOptWhere.map(inlineIdentifiers.narrowed)
@@ -100,13 +100,13 @@ case object inlineProjections extends Rewriter {
             Seq(item)
           } else {
             dependencies.map { id =>
-              AliasedReturnItem(id.copyId, id.copyId)(item.position)
+              AliasedReturnItem(id.copyId, id.copyId)
             }.toSeq
           }
         case item: AliasedReturnItem => Seq(
-          item.copy(expression = inlineExpressions(item.expression))(item.position)
+          item.copy(expression = inlineExpressions(item.expression))
         )
       }
-      ri.copy(items = newItems)(ri.position)
+      ri.copy(items = newItems)
   }
 }

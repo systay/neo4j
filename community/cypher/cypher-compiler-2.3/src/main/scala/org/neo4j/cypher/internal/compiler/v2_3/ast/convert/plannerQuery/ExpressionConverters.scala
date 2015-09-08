@@ -66,14 +66,14 @@ object ExpressionConverters {
         case p@HasLabels(Identifier(name), labels) =>
           (acc, _) => acc ++ labels.map {
             label: LabelName =>
-              Predicate(Set(IdName(name)), p.copy(labels = Seq(label))(p.position))
+              Predicate(Set(IdName(name)), p.copy(labels = Seq(label)))
           }
         // and
         case _: Ands =>
           (acc, children) => children(acc)
         case p: Expression =>
           (acc, _) => acc + Predicate(p.idNames, p)
-      }.map(filterUnnamed).toSet
+      }.map(filterUnnamed)
     }
 
     private def filterUnnamed(predicate: Predicate): Predicate = predicate match {

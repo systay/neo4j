@@ -21,7 +21,7 @@ package org.neo4j.cypher.internal.frontend.v2_3.ast
 
 import org.neo4j.cypher.internal.frontend.v2_3.{InputPosition, SemanticChecking, SemanticError, _}
 
-case class Query(periodicCommitHint: Option[PeriodicCommitHint], part: QueryPart)(val position: InputPosition)
+case class Query(periodicCommitHint: Option[PeriodicCommitHint], part: QueryPart)
   extends Statement with SemanticChecking {
 
   override def semanticCheck =
@@ -36,7 +36,7 @@ sealed trait QueryPart extends ASTNode with ASTPhrase with SemanticCheckable {
   def containsUpdates: Boolean
 }
 
-case class SingleQuery(clauses: Seq[Clause])(val position: InputPosition) extends QueryPart {
+case class SingleQuery(clauses: Seq[Clause]) extends QueryPart {
   assert(clauses.nonEmpty)
 
   def containsUpdates:Boolean =
@@ -161,5 +161,5 @@ sealed trait Union extends QueryPart with SemanticChecking {
   }
 }
 
-final case class UnionAll(part: QueryPart, query: SingleQuery)(val position: InputPosition) extends Union
-final case class UnionDistinct(part: QueryPart, query: SingleQuery)(val position: InputPosition) extends Union
+final case class UnionAll(part: QueryPart, query: SingleQuery) extends Union
+final case class UnionDistinct(part: QueryPart, query: SingleQuery) extends Union

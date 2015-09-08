@@ -125,13 +125,13 @@ abstract class Function extends SemanticChecking {
     else
       None
 
-  def asFunctionName(implicit position: InputPosition) = FunctionName(name)(position)
+  def asFunctionName(implicit position: InputPosition) = FunctionName(name).setPos(position)
 
   def asInvocation(argument: ast.Expression, distinct: Boolean = false)(implicit position: InputPosition): FunctionInvocation =
-    FunctionInvocation(asFunctionName, distinct = distinct, IndexedSeq(argument))(position)
+    FunctionInvocation(asFunctionName, distinct = distinct, IndexedSeq(argument)).setPos(position)
 
   def asInvocation(lhs: ast.Expression, rhs: ast.Expression)(implicit position: InputPosition): FunctionInvocation =
-    FunctionInvocation(asFunctionName, distinct = false, IndexedSeq(lhs, rhs))(position)
+    FunctionInvocation(asFunctionName, distinct = false, IndexedSeq(lhs, rhs)).setPos(position)
 }
 
 

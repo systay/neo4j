@@ -25,7 +25,7 @@ import org.neo4j.cypher.internal.frontend.v2_3.{DummyPosition, IdentityMap, Sema
 
 class ExpressionTest extends CypherFunSuite with AstConstructionTestSupport {
 
-  val expression = DummyExpression(CTAny, DummyPosition(0))
+  val expression = DummyExpression(CTAny).setPos(DummyPosition(0))
 
   test("shouldReturnCalculatedType") {
     expression.types(SemanticState.clean) should equal(TypeSpec.all)
@@ -74,28 +74,28 @@ class ExpressionTest extends CypherFunSuite with AstConstructionTestSupport {
 
   test("should compute dependencies of simple expressions") {
     ident("a").dependencies should equal(Set(ident("a")))
-    SignedDecimalIntegerLiteral("1")(pos).dependencies should equal(Set())
+    SignedDecimalIntegerLiteral("1").dependencies should equal(Set())
   }
 
   test("should compute dependencies of composite expressions") {
-    Add(ident("a"), Subtract(SignedDecimalIntegerLiteral("1")(pos), ident("b"))_)(pos).dependencies should equal(Set(ident("a"), ident("b")))
+    Add(ident("a"), Subtract(SignedDecimalIntegerLiteral("1"), ident("b"))).dependencies should equal(Set(ident("a"), ident("b")))
   }
 
   test("should compute dependencies for filtering expressions") {
     // extract(x IN (n)-->(k) | head(nodes(x)) )
     val pat: RelationshipsPattern = RelationshipsPattern(
       RelationshipChain(
-        NodePattern(Some(ident("n")), Seq.empty, None, naked = false)_,
-        RelationshipPattern(None, optional = false, Seq.empty, None, None, SemanticDirection.OUTGOING)_,
-        NodePattern(Some(ident("k")), Seq.empty, None, naked = false)_
-      )_
-    )_
+        NodePattern(Some(ident("n")), Seq.empty, None, naked = false),
+        RelationshipPattern(None, optional = false, Seq.empty, None, None, SemanticDirection.OUTGOING),
+        NodePattern(Some(ident("k")), Seq.empty, None, naked = false)
+      )
+    )
     val expr: Expression = ExtractExpression(
       ident("x"),
       PatternExpression(pat),
       None,
-      Some(FunctionInvocation(FunctionName("head")_, FunctionInvocation(FunctionName("nodes")_, ident("x"))_)_)
-    )_
+      Some(FunctionInvocation(FunctionName("head"), FunctionInvocation(FunctionName("nodes"), ident("x"))))
+    )
 
     expr.dependencies should equal(Set(ident("n"), ident("k")))
   }
@@ -104,9 +104,9 @@ class ExpressionTest extends CypherFunSuite with AstConstructionTestSupport {
   test("should compute inputs of composite expressions") {
     val identA = ident("a")
     val identB = ident("b")
-    val lit1 = SignedDecimalIntegerLiteral("1")(pos)
-    val sub = Subtract(lit1, identB)(pos)
-    val add = Add(identA, sub)(pos)
+    val lit1 = SignedDecimalIntegerLiteral("1")
+    val sub = Subtract(lit1, identB)
+    val add = Add(identA, sub)
 
     IdentityMap(add.inputs: _*) should equal(IdentityMap(
       identA -> Set.empty,
@@ -121,14 +121,14 @@ class ExpressionTest extends CypherFunSuite with AstConstructionTestSupport {
     // given
     val pat = PatternExpression(RelationshipsPattern(
       RelationshipChain(
-        NodePattern(Some(ident("n")), Seq.empty, None, naked = false)_,
-        RelationshipPattern(None, optional = false, Seq.empty, None, None, SemanticDirection.OUTGOING)_,
-        NodePattern(Some(ident("k")), Seq.empty, None, naked = false)_
-      )_
-    )_)
+        NodePattern(Some(ident("n")), Seq.empty, None, naked = false),
+        RelationshipPattern(None, optional = false, Seq.empty, None, None, SemanticDirection.OUTGOING),
+        NodePattern(Some(ident("k")), Seq.empty, None, naked = false)
+      )
+    ))
 
-    val callNodes: Expression = FunctionInvocation(FunctionName("nodes") _, ident("x"))_
-    val callHead: Expression = FunctionInvocation(FunctionName("head") _, callNodes) _
+    val callNodes: Expression = FunctionInvocation(FunctionName("nodes"), ident("x"))
+    val callHead: Expression = FunctionInvocation(FunctionName("head"), callNodes)
 
     // extract(x IN (n)-->(k) | head(nodes(x)) )
     val expr: Expression = ExtractExpression(
@@ -136,7 +136,7 @@ class ExpressionTest extends CypherFunSuite with AstConstructionTestSupport {
       pat,
       None,
       Some(callHead)
-    )_
+    )
 
     // when
     val inputs = IdentityMap(expr.inputs: _*)

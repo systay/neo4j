@@ -55,8 +55,8 @@ case object getDegreeOptimizer extends Rewriter {
 
   def calculateUsingGetDegree(func: FunctionInvocation, node: Identifier, types: Seq[RelTypeName], dir: SemanticDirection): Expression = {
     types
-      .map(typ => GetDegree(node.copyId, Some(typ), dir)(typ.position))
-      .reduceOption[Expression](Add(_, _)(func.position))
-      .getOrElse(GetDegree(node, None, dir)(func.position))
+      .map(typ => GetDegree(node.copyId, Some(typ), dir))
+      .reduceOption[Expression](Add)
+      .getOrElse(GetDegree(node, None, dir))
   }
 }

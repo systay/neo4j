@@ -25,10 +25,10 @@ import org.neo4j.cypher.internal.frontend.v2_3.{DummyPosition, SemanticError, Se
 
 class HexIntegerLiteralTest extends CypherFunSuite {
   test("correctly parses hexadecimal numbers") {
-    assert(SignedHexIntegerLiteral("0x22")(DummyPosition(0)).value === 0x22)
-    assert(SignedHexIntegerLiteral("0x0")(DummyPosition(0)).value === 0)
-    assert(SignedHexIntegerLiteral("0xffFF")(DummyPosition(0)).value === 0xffff)
-    assert(SignedHexIntegerLiteral("-0x9abc")(DummyPosition(0)).value === -0x9abc)
+    assert(SignedHexIntegerLiteral("0x22").value === 0x22)
+    assert(SignedHexIntegerLiteral("0x0").value === 0)
+    assert(SignedHexIntegerLiteral("0xffFF").value === 0xffff)
+    assert(SignedHexIntegerLiteral("-0x9abc").value === -0x9abc)
   }
 
   test("throws error for invalid hexadecimal numbers") {
@@ -43,7 +43,7 @@ class HexIntegerLiteralTest extends CypherFunSuite {
   }
 
   private def assertSemanticError(stringValue: String, errorMessage: String) {
-    val literal = SignedHexIntegerLiteral(stringValue)(DummyPosition(4))
+    val literal = SignedHexIntegerLiteral(stringValue)
     val result = literal.semanticCheck(SemanticContext.Simple)(SemanticState.clean)
     assert(result.errors === Vector(SemanticError(errorMessage, DummyPosition(4))))
   }

@@ -181,4 +181,6 @@ class SnitchingQueryContext extends QueryContext {
 
   // Legacy dependency between kernel and compiler
   override def variableLengthPathExpand(node: PatternNode, realNode: Node, minHops: Option[Int], maxHops: Option[Int], direction: SemanticDirection, relTypes: Seq[String]): Iterator[Path] = ???
+
+  override def createRelationship(start: Long, end: Long, relType: Int) = ???
 }

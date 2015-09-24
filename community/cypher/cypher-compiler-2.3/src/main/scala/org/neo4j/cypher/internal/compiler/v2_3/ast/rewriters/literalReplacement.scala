@@ -43,7 +43,7 @@ object literalReplacement {
       (acc, _) => n.properties.treeFold(acc)(literalMatcher)
     case r: ast.RelationshipPattern =>
       (acc, _) => r.properties.treeFold(acc)(literalMatcher)
-    case ast.LikePattern(_: ast.StringLiteral) =>
+    case ast.StartsWith(_: ast.StringLiteral) =>
       (acc, _) => acc
     case ast.ContainerIndex(_, _: ast.StringLiteral) =>
       (acc, _) => acc

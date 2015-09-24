@@ -150,7 +150,11 @@ case class Match(optional: Boolean, pattern: Pattern, hints: Seq[UsingHint], whe
           (acc, _) => acc :+ name
         case IsNotNull(Property(Identifier(id), PropertyKeyName(name))) if id == identifier =>
           (acc, _) => acc :+ name
-        case Like(Property(Identifier(id), PropertyKeyName(name)), _, _) if id == identifier =>
+        case StartsWith(Property(Identifier(id), PropertyKeyName(name)), _) if id == identifier =>
+          (acc, _) => acc :+ name
+        case EndsWith(Property(Identifier(id), PropertyKeyName(name)), _) if id == identifier =>
+          (acc, _) => acc :+ name
+        case Contains(Property(Identifier(id), PropertyKeyName(name)), _) if id == identifier =>
           (acc, _) => acc :+ name
         case expr: InequalityExpression => expr.lhs match {
             case Property(Identifier(id), PropertyKeyName(name)) if id == identifier =>

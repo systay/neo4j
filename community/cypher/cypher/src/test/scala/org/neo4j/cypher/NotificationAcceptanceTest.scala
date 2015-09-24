@@ -203,7 +203,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with NewPlanner
     result.notifications should equal(Set(IndexScanUnfulfillableNotification(Set("Person"))))
   }
 
-  ignore("warn for unfulfillable index seek when using dynamic property lookup with a single label and like") {
+  test("warn for unfulfillable index seek when using dynamic property lookup with a single label and like") {
     graph.createIndex("Person", "name")
 
     val result = innerExecute("EXPLAIN MATCH (n:Person) WHERE n['key-' + n.name] LIKE 'Foo%' RETURN n")
@@ -211,7 +211,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with NewPlanner
     result.notifications should equal(Set(IndexSeekUnfulfillableNotification(Set("Person")), IndexScanUnfulfillableNotification(Set("Person"))))
   }
 
-  ignore("warn for unfulfillable index seek when using dynamic property lookup with a single label and like - suffix") {
+  test("warn for unfulfillable index seek when using dynamic property lookup with a single label and like - suffix") {
     graph.createIndex("Person", "name")
 
     val result = innerExecute("EXPLAIN MATCH (n:Person) WHERE n['key-' + n.name] LIKE '%Foo' RETURN n")

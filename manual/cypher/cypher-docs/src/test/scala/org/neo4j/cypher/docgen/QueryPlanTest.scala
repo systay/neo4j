@@ -21,8 +21,9 @@ package org.neo4j.cypher.docgen
 
 import org.hamcrest.CoreMatchers._
 import org.junit.Assert._
-import org.junit.{Ignore, Test}
-import org.neo4j.cypher.internal.compiler.v2_3.pipes.IndexSeekByRange
+import org.junit.Test
+import org.neo4j.cypher.internal.compiler.v2_3.pipes.{IndexSeekByRange, UniqueIndexSeekByRange}
+import org.scalatest.Ignore
 
 class QueryPlanTest extends DocumentingTestBase with SoftReset {
   override val setupQueries = List(
@@ -197,7 +198,7 @@ class QueryPlanTest extends DocumentingTestBase with SoftReset {
     )
   }
 
-  @Ignore("Should use startsWith instead") def nodeIndexRangeSeek() {
+  @Test def nodeIndexRangeSeek() {
     executePreparationQueries {
       val a = (0 to 100).map { i => "CREATE (:Location)" }.toList
       val b = (0 to 300).map { i => s"CREATE (:Location {name: '$i'})" }.toList

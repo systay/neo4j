@@ -126,21 +126,19 @@ object PartialPredicate {
   }
 }
 
-final case class LikePattern(expr: Expression) extends ASTNode {
-  def position = expr.position
-}
-
-case class Like(lhs: Expression, pattern: LikePattern, caseInsensitive: Boolean = false)(val position: InputPosition) extends Expression with BinaryOperatorExpression with InfixFunctionTyping {
-  def rhs = pattern.expr
-
+case class StartsWith(lhs: Expression, rhs: Expression)(val position: InputPosition) extends Expression with BinaryOperatorExpression with InfixFunctionTyping {
   val signatures = Vector(
     Signature(argumentTypes = Vector(CTString, CTString), outputType = CTBoolean)
   )
 }
 
-case class NotLike(lhs: Expression, pattern: LikePattern, caseInsensitive: Boolean = false)(val position: InputPosition) extends Expression with BinaryOperatorExpression with InfixFunctionTyping {
-  def rhs = pattern.expr
+case class EndsWith(lhs: Expression, rhs: Expression)(val position: InputPosition) extends Expression with BinaryOperatorExpression with InfixFunctionTyping {
+  val signatures = Vector(
+    Signature(argumentTypes = Vector(CTString, CTString), outputType = CTBoolean)
+  )
+}
 
+case class Contains(lhs: Expression, rhs: Expression)(val position: InputPosition) extends Expression with BinaryOperatorExpression with InfixFunctionTyping {
   val signatures = Vector(
     Signature(argumentTypes = Vector(CTString, CTString), outputType = CTBoolean)
   )

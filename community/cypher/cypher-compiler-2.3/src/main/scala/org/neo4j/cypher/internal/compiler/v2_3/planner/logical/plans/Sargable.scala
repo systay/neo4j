@@ -70,8 +70,8 @@ object AsPropertyScannable {
     case expr: InequalityExpression =>
       partialPropertyPredicate(expr, expr.lhs)
 
-    case like: Like =>
-      partialPropertyPredicate(like, like.lhs)
+    case startsWith: StartsWith =>
+      partialPropertyPredicate(startsWith, startsWith.lhs)
 
     case regex: RegexMatch =>
       partialPropertyPredicate(regex, regex.lhs)
@@ -97,8 +97,7 @@ object AsPropertyScannable {
 
 object AsStringRangeSeekable {
   def unapply(v: Any): Option[PrefixRangeSeekable] = v match {
-    case like@Like(Property(ident: Identifier, propertyKey), LikePattern(lit@StringLiteral(value)), _)
-      if !like.caseInsensitive =>
+    case like@StartsWith(Property(ident: Identifier, propertyKey), lit@StringLiteral(value)) =>
         for ((range, prefix) <- getRange(value))
           yield {
             val prefixPattern = LikePattern(StringLiteral(prefix)(lit.position))
@@ -161,8 +160,8 @@ sealed trait RangeSeekable[T <: Expression, V] extends Seekable[T] {
   def range: SeekRange[V]
 }
 
-case class PrefixRangeSeekable(override val range: PrefixRange, expr: Like, ident: Identifier, propertyKey: PropertyKeyName)
-  extends RangeSeekable[Like, String] {
+case class PrefixRangeSeekable(override val range: PrefixRange, expr: StartsWith, ident: Identifier, propertyKey: PropertyKeyName)
+  extends RangeSeekable[StartsWith, String] {
 
   def dependencies = Set.empty
 

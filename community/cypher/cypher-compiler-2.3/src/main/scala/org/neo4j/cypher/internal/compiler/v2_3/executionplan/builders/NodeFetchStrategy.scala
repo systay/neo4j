@@ -176,31 +176,9 @@ object IndexSeekStrategy extends NodeStrategy {
   }
 
   private def findIndexSeekByPrefixPredicatesOnProperty(identifier: IdentifierName, where: Seq[Predicate], initialSymbols: SymbolTable): Seq[SolvedPredicate[PropertyKey]] = {
-    val symbols = initialSymbols.add(identifier, CTNode)
-
     where.collect {
-      case literalPredicate@LiteralLikePattern(
-      reg@LiteralRegularExpression(p@Property(Identifier(id), prop), _),
-      ParsedLikePattern(MatchText(prefix) :: (wildcard: WildcardLikePatternOp) :: tl),
-      caseInsensitive
-      ) if !caseInsensitive && id == identifier && literalPredicate.symbolDependenciesMet(symbols) =>
-        if (tl.isEmpty && wildcard == MatchMany) {
-          SolvedPredicate(prop.name, literalPredicate)
-        } else {
-          val pattern = ParsedLikePattern(List(MatchText(prefix), MatchMany))
-          val prefixPredicate = LiteralLikePattern(
-            LiteralRegularExpression(p, Literal(convertLikePatternToRegex(pattern, caseInsensitive))),
-            pattern,
-            caseInsensitive
-          )
-          val filterPattern = ParsedLikePattern(prefix.map(_ => MatchSingle).toList ++ (wildcard :: tl))
-          val filterPredicate = LiteralLikePattern(
-            LiteralRegularExpression(p, Literal(convertLikePatternToRegex(filterPattern, caseInsensitive))),
-            filterPattern,
-            caseInsensitive
-          )
-          SolvedPredicate(prop.name, predicate = prefixPredicate, newUnsolvedPredicate = Some(filterPredicate))
-        }
+      case literalPredicate@StartsWith(p@Property(Identifier(id), prop), Literal(prefix: String)) if id == identifier =>
+        SolvedPredicate(prop.name, literalPredicate)
     }
   }
 

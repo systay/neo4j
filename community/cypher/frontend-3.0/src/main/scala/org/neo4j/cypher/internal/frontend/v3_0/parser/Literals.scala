@@ -55,6 +55,18 @@ trait Literals extends Parser
     ) ~~>> (ast.MapExpression(_))
   }
 
+  def KeyValuePair: Rule1[ast.TreeProjectionElement] = rule("key-value pair") (
+    PropertyKeyName ~~ ch(':') ~~ Expression ~~>> (ast.KeyValuePair(_, _))
+  )
+  def DotIdentifier: Rule1[ast.TreeProjectionElement] = rule("dot identifier") (ch('.') ~~ Identifier ~~>> (ast.DotElement(_)))
+  def IdentifierElement: Rule1[ast.TreeProjectionElement] = Identifier ~~>> (ast.VariableElement(_))
+
+  def TreeProjection: Rule1[ast.TreeProjection] = rule {
+    group(
+     Identifier ~~ ch('{') ~~ zeroOrMore(KeyValuePair | DotIdentifier | IdentifierElement, CommaSep) ~~ ch('}')
+    ) ~~>> (ast.TreeProjection(_, _))
+  }
+
   def Parameter: Rule1[ast.Parameter] = rule("a parameter") {
     ((ch('{') ~~ (UnescapedSymbolicNameString | EscapedSymbolicNameString | UnsignedDecimalInteger ~> (_.toString)) ~~ ch('}')) memoMismatches) ~~>> (ast.Parameter(_))
   }

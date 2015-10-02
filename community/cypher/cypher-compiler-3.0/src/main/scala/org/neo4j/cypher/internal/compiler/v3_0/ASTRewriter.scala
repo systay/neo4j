@@ -44,6 +44,7 @@ class ASTRewriter(rewriterSequencer: (String) => RewriterStepSequencer, shouldEx
       expandStar(semanticState),
       enableCondition(containsNoReturnAll),
       foldConstants,
+      desugarTreeProjection,
       ApplyRewriter("extractParameters", extractParameters),
       nameMatchPatternElements,
       enableCondition(noUnnamedPatternElementsInMatch),

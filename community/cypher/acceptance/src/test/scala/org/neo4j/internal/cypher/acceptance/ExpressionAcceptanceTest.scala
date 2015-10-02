@@ -42,23 +42,23 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with NewPlannerTe
   }
 
   test("Uses dynamic property lookup based on parameters when there is no type information") {
-    executeScalarWithAllPlanners[String]
-    ("WITH {expr} AS expr, {idx} AS idx RETURN expr[idx]", "expr" -> jMap, "idx" -> "name") should equal("Apa")
+    executeScalarWithAllPlanners[String](
+      "WITH {expr} AS expr, {idx} AS idx RETURN expr[idx]", "expr" -> jMap, "idx" -> "name") should equal("Apa")
   }
 
   test("Uses dynamic property lookup based on parameters when there is lhs type information") {
-    executeScalarWithAllPlanners[String]
-    ("CREATE (n {name: 'Apa'}) RETURN n[{idx}]", "idx" -> "name") should equal("Apa")
+    executeScalarWithAllPlanners[String](
+      "CREATE (n {name: 'Apa'}) RETURN n[{idx}]", "idx" -> "name") should equal("Apa")
   }
 
   test("Uses dynamic property lookup based on parameters when there is rhs type information") {
-    executeScalarWithAllPlanners[String]
-    ("WITH {expr} AS expr, {idx} AS idx RETURN expr[toString(idx)]", "expr" -> jMap, "idx" -> "name") should equal("Apa")
+    executeScalarWithAllPlanners[String](
+      "WITH {expr} AS expr, {idx} AS idx RETURN expr[toString(idx)]", "expr" -> jMap, "idx" -> "name") should equal("Apa")
   }
 
   test("Uses collection lookup based on parameters when there is no type information") {
-    executeScalarWithAllPlanners[String]
-    ("WITH {expr} AS expr, {idx} AS idx RETURN expr[idx]", "expr" -> jList, "idx" -> 0) should equal("Apa")
+    executeScalarWithAllPlanners[String](
+      "WITH {expr} AS expr, {idx} AS idx RETURN expr[idx]", "expr" -> jList, "idx" -> 0) should equal("Apa")
   }
 
   test("Uses collection lookup based on parameters when there is lhs type information") {
@@ -66,14 +66,14 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with NewPlannerTe
   }
 
   test("Uses collection lookup based on parameters when there is rhs type information") {
-    executeScalarWithAllPlanners[String]
-    ("WITH {expr} AS expr, {idx} AS idx RETURN expr[toInt(idx)]", "expr" -> jList, "idx" -> 0) should equal("Apa")
+    executeScalarWithAllPlanners[String](
+      "WITH {expr} AS expr, {idx} AS idx RETURN expr[toInt(idx)]", "expr" -> jList, "idx" -> 0) should equal("Apa")
   }
 
   test("Fails at runtime when attempting to index with an Int into a Map") {
     a [CypherTypeException] should be thrownBy {
-      executeScalarWithAllPlanners[String]
-      ("WITH {expr} AS expr, {idx} AS idx RETURN expr[idx]", "expr" -> jMap, "idx" -> 0)
+      executeScalarWithAllPlanners[String](
+        "WITH {expr} AS expr, {idx} AS idx RETURN expr[idx]", "expr" -> jMap, "idx" -> 0)
     }
   }
 
@@ -85,8 +85,8 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with NewPlannerTe
 
   test("Fails at runtime when attempting to index with a String into a Collection") {
     a [CypherTypeException] should be thrownBy {
-      executeScalarWithAllPlanners[String]
-      ("WITH {expr} AS expr, {idx} AS idx RETURN expr[idx]", "expr" -> jList, "idx" -> "name")
+      executeScalarWithAllPlanners[String](
+        "WITH {expr} AS expr, {idx} AS idx RETURN expr[idx]", "expr" -> jList, "idx" -> "name")
     }
   }
 
@@ -100,5 +100,19 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with NewPlannerTe
     a [CypherTypeException] should be thrownBy {
       executeScalarWithAllPlanners[Any]("RETURN {expr}[{idx}]", "expr" -> 1, "idx" -> 12.3)
     }
+  }
+
+  test("should handle tree projection with dot element") {
+    createNode("foo" -> 1, "bar" -> "apa")
+
+    executeScalarWithAllPlanners[Any]("MATCH n RETURN n{.foo,.bar,.baz}") should equal(
+      Map("foo" -> 1, "bar" -> "apa", "baz" -> null))
+  }
+
+  test("should handle tree projection with pure identifier") {
+    createNode("foo" -> 1, "bar" -> "apa")
+
+    executeScalarWithAllPlanners[Any]("WITH 42 as x MATCH n RETURN n{.foo,.bar,x}") should equal(
+      Map("foo" -> 1, "bar" -> "apa", "x" -> 42))
   }
 }

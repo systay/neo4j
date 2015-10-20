@@ -27,7 +27,7 @@ import org.scalatest.mock.MockitoSugar
 
 trait PipeTestSupport extends CypherTestSupport with MockitoSugar {
 
-  val newMonitor = mock[PipeMonitor]
+  implicit val newMonitor = mock[PipeMonitor]
 
   def pipeWithResults(f: QueryState => Iterator[ExecutionContext]): Pipe = new Pipe {
     protected def internalCreateResults(state: QueryState) = f(state)

@@ -21,10 +21,11 @@ package org.neo4j.cypher.internal.compiler.v3_0.pipes
 
 import org.neo4j.cypher.internal.compiler.v3_0.ExecutionContext
 import org.neo4j.cypher.internal.compiler.v3_0.executionplan.Effects
+import org.neo4j.cypher.internal.compiler.v3_0.planDescription.{TwoChildren, PlanDescriptionImpl, InternalPlanDescription}
 import org.neo4j.cypher.internal.compiler.v3_0.planDescription.InternalPlanDescription.Arguments.KeyNames
 import org.neo4j.cypher.internal.frontend.v3_0.symbols.CollectionType
 
-case class RollUpPipe(lhs: Pipe, rhs: Pipe, collectionName: String, identifierToCollect: String, nullableIdentifiers: Seq[String])
+case class RollUpPipe(lhs: Pipe, rhs: Pipe, collectionName: String, identifierToCollect: String, nullableIdentifiers: Set[String])
                      (val estimatedCardinality: Option[Double] = None)(implicit pipeMonitor: PipeMonitor)
   extends PipeWithSource(lhs, pipeMonitor) with RonjaPipe {
 
@@ -44,7 +45,14 @@ case class RollUpPipe(lhs: Pipe, rhs: Pipe, collectionName: String, identifierTo
   }
 
   override def planDescriptionWithoutCardinality =
-    lhs.planDescription.andThen(id, "RollUp", identifiers, KeyNames(Seq(collectionName)))
+//    lhs.planDescription.andThen(id, "RollUp", identifiers, KeyNames(Seq(collectionName)))
+  new PlanDescriptionImpl(
+    id = id,
+    name = "RollUp",
+    children = TwoChildren(lhs.planDescription, rhs.planDescription),
+    arguments = Seq(KeyNames(Seq(collectionName))),
+    identifiers
+  )
 
   def withEstimatedCardinality(estimated: Double) = copy()(Some(estimated))
 

@@ -19,11 +19,10 @@
  */
 package org.neo4j.cypher.internal.compiler.v3_0.ast.rewriters
 
-import org.neo4j.cypher.internal.frontend.v3_0.Foldable._
-import org.neo4j.cypher.internal.compiler.v3_0._
-import org.neo4j.cypher.internal.frontend.v3_0.ast._
 import org.neo4j.cypher.internal.compiler.v3_0.planner.CantHandleQueryException
-import org.neo4j.cypher.internal.frontend.v3_0.{Ref, topDown, Rewriter}
+import org.neo4j.cypher.internal.frontend.v3_0.Foldable._
+import org.neo4j.cypher.internal.frontend.v3_0.ast._
+import org.neo4j.cypher.internal.frontend.v3_0.{Ref, Rewriter, topDown}
 
 import scala.annotation.tailrec
 

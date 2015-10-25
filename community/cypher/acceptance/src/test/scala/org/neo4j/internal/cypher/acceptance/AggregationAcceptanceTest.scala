@@ -23,6 +23,19 @@ import org.neo4j.cypher.{SyntaxException, NewPlannerTestSupport, ExecutionEngine
 import org.neo4j.graphdb.Node
 
 class AggregationAcceptanceTest extends ExecutionEngineFunSuite with NewPlannerTestSupport {
+  test("apa") {
+    val n = createNode()
+    relate(n, createNode())
+    relate(n, createNode())
+
+    relate(createNode(), createNode())
+    relate(createNode(), createNode())
+
+    val r = executeWithAllPlanners("MATCH (a) RETURN a, (a)-->()")
+    println(r.dumpToString())
+    println(r.executionPlanDescription())
+  }
+
   test("should handle aggregates inside non aggregate expressions") {
     executeWithAllPlanners(
       "MATCH (a { name: 'Andres' })<-[:FATHER]-(child) RETURN {foo:a.name='Andres',kids:collect(child.name)}"

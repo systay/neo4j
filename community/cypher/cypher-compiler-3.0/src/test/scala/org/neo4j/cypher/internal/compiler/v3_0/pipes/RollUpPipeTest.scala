@@ -32,7 +32,7 @@ class RollUpPipeTest extends CypherFunSuite with PipeTestSupport {
     // given
     val lhs = createLhs(1)
     val rhs = pipeWithResults { (state) => Iterator() }
-    val pipe = RollUpPipe(lhs, rhs, collectionName = "x", identifierToCollect = "y", nullableIdentifiers = Seq("a"))()
+    val pipe = RollUpPipe(lhs, rhs, collectionName = "x", identifierToCollect = "y", nullableIdentifiers = Set("a"))()
 
     // when
     val result = pipe.createResults(QueryStateHelper.empty).toList
@@ -45,7 +45,7 @@ class RollUpPipeTest extends CypherFunSuite with PipeTestSupport {
     // given
     val lhs = createLhs(null, 1)
     val rhs = pipeWithResults { (state) => Iterator() }
-    val pipe = RollUpPipe(lhs, rhs, collectionName = "x", identifierToCollect = "y", nullableIdentifiers = Seq("a"))()
+    val pipe = RollUpPipe(lhs, rhs, collectionName = "x", identifierToCollect = "y", nullableIdentifiers = Set("a"))()
 
     // when
     val result = pipe.createResults(QueryStateHelper.empty).toList
@@ -60,7 +60,7 @@ class RollUpPipeTest extends CypherFunSuite with PipeTestSupport {
     // given
     val lhs = createLhs(1)
     val rhs = createRhs(1, 2, 3, 4)
-    val pipe = RollUpPipe(lhs, rhs, collectionName = "x", identifierToCollect = "y", nullableIdentifiers = Seq("a"))()
+    val pipe = RollUpPipe(lhs, rhs, collectionName = "x", identifierToCollect = "y", nullableIdentifiers = Set("a"))()
 
     // when
     val result = pipe.createResults(QueryStateHelper.empty).toList
@@ -81,7 +81,7 @@ class RollUpPipeTest extends CypherFunSuite with PipeTestSupport {
         Iterator.empty
       }
     })
-    val pipe = RollUpPipe(lhs, rhs, collectionName = "x", identifierToCollect = "y", nullableIdentifiers = Seq("a"))()
+    val pipe = RollUpPipe(lhs, rhs, collectionName = "x", identifierToCollect = "y", nullableIdentifiers = Set("a"))()
 
     // when
     pipe.createResults(QueryStateHelper.empty).toList

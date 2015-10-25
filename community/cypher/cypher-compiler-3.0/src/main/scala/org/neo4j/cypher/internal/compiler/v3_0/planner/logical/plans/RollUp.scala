@@ -30,7 +30,7 @@ pattern comprehension.
 
 Note about nullableIdentifiers: when any of these identifiers is null, the collection should be null.
  */
-case class RollUp(source: LogicalPlan, collectionName: IdName, identifierToCollect: IdName, nullableIdentifiers: Seq[IdName])
+case class RollUp(source: LogicalPlan, inner: LogicalPlan, collectionName: IdName, identifierToCollect: IdName, nullableIdentifiers: Set[IdName])
                  (val solved: PlannerQuery with CardinalityEstimation)
   extends LogicalPlan with LazyLogicalPlan with LogicalPlanWithoutExpressions {
 
@@ -38,5 +38,5 @@ case class RollUp(source: LogicalPlan, collectionName: IdName, identifierToColle
 
   override def availableSymbols = source.availableSymbols + collectionName
 
-  override def rhs = None
+  override def rhs = Some(inner)
 }

@@ -51,8 +51,18 @@ case object patternExpressionBuilder {
            (implicit context: LogicalPlanningContext): (LogicalPlan, Map[String, Expression]) = {
 
     projectionsMap.foldLeft(source, Map.empty[String, Expression]) {
-      case ((plan, projections), (key, expr: PatternExpression)) =>
+      case ((plan, projections), (key, expression)) =>
+        val (newPlan, newExpression) = fixup(plan, expression, Some(key))
 
+        (newPlan, projections + (key -> newExpression))
+    }
+  }
+
+
+  private def fixup(source: LogicalPlan, expression: Expression, maybeKey: Option[String])
+                   (implicit context: LogicalPlanningContext): (LogicalPlan, Expression) = {
+    expression match {
+      case expr: PatternExpression =>
         val (namedExpr, namedMap) = PatternExpressionPatternElementNamer(expr)
 
         val qg = extractQG(source, expr, namedExpr)
@@ -63,13 +73,14 @@ case object patternExpressionBuilder {
         val innerPlan = patternPlanningContext.strategy.plan(qg)(patternPlanningContext, argLeafPlan)
         val collectionName = FreshIdNameGenerator.name(expr.position)
         val projectedPath = createPathExpression(namedExpr)
-        val projectedInner = context.logicalPlanProducer.planRegularProjection(innerPlan, Map(collectionName -> projectedPath), projections)(patternPlanningContext)
-        val producedPlan  = context.logicalPlanProducer.planRollup(plan, projectedInner, IdName(key), IdName(collectionName), qg.argumentIds)
+        val projectedInner = context.logicalPlanProducer.planRegularProjection(innerPlan, Map(collectionName -> projectedPath), Map.empty)(patternPlanningContext)
+        val key = maybeKey.getOrElse(FreshIdNameGenerator.name(expr.position.bumped()))
+        val producedPlan = context.logicalPlanProducer.planRollup(source, projectedInner, IdName(key), IdName(collectionName), qg.argumentIds)
 
-        (producedPlan, projections + (key -> Identifier(key)(expr.position)))
+        (producedPlan, Identifier(key)(expr.position))
 
-      case ((plan, projections), (key, expression)) =>
-        (plan, projections + (key -> expression))
+      case e =>
+        (source, expression)
     }
   }
 

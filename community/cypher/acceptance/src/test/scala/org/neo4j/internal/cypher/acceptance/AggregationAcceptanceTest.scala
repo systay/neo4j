@@ -31,7 +31,7 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with NewPlannerT
     relate(createNode(), createNode())
     relate(createNode(), createNode())
 
-    val r = executeWithAllPlanners("MATCH (a) RETURN a, (a)-->()")
+    val r = executeWithAllPlanners("MATCH (a)  RETURN (a)-->()")
     println(r.dumpToString())
     println(r.executionPlanDescription())
   }

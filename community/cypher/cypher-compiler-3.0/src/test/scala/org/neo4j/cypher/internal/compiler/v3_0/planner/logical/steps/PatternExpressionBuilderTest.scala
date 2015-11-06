@@ -28,6 +28,8 @@ import org.neo4j.cypher.internal.frontend.v3_0.SemanticDirection
 import org.neo4j.cypher.internal.frontend.v3_0.ast._
 import org.neo4j.cypher.internal.frontend.v3_0.test_helpers.CypherFunSuite
 
+import scala.collection.mutable
+
 class PatternExpressionBuilderTest extends CypherFunSuite with LogicalPlanningTestSupport {
   test("Rewrites single pattern expression") {
     // given expression (a)-->(b)
@@ -35,31 +37,62 @@ class PatternExpressionBuilderTest extends CypherFunSuite with LogicalPlanningTe
     val strategy = createStrategy(b)
     implicit val context = newMockedLogicalPlanningContext(newMockedPlanContext, strategy = strategy)
     val source = newMockedLogicalPlan("a")
+    val pathStep = mock[PathStep]
+    val mockPathStepBuilder: EveryPath => PathStep = _ => pathStep
 
+    val step1 = patternExpressionBuilder(mockPathStepBuilder)
     // when
-    val (resultPlan, expressions) = patternExpressionBuilder(source, Map("x" -> patExpr1))
+    val (resultPlan, expressions) = step1(source, Map("x" -> patExpr1))
 
     // then
-    val expectedInnerPlan = Projection(b, Map("  FRESHID0" -> namedPatExpr1))(solved)
+    val expectedInnerPlan = Projection(b, Map("  FRESHID0" -> PathExpression(pathStep)(pos)))(solved)
 
     resultPlan should equal(RollUp(source, expectedInnerPlan, IdName("x"), IdName("  FRESHID0"), Set(IdName("a")))(solved))
-    //    expressions should equal(Map("  FRESHID0" -> Identifier("  FRESHID0")(pos)))
+    expressions should equal(Map("x" -> Identifier("x")(pos)))
   }
 
-  private val patExpr1 = newPatExpr("a", "b")
-  private val namedPatExpr1 = newPatExpr("a", "b")
-  private val patExpr2 = newPatExpr("c", "d")
-  private val patExpr3 = newPatExpr("e", "f ")
-  private val patExpr4 = newPatExpr("g", "h")
+  test("Rewrites multiple pattern expressions") {
+    // given expression (a)-->(b)
+    val b = newMockedLogicalPlan("b")
+    val strategy = createStrategy(b)
+    implicit val context = newMockedLogicalPlanningContext(newMockedPlanContext, strategy = strategy)
+    val source = newMockedLogicalPlan("a")
+    val pathStep1 = mock[PathStep]
+    val pathStep2 = mock[PathStep]
+    val stack = mutable.Stack[PathStep]()
+    stack.push(pathStep1, pathStep2)
 
-  private val dummyPlan = AllNodesScan(IdName("a"), Set.empty)(solved)
+    val mockPathStepBuilder : EveryPath => PathStep = _ => stack.pop()
 
-  private def newPatExpr(left: String, right: String, relName: String): PatternExpression = newPatExpr(left, right, Some(relName))
-  private def newPatExpr(left: String, right: String, relName: Option[String] = None): PatternExpression = {
+    // when
+    val (resultPlan, expressions) = patternExpressionBuilder(mockPathStepBuilder)(source, Map("x" -> patExpr1, "y" -> patExpr2))
+
+    // then
+    val expectedInnerPlan1 = Projection(b, Map("  FRESHID0" -> namedPatExpr1))(solved)
+    val rollUp1 = RollUp(source, expectedInnerPlan1, IdName("x"), IdName("  FRESHID0"), Set(IdName("a")))(solved)
+
+    val expectedInnerPlan2 = Projection(b, Map("  FRESHID0" -> namedPatExpr2))(solved)
+    val rollUp2 = RollUp(rollUp1, expectedInnerPlan2, IdName("y"), IdName("  FRESHID0"), Set(IdName("a")))(solved)
+
+
+    resultPlan should equal()
+    expressions should equal(Map("x" -> Identifier("x")(pos), "y" -> Identifier("y")(pos)))
+  }
+
+  private val patExpr1 = newPatExpr("a")
+  private val patExpr2 = newPatExpr("a", SemanticDirection.INCOMING)
+  private val namedPatExpr1 = newPatExpr("a", "  UNNAMED1")
+  private val namedPatExpr2 = newPatExpr("a", "  UNNAMED1", SemanticDirection.INCOMING)
+
+  private def newPatExpr(left: String, dir: SemanticDirection = SemanticDirection.OUTGOING): PatternExpression = newPatExpr(left, None, None, dir)
+  private def newPatExpr(left: String, right: String): PatternExpression = newPatExpr(left, Some(right), None, SemanticDirection.INCOMING)
+  private def newPatExpr(left: String, right: String, dir: SemanticDirection): PatternExpression = newPatExpr(left, Some(right), None, dir)
+
+  private def newPatExpr(left: String, right: Option[String], relName: Option[String], dir: SemanticDirection): PatternExpression = {
     PatternExpression(RelationshipsPattern(RelationshipChain(
       NodePattern(Some(ident(left)), Seq.empty, None) _,
       RelationshipPattern(None, optional = false, Seq.empty, None, None, SemanticDirection.OUTGOING) _,
-      NodePattern(Some(ident(right)), Seq.empty, None) _) _) _)
+      NodePattern(right.map(ident), Seq.empty, None) _) _) _)
   }
 
   private def createStrategy(plan: LogicalPlan): QueryGraphSolver = {

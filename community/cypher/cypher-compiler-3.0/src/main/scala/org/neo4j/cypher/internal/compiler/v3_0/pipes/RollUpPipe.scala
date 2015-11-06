@@ -21,8 +21,8 @@ package org.neo4j.cypher.internal.compiler.v3_0.pipes
 
 import org.neo4j.cypher.internal.compiler.v3_0.ExecutionContext
 import org.neo4j.cypher.internal.compiler.v3_0.executionplan.Effects
-import org.neo4j.cypher.internal.compiler.v3_0.planDescription.{TwoChildren, PlanDescriptionImpl, InternalPlanDescription}
 import org.neo4j.cypher.internal.compiler.v3_0.planDescription.InternalPlanDescription.Arguments.KeyNames
+import org.neo4j.cypher.internal.compiler.v3_0.planDescription.{PlanDescriptionImpl, TwoChildren}
 import org.neo4j.cypher.internal.frontend.v3_0.symbols.CollectionType
 
 case class RollUpPipe(lhs: Pipe, rhs: Pipe, collectionName: String, identifierToCollect: String, nullableIdentifiers: Set[String])
@@ -45,10 +45,9 @@ case class RollUpPipe(lhs: Pipe, rhs: Pipe, collectionName: String, identifierTo
   }
 
   override def planDescriptionWithoutCardinality =
-//    lhs.planDescription.andThen(id, "RollUp", identifiers, KeyNames(Seq(collectionName)))
   new PlanDescriptionImpl(
     id = id,
-    name = "RollUp",
+    name = "RollUpApply",
     children = TwoChildren(lhs.planDescription, rhs.planDescription),
     arguments = Seq(KeyNames(Seq(collectionName))),
     identifiers

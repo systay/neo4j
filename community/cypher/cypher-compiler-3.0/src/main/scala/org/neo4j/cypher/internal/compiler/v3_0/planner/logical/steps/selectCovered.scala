@@ -25,8 +25,11 @@ import org.neo4j.cypher.internal.compiler.v3_0.planner.logical.plans.LogicalPlan
 
 case object selectCovered extends CandidateGenerator[LogicalPlan] {
 
-  def apply(plan: LogicalPlan, queryGraph: QueryGraph)(implicit context: LogicalPlanningContext): Seq[LogicalPlan] = {
-    val unsolvedPredicates = queryGraph.selections.unsolvedPredicates(plan)
+  def apply(in: LogicalPlan, queryGraph: QueryGraph)(implicit context: LogicalPlanningContext): Seq[LogicalPlan] = {
+    val firstStep = queryGraph.selections.unsolvedPredicates(in)
+
+    val (plan, unsolvedPredicates) = patternExpressionBuilder()(in, firstStep)
+
     if (unsolvedPredicates.isEmpty)
       Seq()
     else {
@@ -34,4 +37,3 @@ case object selectCovered extends CandidateGenerator[LogicalPlan] {
     }
   }
 }
-

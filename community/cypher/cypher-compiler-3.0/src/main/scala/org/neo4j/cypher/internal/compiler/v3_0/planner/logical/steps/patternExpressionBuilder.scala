@@ -20,7 +20,7 @@
 package org.neo4j.cypher.internal.compiler.v3_0.planner.logical.steps
 
 import org.neo4j.cypher.internal.compiler.v3_0.ast.rewriters.projectNamedPaths
-import org.neo4j.cypher.internal.compiler.v3_0.helpers.FreshIdNameGenerator
+import org.neo4j.cypher.internal.compiler.v3_0.helpers.{UnNamedNameGenerator, FreshIdNameGenerator}
 import org.neo4j.cypher.internal.compiler.v3_0.planner.QueryGraph
 import org.neo4j.cypher.internal.compiler.v3_0.planner.logical.plans.{IdName, LogicalPlan}
 import org.neo4j.cypher.internal.compiler.v3_0.planner.logical.{LogicalPlanningContext, PatternExpressionPatternElementNamer}
@@ -45,27 +45,44 @@ Would be solved with a plan such as
 | +Argument
 |
 +AllNodesScan(n)
-*/
-case object patternExpressionBuilder {
+*/ // MATCH (a) WHERE length((a)--(:X)) = 3 RETURN a
+case class patternExpressionBuilder(pathStepBuilder: EveryPath => PathStep = projectNamedPaths.patternPartPathExpression) {
   def apply(source: LogicalPlan, projectionsMap: Map[String, Expression])
            (implicit context: LogicalPlanningContext): (LogicalPlan, Map[String, Expression]) = {
 
     projectionsMap.foldLeft(source, Map.empty[String, Expression]) {
       case ((plan, projections), (key, expression)) =>
-        val (newPlan, newExpression) = fixup(plan, expression, Some(key))
+        val (newPlan, newExpression) = fixUp(plan, expression, maybeKey = Some(key))
 
         (newPlan, projections + (key -> newExpression))
     }
   }
 
+  def apply(source: LogicalPlan, expressions: Seq[Expression])
+           (implicit context: LogicalPlanningContext): (LogicalPlan, Seq[Expression]) = {
+    expressions.foldLeft(source, Seq.empty[Expression]) {
+      case ((plan, apa), expression) =>
 
-  private def fixup(source: LogicalPlan, expression: Expression, maybeKey: Option[String])
+        val x = expression.findByAllClass[PatternExpression]
+
+        val (newPlan, replacements) = x.foldLeft(source, Map.empty[PatternExpression, Expression]) {
+          case ((plan, replacementsAcc), patternExpression) =>
+            (plan, replacementsAcc + (patternExpression -> patternExpression))
+        }
+
+//        val (newPlan, newExpression) = fixUp(plan, expression, maybeKey = None)
+
+        (newPlan, apa :+ expression)
+    }
+  }
+
+  private def fixUp(source: LogicalPlan, expression: Expression, maybeKey: Option[String])
                    (implicit context: LogicalPlanningContext): (LogicalPlan, Expression) = {
     expression match {
       case expr: PatternExpression =>
         val (namedExpr, namedMap) = PatternExpressionPatternElementNamer(expr)
 
-        val qg = extractQG(source, expr, namedExpr)
+        val qg = extractQG(source, namedExpr)
 
         val argLeafPlan = Some(context.logicalPlanProducer.planQueryArgumentRow(qg))
         val patternPlanningContext = createPlannerContext(context, namedMap)
@@ -87,9 +104,8 @@ case object patternExpressionBuilder {
   private def createPathExpression(pattern: PatternExpression): PathExpression = {
     val pos = pattern.position
     val path = ast.EveryPath(pattern.pattern.element)
-    val step: PathStep = projectNamedPaths.patternPartPathExpression(path)
+    val step: PathStep = pathStepBuilder(path)
     ast.PathExpression(step)(pos)
-
   }
 
   private def createPlannerContext(context: LogicalPlanningContext, namedMap: Map[PatternElement, Identifier]): LogicalPlanningContext = {
@@ -98,10 +114,14 @@ case object patternExpressionBuilder {
     context.forExpressionPlanning(namedNodes, namedRels)
   }
 
-  private def extractQG(source: LogicalPlan, expr: PatternExpression, namedExpr: PatternExpression): QueryGraph = {
+  private def extractQG(source: LogicalPlan, namedExpr: PatternExpression): QueryGraph = {
     import org.neo4j.cypher.internal.compiler.v3_0.ast.convert.plannerQuery.ExpressionConverters._
 
-    val dependencies = expr.dependencies.map(IdName.fromIdentifier)
+    val dependencies = namedExpr.
+      dependencies.
+      map(IdName.fromIdentifier).
+      filter(id => UnNamedNameGenerator.isNamed(id.name))
+
     val qgArguments = source.availableSymbols intersect dependencies
     namedExpr.asQueryGraph.withArgumentIds(qgArguments)
   }

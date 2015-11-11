@@ -259,25 +259,18 @@ object ClauseConverters {
   }
 
   private def addMergeToLogicalPlanInput(acc: PlannerQueryBuilder, clause: Merge): PlannerQueryBuilder = {
-    val patternContent = clause.pattern.destructed
-
-
-    val readPart = acc.
-      amendQueryGraph { qg => qg.withAddedOptionalMatch(
-        // When adding QueryGraphs for optional matches, we always start with a new one.
-        // It's either all or nothing per match clause.
-        QueryGraph(
-          patternNodes = patternContent.nodeIds.toSet,
-          patternRelationships = patternContent.rels.toSet,
-          shortestPathPatterns = patternContent.shortestPaths.toSet
-        ))
-      }
-
-    clause.pattern.patternParts.foldLeft(readPart) {
+    clause.pattern.patternParts.foldLeft(acc) {
       //CREATE (n :L1:L2 {prop: 42})
       case (builder, EveryPath(NodePattern(Some(id), labels, props))) =>
         builder
           .amendUpdateGraph(ug => ug.addMutatingPatterns(MergeNodePattern(IdName.fromIdentifier(id), labels, props)))
+          .amendQueryGraph(qg => qg.withAddedOptionalMatch(
+            // When adding QueryGraphs for optional matches, we always start with a new one.
+            // It's either all or nothing per match clause.
+            QueryGraph(
+              patternNodes = Set(IdName.fromIdentifier(id)),
+              selections = Selections.from(labels.map(l => HasLabels(id, Seq(l))(id.position)):_*)
+            )))
 
       case _ => throw new CantHandleQueryException("not supported yet")
     }

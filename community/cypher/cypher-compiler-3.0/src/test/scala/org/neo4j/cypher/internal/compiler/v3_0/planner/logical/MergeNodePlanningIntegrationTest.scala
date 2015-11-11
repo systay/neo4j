@@ -19,6 +19,7 @@
  */
 package org.neo4j.cypher.internal.compiler.v3_0.planner.logical
 
+import org.neo4j.cypher.internal.compiler.v3_0.pipes.LazyLabel
 import org.neo4j.cypher.internal.compiler.v3_0.planner.LogicalPlanningTestSupport2
 import org.neo4j.cypher.internal.compiler.v3_0.planner.logical.plans._
 import org.neo4j.cypher.internal.frontend.v3_0.test_helpers.CypherFunSuite
@@ -32,5 +33,30 @@ class MergeNodePlanningIntegrationTest extends CypherFunSuite with LogicalPlanni
     val emptyResult = EmptyResult(mergeNode)(solved)
 
     planFor("MERGE (a)").plan should equal(emptyResult)
+  }
+
+  test("should plan single merge node from a label scan") {
+
+    val labelScan = NodeByLabelScan(IdName("a"), LazyLabel("X"), Set.empty)(solved)
+    val optional = Optional(labelScan)(solved)
+    val mergeNode = MergeNode(optional, IdName("a"), Seq(LazyLabel("X")), Map.empty)(solved)
+    val emptyResult = EmptyResult(mergeNode)(solved)
+
+    (new given {
+      labelCardinality = Map(
+        "X" -> 30.0
+      )
+    } planFor "MERGE (a:X)").plan should equal(emptyResult)
+  }
+
+  test("should plan single merge node with properties") {
+
+    val allNodesScan = AllNodesScan(IdName("a"), Set.empty)(solved)
+    val selection = Selection(Seq(propEquality("a", "prop", 42)), allNodesScan)(solved)
+    val optional = Optional(selection)(solved)
+    val mergeNode = MergeNode(optional, IdName("a"), Seq(LazyLabel("X")), Map.empty)(solved)
+    val emptyResult = EmptyResult(mergeNode)(solved)
+
+    planFor("MERGE (a {prop: 42})").plan should equal(emptyResult)
   }
 }

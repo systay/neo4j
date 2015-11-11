@@ -36,6 +36,8 @@ case object PlanUpdates
   private def planUpdate(inner: LogicalPlan, pattern: MutatingPattern)(implicit context: LogicalPlanningContext) = pattern match {
     //CREATE ()
     case p: CreateNodePattern => context.logicalPlanProducer.planCreateNode(inner, p)
+    //MERGE ()
+    case p: MergeNodePattern => context.logicalPlanProducer.planMergeNode(inner, p)
     //CREATE (a)-[:R]->(b)
     case p: CreateRelationshipPattern => context.logicalPlanProducer.planCreateRelationship(inner, p)
     //SET n:Foo:Bar

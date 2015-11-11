@@ -40,6 +40,7 @@ object ClauseConverters {
     case c: SetClause => addSetClauseToLogicalPlanInput(acc, c)
     case c: Delete => addDeleteToLogicalPlanInput(acc, c)
     case c: Remove => addRemoveToLogicalPlanInput(acc, c)
+    case c: Merge => addMergeToLogicalPlanInput(acc, c)
 
     case x => throw new CantHandleQueryException(s"$x is not supported by the new runtime yet")
   }
@@ -254,6 +255,31 @@ object ClauseConverters {
           addHints(clause.hints).
           addShortestPaths(patternContent.shortestPaths: _*)
       }
+    }
+  }
+
+  private def addMergeToLogicalPlanInput(acc: PlannerQueryBuilder, clause: Merge): PlannerQueryBuilder = {
+    val patternContent = clause.pattern.destructed
+
+
+    val readPart = acc.
+      amendQueryGraph { qg => qg.withAddedOptionalMatch(
+        // When adding QueryGraphs for optional matches, we always start with a new one.
+        // It's either all or nothing per match clause.
+        QueryGraph(
+          patternNodes = patternContent.nodeIds.toSet,
+          patternRelationships = patternContent.rels.toSet,
+          shortestPathPatterns = patternContent.shortestPaths.toSet
+        ))
+      }
+
+    clause.pattern.patternParts.foldLeft(readPart) {
+      //CREATE (n :L1:L2 {prop: 42})
+      case (builder, EveryPath(NodePattern(Some(id), labels, props))) =>
+        builder
+          .amendUpdateGraph(ug => ug.addMutatingPatterns(MergeNodePattern(IdName.fromIdentifier(id), labels, props)))
+
+      case _ => throw new CantHandleQueryException("not supported yet")
     }
   }
 

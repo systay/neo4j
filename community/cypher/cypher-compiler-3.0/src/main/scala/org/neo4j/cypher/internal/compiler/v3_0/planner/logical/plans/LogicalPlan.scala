@@ -26,6 +26,7 @@ import org.neo4j.cypher.internal.compiler.v3_0.planner.{CardinalityEstimation, P
 import org.neo4j.cypher.internal.frontend.v3_0.Foldable._
 import org.neo4j.cypher.internal.frontend.v3_0.Rewritable._
 import org.neo4j.cypher.internal.frontend.v3_0.ast.{Expression, Variable}
+import org.neo4j.cypher.internal.frontend.v3_0.ast
 import org.neo4j.cypher.internal.frontend.v3_0.perty._
 import org.neo4j.cypher.internal.frontend.v3_0.{InternalException, Rewritable}
 
@@ -129,4 +130,15 @@ object IdName {
   implicit val byName = Ordering[String].on[IdName](_.name)
 
   def fromVariable(variable: Variable) = IdName(variable.name)
+}
+
+/*
+This is a wrapper to mark expressions as having been prepared for use in a logical plan. This means that the
+ast objects need to have been rewritten so they do not contain subqueries and have been simplified and normalized.
+
+Unfortunately, this is not a type restriction, merely a reminder for developers to make sure expressions are
+well-formed before planned.
+*/
+case class LogicalPlanExpression(e: ast.Expression) {
+  def map(f: ast.Expression => ast.Expression) = copy(f(e))
 }

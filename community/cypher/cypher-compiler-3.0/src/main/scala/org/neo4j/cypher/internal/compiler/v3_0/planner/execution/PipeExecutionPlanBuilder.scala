@@ -432,6 +432,11 @@ case class ActualPipeBuilder(monitors: Monitors, recurse: LogicalPlan => Pipe)
 
     toCommandExpression(expr).rewrite(resolver.resolveExpressions(_, planContext))
   }
+  private def buildExpression2(expr: LogicalPlanExpression)(implicit planContext: PlanContext): CommandExpression = {
+//    val rewrittenExpr = expr.endoRewrite(buildPipeExpressions)
+
+    toCommandExpression(expr.e).rewrite(resolver.resolveExpressions(_, planContext))
+  }
 
   private def buildPredicate(expr: ast.Expression)(implicit context: PipeExecutionBuilderContext, planContext: PlanContext): Predicate = {
 //    val rewrittenExpr: Expression = expr.endoRewrite(buildPipeExpressions)

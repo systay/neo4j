@@ -94,7 +94,7 @@ case class patternExpressionBuilder(pathStepBuilder: EveryPath => PathStep = pro
         val key = maybeKey.getOrElse(FreshIdNameGenerator.name(expr.position.bumped()))
         val producedPlan = context.logicalPlanProducer.planRollup(source, projectedInner, IdName(key), IdName(collectionName), qg.argumentIds)
 
-        (producedPlan, Identifier(key)(expr.position))
+        (producedPlan, Variable(key)(expr.position))
 
       case e =>
         (source, expression)
@@ -108,7 +108,7 @@ case class patternExpressionBuilder(pathStepBuilder: EveryPath => PathStep = pro
     ast.PathExpression(step)(pos)
   }
 
-  private def createPlannerContext(context: LogicalPlanningContext, namedMap: Map[PatternElement, Identifier]): LogicalPlanningContext = {
+  private def createPlannerContext(context: LogicalPlanningContext, namedMap: Map[PatternElement, Variable]): LogicalPlanningContext = {
     val namedNodes = namedMap.collect { case (elem: NodePattern, identifier) => identifier }
     val namedRels = namedMap.collect { case (elem: RelationshipChain, identifier) => identifier }
     context.forExpressionPlanning(namedNodes, namedRels)
@@ -119,7 +119,7 @@ case class patternExpressionBuilder(pathStepBuilder: EveryPath => PathStep = pro
 
     val dependencies = namedExpr.
       dependencies.
-      map(IdName.fromIdentifier).
+      map(IdName.fromVariable).
       filter(id => UnNamedNameGenerator.isNamed(id.name))
 
     val qgArguments = source.availableSymbols intersect dependencies

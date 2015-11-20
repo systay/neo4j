@@ -148,7 +148,7 @@ class LetSelectOrSemiApplyPipeTest extends CypherFunSuite with PipeTestSupport {
     })
 
     val result =
-      LetSelectOrSemiApplyPipe(lhs, rhs, "let", Equals(Variable("a"), Literal(2)), negated = false)()().
+      LetSelectOrSemiApplyPipe(lhs, rhs, "let", Equals(Variable("a"), Literal(2)), negated = false)().
         createResults(QueryStateHelper.empty).toList
     result should equal(List(
       Map("a" -> 3, "let" -> false),

@@ -50,7 +50,7 @@ case class RollUpPipe(lhs: Pipe, rhs: Pipe, collectionName: String, identifierTo
     name = "RollUpApply",
     children = TwoChildren(lhs.planDescription, rhs.planDescription),
     arguments = Seq(KeyNames(Seq(collectionName))),
-    identifiers
+    variables
   )
 
   def withEstimatedCardinality(estimated: Double) = copy()(Some(estimated))
@@ -58,7 +58,7 @@ case class RollUpPipe(lhs: Pipe, rhs: Pipe, collectionName: String, identifierTo
   override def localEffects = Effects()
 
   override def symbols =
-    lhs.symbols.add(collectionName, CollectionType(rhs.symbols.identifiers(identifierToCollect)))
+    lhs.symbols.add(collectionName, CollectionType(rhs.symbols.variables(identifierToCollect)))
 
   override def dup(sources: List[Pipe]) = {
     val (l :: r :: Nil) = sources

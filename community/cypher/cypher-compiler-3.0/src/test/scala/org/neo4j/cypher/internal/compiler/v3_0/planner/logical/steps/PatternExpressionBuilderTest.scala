@@ -48,7 +48,7 @@ class PatternExpressionBuilderTest extends CypherFunSuite with LogicalPlanningTe
     val expectedInnerPlan = Projection(b, Map("  FRESHID0" -> PathExpression(pathStep)(pos)))(solved)
 
     resultPlan should equal(RollUp(source, expectedInnerPlan, IdName("x"), IdName("  FRESHID0"), Set(IdName("a")))(solved))
-    expressions should equal(Map("x" -> Identifier("x")(pos)))
+    expressions should equal(Map("x" -> Variable("x")(pos)))
   }
 
   test("Rewrites multiple pattern expressions") {
@@ -76,7 +76,7 @@ class PatternExpressionBuilderTest extends CypherFunSuite with LogicalPlanningTe
 
 
     resultPlan should equal()
-    expressions should equal(Map("x" -> Identifier("x")(pos), "y" -> Identifier("y")(pos)))
+    expressions should equal(Map("x" -> Variable("x")(pos), "y" -> Variable("y")(pos)))
   }
 
   private val patExpr1 = newPatExpr("a")
@@ -90,9 +90,9 @@ class PatternExpressionBuilderTest extends CypherFunSuite with LogicalPlanningTe
 
   private def newPatExpr(left: String, right: Option[String], relName: Option[String], dir: SemanticDirection): PatternExpression = {
     PatternExpression(RelationshipsPattern(RelationshipChain(
-      NodePattern(Some(ident(left)), Seq.empty, None) _,
+      NodePattern(Some(varFor(left)), Seq.empty, None) _,
       RelationshipPattern(None, optional = false, Seq.empty, None, None, SemanticDirection.OUTGOING) _,
-      NodePattern(right.map(ident), Seq.empty, None) _) _) _)
+      NodePattern(right.map(varFor), Seq.empty, None) _) _) _)
   }
 
   private def createStrategy(plan: LogicalPlan): QueryGraphSolver = {

@@ -31,6 +31,7 @@ import org.neo4j.cypher.internal.frontend.v3_0.symbols._
 import org.neo4j.cypher.internal.frontend.v3_0.{InternalException, SemanticDirection, ast, symbols}
 
 case class LogicalPlanProducer(cardinalityModel: CardinalityModel) extends CollectionSupport {
+
   def solvePredicate(plan: LogicalPlan, solved: Expression)(implicit context: LogicalPlanningContext) =
     plan.updateSolved(_.amendQueryGraph(_.addPredicates(solved)))
 

@@ -33,7 +33,7 @@ import org.neo4j.graphalgo.GraphAlgoFactory
 import org.neo4j.graphalgo.impl.path.ShortestPath.ShortestPathPredicate
 import org.neo4j.graphdb._
 import org.neo4j.kernel.Traversal
-
+import org.neo4j.function.{Predicate => KernelPredicate}
 import scala.collection.JavaConverters._
 import scala.collection.Map
 
@@ -53,7 +53,7 @@ case class ShortestPathExpression(shortestPathPattern: ShortestPath, predicates:
   private def getMatches(ctx: ExecutionContext)(implicit state: QueryState): Any = {
     val start = getEndPoint(ctx, shortestPathPattern.left)
     val end = getEndPoint(ctx, shortestPathPattern.right)
-    val (expander: Expander, nodePredicates: Seq[org.neo4j.function.Predicate[PropertyContainer]]) = addPredicates(ctx, makeRelationshipTypeExpander())
+    val (expander, nodePredicates) = addPredicates(ctx, makeRelationshipTypeExpander())
     val shortestPathPredicate = createShortestPathPredicate(ctx, predicates)
     val shortestPathStrategy = if (shortestPathPattern.single)
       new SingleShortestPathStrategy(expander, shortestPathPattern.allowZeroLength, shortestPathPattern.maxDepth.getOrElse(Int.MaxValue), shortestPathPredicate, nodePredicates)
@@ -93,25 +93,25 @@ case class ShortestPathExpression(shortestPathPattern: ShortestPath, predicates:
 
   def symbolTableDependencies = shortestPathPattern.symbolTableDependencies + shortestPathPattern.left.name + shortestPathPattern.right.name
 
-  private def propertyExistsExpander(name: String) = new org.neo4j.function.Predicate[PropertyContainer] {
+  private def propertyExistsExpander(name: String) = new KernelPredicate[PropertyContainer] {
     override def test(t: PropertyContainer): Boolean = {
       t.hasProperty(name)
     }
   }
 
-  private def propertyNotExistsExpander(name: String) = new org.neo4j.function.Predicate[PropertyContainer] {
+  private def propertyNotExistsExpander(name: String) = new KernelPredicate[PropertyContainer] {
     override def test(t: PropertyContainer): Boolean = {
       !t.hasProperty(name)
     }
   }
 
-  private def cypherPositivePredicatesAsExpander(incomingCtx: ExecutionContext, name: String, predicate: Predicate)(implicit state: QueryState) = new org.neo4j.function.Predicate[PropertyContainer] {
+  private def cypherPositivePredicatesAsExpander(incomingCtx: ExecutionContext, name: String, predicate: Predicate)(implicit state: QueryState) = new KernelPredicate[PropertyContainer] {
     override def test(t: PropertyContainer): Boolean = {
       predicate.isTrue(incomingCtx += (name -> t))
     }
   }
 
-  private def cypherNegativePredicatesAsExpander(incomingCtx: ExecutionContext, name: String, predicate: Predicate)(implicit state: QueryState) = new org.neo4j.function.Predicate[PropertyContainer] {
+  private def cypherNegativePredicatesAsExpander(incomingCtx: ExecutionContext, name: String, predicate: Predicate)(implicit state: QueryState) = new KernelPredicate[PropertyContainer] {
     override def test(t: PropertyContainer): Boolean = {
       !predicate.isTrue(incomingCtx += (name -> t))
     }
@@ -135,8 +135,8 @@ case class ShortestPathExpression(shortestPathPattern: ShortestPath, predicates:
 
   private def addAllOrNoneNodeExpander(ctx: ExecutionContext, currentExpander: Expander, all: Boolean,
                                        predicate: Predicate, relName: String,
-                                       currentNodePredicates: Seq[org.neo4j.function.Predicate[PropertyContainer]])
-                                      (implicit state: QueryState): (Expander, Seq[org.neo4j.function.Predicate[PropertyContainer]]) = {
+                                       currentNodePredicates: Seq[KernelPredicate[PropertyContainer]])
+                                      (implicit state: QueryState): (Expander, Seq[KernelPredicate[PropertyContainer]]) = {
     val filter = predicate match {
       case PropertyExists(_, propertyKey) =>
         if (all) propertyExistsExpander(propertyKey.name)
@@ -160,11 +160,11 @@ case class ShortestPathExpression(shortestPathPattern: ShortestPath, predicates:
   }
 
   private def addPredicates(ctx: ExecutionContext, relTypeAndDirExpander: Expander)(implicit state: QueryState):
-  (Expander, Seq[org.neo4j.function.Predicate[PropertyContainer]]) =
+  (Expander, Seq[KernelPredicate[PropertyContainer]]) =
     if (predicates.isEmpty) (relTypeAndDirExpander, Seq())
     else
-      predicates.foldLeft((relTypeAndDirExpander, Seq[org.neo4j.function.Predicate[PropertyContainer]]())) {
-        case ((currentExpander, currentNodePredicates: Seq[org.neo4j.function.Predicate[PropertyContainer]]), predicate) =>
+      predicates.foldLeft((relTypeAndDirExpander, Seq[KernelPredicate[PropertyContainer]]())) {
+        case ((currentExpander, currentNodePredicates: Seq[KernelPredicate[PropertyContainer]]), predicate) =>
           predicate match {
             case NoneInCollection(RelationshipFunction(_), symbolName, innerPredicate) if doesNotDependOnFullPath(innerPredicate) =>
               (addAllOrNoneRelationshipExpander(ctx, currentExpander, all = false, innerPredicate, symbolName), currentNodePredicates)
@@ -190,7 +190,7 @@ trait ShortestPathStrategy {
 }
 
 class SingleShortestPathStrategy(expander: Expander, allowZeroLength: Boolean, depth: Int, predicate: ShortestPathPredicate,
-                                 filters: Seq[org.neo4j.function.Predicate[PropertyContainer]]) extends ShortestPathStrategy {
+                                 filters: Seq[KernelPredicate[PropertyContainer]]) extends ShortestPathStrategy {
   private val finder = new org.neo4j.graphalgo.impl.path.ShortestPath(depth, expander, predicate) {
     protected override def filterNextLevelNodes(nextNodes: java.util.Collection[Node]): java.util.Collection[Node] = {
       if (filters.isEmpty)

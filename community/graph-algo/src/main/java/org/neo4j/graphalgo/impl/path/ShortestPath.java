@@ -335,34 +335,44 @@ public class ShortestPath implements PathFinder<Path>
         @Override
         protected Node fetchNextOrNull()
         {
-            while ( true )
-            {
+            return foundANode();
+        }
+
+        private Node foundANode()
+        {
+            while ( true ) {
+
                 Relationship nextRel = fetchNextRelOrNull();
-                if ( nextRel == null )
-                {
+                if ( nextRel == null ) {
                     return null;
                 }
-                lastMetadata.rels++;
 
                 Node result = nextRel.getOtherNode( this.lastPath.endNode() );
-                LevelData levelData = this.visitedNodes.get( result );
-                boolean createdLevelData = false;
-                if ( levelData == null )
-                {
-                    levelData = new LevelData( nextRel, this.currentDepth );
-                    this.visitedNodes.put( result, levelData );
-                    createdLevelData = true;
-                }
-                if ( this.currentDepth == levelData.depth && !createdLevelData )
-                {
-                    levelData.addRel( nextRel );
-                }
-                // Was this level data created right now, i.e. have we visited this node before?
-                // In that case don't add it as next node to traverse
-                if ( createdLevelData )
-                {
-                    this.nextNodes.add( result );
-                    return result;
+                ArrayList<Node> nodeToTest = new ArrayList<>();
+                nodeToTest.add( result );
+
+                if ( !filterNextLevelNodes(nodeToTest).isEmpty() ) {
+                    lastMetadata.rels++;
+
+                    LevelData levelData = this.visitedNodes.get( result );
+                    boolean createdLevelData = false;
+                    if (levelData == null) {
+                        levelData = new LevelData( nextRel, this.currentDepth );
+                        this.visitedNodes.put( result, levelData );
+                        createdLevelData = true;
+                    }
+                    if ( this.currentDepth == levelData.depth && !createdLevelData ) {
+                        levelData.addRel(nextRel);
+                    }
+                    // Was this level data created right now, i.e. have we visited this node before?
+                    // In that case don't add it as next node to traverse
+                    if ( createdLevelData ) {
+                        this.nextNodes.add( result );
+                        return result;
+                    }
+                } else {
+                    //the other node was filtered out by a node predicate(s) on the shortest path
+                    return foundANode();
                 }
             }
         }

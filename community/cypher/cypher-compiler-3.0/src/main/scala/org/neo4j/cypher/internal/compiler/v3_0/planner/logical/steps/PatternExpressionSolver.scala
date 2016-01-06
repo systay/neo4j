@@ -27,7 +27,7 @@ import org.neo4j.cypher.internal.compiler.v3_0.planner.logical.{LogicalPlanningC
 import org.neo4j.cypher.internal.frontend.v3_0.Rewritable._
 import org.neo4j.cypher.internal.frontend.v3_0.ast._
 import org.neo4j.cypher.internal.frontend.v3_0.ast.functions.Exists
-import org.neo4j.cypher.internal.frontend.v3_0.{ExpressionWithInnerScope, ast, replace}
+import org.neo4j.cypher.internal.frontend.v3_0.{Rewriter, ExpressionWithInnerScope, ast, replace}
 
 import scala.collection.mutable
 
@@ -52,18 +52,22 @@ Would be solved with a plan such as
 */
 case class PatternExpressionSolver(pathStepBuilder: EveryPath => PathStep = projectNamedPaths.patternPartPathExpression) {
 
+  import PatternExpressionSolver.solvePatternExpressions
+
   def apply(source: LogicalPlan, expressions: Seq[Expression])
            (implicit context: LogicalPlanningContext): (LogicalPlan, Seq[Expression]) = {
-    val lastDitch = patternExpressionRewriter(source.availableSymbols, context)
     val expressionBuild = mutable.ListBuffer[Expression]()
+    val patternSolver = solvePatternExpressions(source.availableSymbols, context, pathStepBuilder)
+
     val finalPlan = expressions.foldLeft(source) {
       case (planAcc, expression: PatternExpression) =>
-        val (newPlan, newExpression) = solveUsingRollUpApply(planAcc, expression, None)
+        val (newPlan, newExpression) = patternSolver.solveUsingRollUpApply(planAcc, expression, None)
         expressionBuild += newExpression
         newPlan
 
       case (planAcc, inExpression) =>
-        val (newPlan, newExpression) = rewriteInnerExpressions(planAcc, inExpression, lastDitch)
+        val expression = solveUsingGetDegree(inExpression)
+        val (newPlan, newExpression) = patternSolver.rewriteInnerExpressions(planAcc, expression)
         expressionBuild += newExpression
         newPlan
     }
@@ -74,18 +78,20 @@ case class PatternExpressionSolver(pathStepBuilder: EveryPath => PathStep = proj
   def apply(source: LogicalPlan, projectionsMap: Map[String, Expression])
            (implicit context: LogicalPlanningContext): (LogicalPlan, Map[String, Expression]) = {
     val newProjections = Map.newBuilder[String, Expression]
-    val lastDitch = patternExpressionRewriter(source.availableSymbols, context)
+    val patternSolver = solvePatternExpressions(source.availableSymbols, context, pathStepBuilder)
+
     val plan = projectionsMap.foldLeft(source) {
 
       // RETURN (a)-->() as X - The top-level expression is a pattern expression
-      case (plan, (key, expression: PatternExpression)) =>
-        val (newPlan, newExpression) = solveUsingRollUpApply(plan, expression, Some(key))
+      case (planAcc, (key, expression: PatternExpression)) =>
+        val (newPlan, newExpression) = patternSolver.solveUsingRollUpApply(planAcc, expression, Some(key))
         newProjections += (key -> newExpression)
         newPlan
 
       // Any other expression, that might contain an inner PatternExpression
-      case (plan, (key, inExpression)) =>
-        val (newPlan, newExpression) = rewriteInnerExpressions(plan, inExpression, lastDitch)
+      case (planAcc, (key, inExpression)) =>
+        val expression = solveUsingGetDegree(inExpression)
+        val (newPlan, newExpression) = patternSolver.rewriteInnerExpressions(planAcc, expression)
         newProjections += (key -> newExpression)
         newPlan
     }
@@ -93,11 +99,77 @@ case class PatternExpressionSolver(pathStepBuilder: EveryPath => PathStep = proj
     (plan, newProjections.result())
   }
 
-  private def rewriteInnerExpressions(plan: LogicalPlan, inExpression: Expression, lastDitch: patternExpressionRewriter)
-                                     (implicit context: LogicalPlanningContext): (LogicalPlan, Expression) = {
-    val expression = solveUsingGetDegree(inExpression)
+  private def solveUsingGetDegree(exp: Expression): Expression = exp.endoRewrite(getDegreeRewriter)
 
-    val patternExpressions: Seq[PatternExpression] = expression.findByAllClass[PatternExpression]
+}
+
+object PatternExpressionSolver {
+  def solvePatternExpressions(availableSymbols: Set[IdName], context: LogicalPlanningContext, pathStepBuilder: EveryPath => PathStep): CollectionSubQueryExpressionSolver[PatternExpression] = {
+
+    def extractQG(source: LogicalPlan, namedExpr: PatternExpression): QueryGraph = {
+      import org.neo4j.cypher.internal.compiler.v3_0.ast.convert.plannerQuery.ExpressionConverters._
+
+      val dependencies = namedExpr.
+        dependencies.
+        map(IdName.fromVariable).
+        filter(id => UnNamedNameGenerator.isNamed(id.name))
+
+      val qgArguments = source.availableSymbols intersect dependencies
+      namedExpr.asQueryGraph.withArgumentIds(qgArguments)
+    }
+
+    def createPlannerContext(context: LogicalPlanningContext, namedMap: Map[PatternElement, Variable]): LogicalPlanningContext = {
+      val namedNodes = namedMap.collect { case (elem: NodePattern, identifier) => identifier }
+      val namedRels = namedMap.collect { case (elem: RelationshipChain, identifier) => identifier }
+      context.forExpressionPlanning(namedNodes, namedRels)
+    }
+
+    def createPathExpression(pattern: PatternExpression): PathExpression = {
+      val pos = pattern.position
+      val path = ast.EveryPath(pattern.pattern.element)
+      val step: PathStep = pathStepBuilder(path)
+      ast.PathExpression(step)(pos)
+    }
+
+    CollectionSubQueryExpressionSolver[PatternExpression](
+      namer = PatternExpressionPatternElementNamer.apply,
+      extractQG = extractQG,
+      createPlannerContext = createPlannerContext,
+      projectionCreator = createPathExpression,
+      lastDitch = patternExpressionRewriter(availableSymbols, context))
+  }
+
+}
+
+case class CollectionSubQueryExpressionSolver[T <: Expression](namer: T => (T, Map[PatternElement, Variable]),
+                                                               extractQG: (LogicalPlan, T) => QueryGraph,
+                                                               createPlannerContext: (LogicalPlanningContext, Map[PatternElement, Variable]) => LogicalPlanningContext,
+                                                               projectionCreator: T => Expression,
+                                                               lastDitch: Rewriter,
+                                                               pathStepBuilder: EveryPath => PathStep = projectNamedPaths.patternPartPathExpression)(implicit m: Manifest[T]) {
+  def solveUsingRollUpApply(source: LogicalPlan, expr: T, maybeKey: Option[String])
+                           (implicit context: LogicalPlanningContext): (LogicalPlan, Expression) = {
+
+    val (namedExpr, namedMap) = namer(expr)
+
+    val qg = extractQG(source, namedExpr)
+
+    val argLeafPlan = Some(context.logicalPlanProducer.planQueryArgumentRow(qg))
+    val patternPlanningContext = createPlannerContext(context, namedMap)
+
+    val innerPlan = patternPlanningContext.strategy.plan(qg)(patternPlanningContext, argLeafPlan)
+    val collectionName = FreshIdNameGenerator.name(expr.position)
+    val projectedPath = projectionCreator(namedExpr)
+    val projectedInner = context.logicalPlanProducer.planRegularProjection(innerPlan, Map(collectionName -> projectedPath), Map.empty)(patternPlanningContext)
+    val key = maybeKey.getOrElse(FreshIdNameGenerator.name(expr.position.bumped()))
+    val producedPlan = context.logicalPlanProducer.planRollup(source, projectedInner, IdName(key), IdName(collectionName), qg.argumentIds)
+
+    (producedPlan, Variable(key)(expr.position))
+  }
+
+  def rewriteInnerExpressions(plan: LogicalPlan, expression: Expression)
+                             (implicit context: LogicalPlanningContext): (LogicalPlan, Expression) = {
+    val patternExpressions: Seq[T] = expression.findByAllClass[T]
 
     patternExpressions.foldLeft(plan, expression) {
       case ((planAcc, expressionAcc), patternExpression) =>
@@ -114,7 +186,7 @@ case class PatternExpressionSolver(pathStepBuilder: EveryPath => PathStep = proj
     }
   }
 
-  private def rewriteButStopAtInnerScopes(oldExp: Expression, newExp: Expression, lastDitch: patternExpressionRewriter) =
+  private def rewriteButStopAtInnerScopes(oldExp: Expression, newExp: Expression, lastDitch: Rewriter) =
     replace(replacer => {
       // We only unnest the pattern expressions if they are not hiding inside an expression that introduces scope.
       case exp@(_: ExpressionWithInnerScope) => exp.endoRewrite(lastDitch)
@@ -124,51 +196,5 @@ case class PatternExpressionSolver(pathStepBuilder: EveryPath => PathStep = proj
       case exp if exp == oldExp => newExp
       case exp => replacer.expand(exp)
     })
-
-  private def solveUsingGetDegree(exp: Expression): Expression = exp.endoRewrite(getDegreeRewriter)
-
-  private def solveUsingRollUpApply(source: LogicalPlan, expr: PatternExpression, maybeKey: Option[String])
-                                   (implicit context: LogicalPlanningContext): (LogicalPlan, Expression) = {
-
-    val (namedExpr, namedMap) = PatternExpressionPatternElementNamer(expr)
-
-    val qg = extractQG(source, namedExpr)
-
-    val argLeafPlan = Some(context.logicalPlanProducer.planQueryArgumentRow(qg))
-    val patternPlanningContext = createPlannerContext(context, namedMap)
-
-    val innerPlan = patternPlanningContext.strategy.plan(qg)(patternPlanningContext, argLeafPlan)
-    val collectionName = FreshIdNameGenerator.name(expr.position)
-    val projectedPath = createPathExpression(namedExpr)
-    val projectedInner = context.logicalPlanProducer.planRegularProjection(innerPlan, Map(collectionName -> projectedPath), Map.empty)(patternPlanningContext)
-    val key = maybeKey.getOrElse(FreshIdNameGenerator.name(expr.position.bumped()))
-    val producedPlan = context.logicalPlanProducer.planRollup(source, projectedInner, IdName(key), IdName(collectionName), qg.argumentIds)
-
-    (producedPlan, Variable(key)(expr.position))
-  }
-
-  private def createPathExpression(pattern: PatternExpression): PathExpression = {
-    val pos = pattern.position
-    val path = ast.EveryPath(pattern.pattern.element)
-    val step: PathStep = pathStepBuilder(path)
-    ast.PathExpression(step)(pos)
-  }
-
-  private def createPlannerContext(context: LogicalPlanningContext, namedMap: Map[PatternElement, Variable]): LogicalPlanningContext = {
-    val namedNodes = namedMap.collect { case (elem: NodePattern, identifier) => identifier }
-    val namedRels = namedMap.collect { case (elem: RelationshipChain, identifier) => identifier }
-    context.forExpressionPlanning(namedNodes, namedRels)
-  }
-
-  private def extractQG(source: LogicalPlan, namedExpr: PatternExpression): QueryGraph = {
-    import org.neo4j.cypher.internal.compiler.v3_0.ast.convert.plannerQuery.ExpressionConverters._
-
-    val dependencies = namedExpr.
-      dependencies.
-      map(IdName.fromVariable).
-      filter(id => UnNamedNameGenerator.isNamed(id.name))
-
-    val qgArguments = source.availableSymbols intersect dependencies
-    namedExpr.asQueryGraph.withArgumentIds(qgArguments)
-  }
 }
+

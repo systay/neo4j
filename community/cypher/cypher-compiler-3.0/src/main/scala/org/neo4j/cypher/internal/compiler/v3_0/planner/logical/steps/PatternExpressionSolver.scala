@@ -19,6 +19,7 @@
  */
 package org.neo4j.cypher.internal.compiler.v3_0.planner.logical.steps
 
+import org.neo4j.cypher.internal.compiler.v3_0.ast.NestedPlanExpression
 import org.neo4j.cypher.internal.compiler.v3_0.ast.rewriters.projectNamedPaths
 import org.neo4j.cypher.internal.compiler.v3_0.helpers.{FreshIdNameGenerator, UnNamedNameGenerator}
 import org.neo4j.cypher.internal.compiler.v3_0.planner.QueryGraph
@@ -150,19 +151,10 @@ case class CollectionSubQueryExpressionSolver[T <: Expression](namer: T => (T, M
   def solveUsingRollUpApply(source: LogicalPlan, expr: T, maybeKey: Option[String])
                            (implicit context: LogicalPlanningContext): (LogicalPlan, Expression) = {
 
-    val (namedExpr, namedMap) = namer(expr)
-
-    val qg = extractQG(source, namedExpr)
-
-    val argLeafPlan = Some(context.logicalPlanProducer.planQueryArgumentRow(qg))
-    val patternPlanningContext = createPlannerContext(context, namedMap)
-
-    val innerPlan = patternPlanningContext.strategy.plan(qg)(patternPlanningContext, argLeafPlan)
-    val collectionName = FreshIdNameGenerator.name(expr.position)
-    val projectedPath = projectionCreator(namedExpr)
-    val projectedInner = context.logicalPlanProducer.planRegularProjection(innerPlan, Map(collectionName -> projectedPath), Map.empty)(patternPlanningContext)
     val key = maybeKey.getOrElse(FreshIdNameGenerator.name(expr.position.bumped()))
-    val producedPlan = context.logicalPlanProducer.planRollup(source, projectedInner, IdName(key), IdName(collectionName), qg.argumentIds)
+    val subQueryPlan = planSubQuery(source, expr)
+    val producedPlan = context.logicalPlanProducer.planRollup(source, subQueryPlan.innerPlan, IdName(key),
+      subQueryPlan.variableToCollect, subQueryPlan.nullableIdentifiers)
 
     (producedPlan, Variable(key)(expr.position))
   }
@@ -175,18 +167,37 @@ case class CollectionSubQueryExpressionSolver[T <: Expression](namer: T => (T, M
       case ((planAcc, expressionAcc), patternExpression) =>
         val (newPlan, introducedVariable) = solveUsingRollUpApply(planAcc, patternExpression, None)
 
-        val rewriter = rewriteButStopAtInnerScopes(patternExpression, introducedVariable, lastDitch)
+        val rewriter = rewriteButStopAtInnerScopes(patternExpression, introducedVariable)
         val rewrittenExpression = expressionAcc.endoRewrite(rewriter)
 
         // If for some reason nothing was changed, make sure we also return the original plan
-        if (rewrittenExpression == expressionAcc)
-          (planAcc, expressionAcc)
-        else
-          (newPlan, rewrittenExpression)
+        assert(rewrittenExpression != expressionAcc)
+
+        (newPlan, rewrittenExpression)
     }
   }
 
-  private def rewriteButStopAtInnerScopes(oldExp: Expression, newExp: Expression, lastDitch: Rewriter) =
+  case class PlannedSubQuery(columnName: String, innerPlan: LogicalPlan, nullableIdentifiers: Set[IdName]) {
+    def variableToCollect = IdName(columnName)
+  }
+
+  private def planSubQuery(source: LogicalPlan, expr: T)
+                          (implicit context: LogicalPlanningContext): PlannedSubQuery = {
+    val (namedExpr, namedMap) = namer(expr)
+
+    val qg = extractQG(source, namedExpr)
+
+    val argLeafPlan = Some(context.logicalPlanProducer.planQueryArgumentRow(qg))
+    val patternPlanningContext = createPlannerContext(context, namedMap)
+
+    val innerPlan = patternPlanningContext.strategy.plan(qg)(patternPlanningContext, argLeafPlan)
+    val collectionName = FreshIdNameGenerator.name(expr.position)
+    val projectedPath = projectionCreator(namedExpr)
+    val projectedInner = context.logicalPlanProducer.planRegularProjection(innerPlan, Map(collectionName -> projectedPath), Map.empty)(patternPlanningContext)
+    PlannedSubQuery(columnName = collectionName, innerPlan = projectedInner, nullableIdentifiers = qg.argumentIds)
+  }
+
+  private def rewriteButStopAtInnerScopes(oldExp: Expression, newExp: Expression) =
     replace(replacer => {
       // We only unnest the pattern expressions if they are not hiding inside an expression that introduces scope.
       case exp@(_: ExpressionWithInnerScope) => exp.endoRewrite(lastDitch)
@@ -196,5 +207,14 @@ case class CollectionSubQueryExpressionSolver[T <: Expression](namer: T => (T, M
       case exp if exp == oldExp => newExp
       case exp => replacer.expand(exp)
     })
+
+  private def nestedExpressionRewriter: Rewriter = replace {
+    replacer => that => that match {
+      case e: PatternExpression =>
+
+      case e: NestedPlanExpression => replacer.stop(e)
+    }
+  }
+
 }
 

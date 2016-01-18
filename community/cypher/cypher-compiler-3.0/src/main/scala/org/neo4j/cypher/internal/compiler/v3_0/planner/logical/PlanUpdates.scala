@@ -35,28 +35,15 @@ case object PlanUpdates
       case (acc, pattern) => planUpdate(query, acc, pattern)
     }
 
-  private def planUpdate(query: PlannerQuery, source: LogicalPlan, pattern: MutatingPattern)(implicit context: LogicalPlanningContext): LogicalPlan = {
-//    def solvedMergePattern: PlannerQuery with CardinalityEstimation = {
-//      val solved = PlannerQuery.asMergePlannerQuery(
-//        source.solved
-//          .amendQueryGraph(q => q.addPatternNodes(q.optionalMatches.head.patternNodes.toSeq: _*)
-//            .addPatternRelationships(q.optionalMatches.head.patternRelationships.toSeq)
-//            .withOptionalMatches(Seq.empty)
-//            .withArgumentIds(query.queryGraph.argumentIds)
-//            .withSelections(query.queryGraph.selections)
-//            .addMutatingPatterns(pattern)
-//          ))
-//      val solvedWithEstimate = context.logicalPlanProducer.estimatePlannerQuery(solved)
-//      solvedWithEstimate
-//    }
-
+  private def planUpdate(query: PlannerQuery, source: LogicalPlan, pattern: MutatingPattern)(implicit context: LogicalPlanningContext): LogicalPlan =
     pattern match {
       //CREATE ()
       case p: CreateNodePattern => context.logicalPlanProducer.planCreateNode(source, p)
       //CREATE (a)-[:R]->(b)
       case p: CreateRelationshipPattern => context.logicalPlanProducer.planCreateRelationship(source, p)
       case p: MergeNodePattern =>
-        val mergePlan = planMerge(query, source, p.matchGraph, Seq(p.createNodePattern), Seq.empty, p.onCreate, p.onMatch)
+        val mergePlan = planMerge(query, source, p.matchGraph, Seq(p.createNodePattern), Seq.empty, p.onCreate,
+                                  p.onMatch)
         //we have to force the plan to solve what we actually solve
         val solved = context.logicalPlanProducer.estimatePlannerQuery(
           source.solved.amendQueryGraph(u => u.addMutatingPatterns(p)))
@@ -64,7 +51,8 @@ case object PlanUpdates
 
       //MERGE (a)-[:T]->(b)
       case p: MergeRelationshipPattern =>
-        val mergePlan = planMerge(query, source, p.matchGraph, p.createNodePatterns, p.createRelPatterns, p.onCreate, p.onMatch)
+        val mergePlan = planMerge(query, source, p.matchGraph, p.createNodePatterns, p.createRelPatterns, p.onCreate,
+                                  p.onMatch)
         //we have to force the plan to solve what we actually solve
         val solved = context.logicalPlanProducer.estimatePlannerQuery(
           source.solved.amendQueryGraph(u => u.addMutatingPatterns(p)))
@@ -107,10 +95,8 @@ case object PlanUpdates
           case expr =>
             context.logicalPlanProducer.planDeleteExpression(source, p)
         }
-
         delete
     }
-  }
 
   /*
    * Merges either match or create. It is planned as following.
@@ -163,7 +149,7 @@ case object PlanUpdates
 
     //           cond-apply
     //             /   \
-    //        apply  on-match
+    //          apply  on-match
     val ids = createNodePatterns.map(_.nodeName) ++ createRelationshipPatterns.map(_.relName)
 
     val conditionalApply = if (onMatch.nonEmpty) {
@@ -171,8 +157,8 @@ case object PlanUpdates
       val onMatchPlan = onMatch.foldLeft[LogicalPlan](producer.planQueryArgumentRow(qgWithAllNeededArguments)) {
         case (src, current) => planUpdate(query, src, current)
       }
-      producer.planConditionalApply(source, onMatchPlan, ids)(innerContext)
-    } else source
+      producer.planConditionalApply(apply, onMatchPlan, ids)(innerContext)
+    } else apply
 
     //       anti-cond-apply
     //         /     \

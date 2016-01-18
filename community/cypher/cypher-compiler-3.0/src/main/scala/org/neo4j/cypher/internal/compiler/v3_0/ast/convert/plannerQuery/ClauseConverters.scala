@@ -281,7 +281,7 @@ object ClauseConverters {
 
         acc
           .withHorizon(asQueryProjection(distinct = false, neededProjections))
-          .withTail(MergePlannerQuery(queryGraph = queryGraph))
+          .withTail(RegularPlannerQuery(queryGraph = queryGraph))
           .withHorizon(asQueryProjection(distinct = false, QueryProjection.forIds(queryGraph.allCoveredIds)))
           .withTail(RegularPlannerQuery())
 
@@ -326,7 +326,7 @@ object ClauseConverters {
 
         acc.
           withHorizon(asQueryProjection(distinct = false, neededProjections)).
-          withTail(MergePlannerQuery(queryGraph = queryGraph)).
+          withTail(RegularPlannerQuery(queryGraph = queryGraph)).
           withHorizon(asQueryProjection(distinct = false, QueryProjection.forIds(queryGraph.allCoveredIds))).
           withTail(RegularPlannerQuery())
 

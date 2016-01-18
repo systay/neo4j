@@ -73,6 +73,7 @@ case class PlanWithTail(expressionRewriterFactory: (LogicalPlanningContext => Re
         //If reads interfere with writes, make it a RepeatableRead
         var shouldPlanEagerBeforeTail = false
         val planWithEffects =
+          // TODO:H Fix this eagerness logic
           if (!plannerQuery.isInstanceOf[MergePlannerQuery] &&
             (alwaysEager || Eagerness.conflictInTail(plannerQuery, plannerQuery)))
             context.logicalPlanProducer.planEager(partPlan)

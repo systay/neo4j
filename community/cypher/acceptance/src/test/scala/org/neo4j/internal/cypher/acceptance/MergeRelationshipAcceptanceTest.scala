@@ -564,4 +564,52 @@ class MergeRelationshipAcceptanceTest extends ExecutionEngineFunSuite with Query
     result.toList should not contain Map("t2.name" -> "rel1")
     result.toList should not contain Map("t2.name" -> "rel2")
   }
+
+  test("match merge match should not be solved with cartesian products") {
+    // GIVEN
+    val a = createLabeledNode("A")
+    val b = createLabeledNode("B")
+    val c = createLabeledNode("C")
+    relate(a, b, "X")
+    relate(b, c, "Y")
+
+    // WHEN
+    val result = updateWithBothPlanners(
+      """MATCH (a:A)
+        |MERGE (a)-[:X]->(b:B)
+        |WITH *
+        |MATCH (b)-[:Y]->(c:C)
+        |RETURN *
+      """.stripMargin)
+
+    // THEN
+    assertStats(result, nodesCreated = 0)
+    result.toList should equal(List(Map("a" -> a, "b" -> b, "c" -> c)))
+  }
+
+  test("unwind match merge match should not be solved with cartesian products") {
+    // GIVEN
+    val a = createLabeledNode("A")
+    val b = createLabeledNode("B")
+    val c = createLabeledNode("C")
+    relate(a, b, "X")
+    relate(b, c, "Y")
+
+    // WHEN
+    val result = updateWithBothPlanners(
+      """UNWIND [1,2] as i
+        |MATCH (a:A)
+        |MERGE (a)-[:X]->(b:B)
+        |WITH *
+        |MATCH (b)-[:Y]->(c:C)
+        |RETURN *
+      """.stripMargin)
+
+    // THEN
+    assertStats(result, nodesCreated = 0)
+    result.toList should equal(List(
+      Map("a" -> a, "b" -> b, "c" -> c, "i" -> 1),
+      Map("a" -> a, "b" -> b, "c" -> c, "i" -> 2)
+    ))
+  }
 }

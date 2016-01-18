@@ -314,14 +314,8 @@ case class LogicalPlanProducer(cardinalityModel: CardinalityModel) extends Colle
     planArgumentRow(patternNodes, patternRels, otherIds)
   }
 
-  def planArgumentRowFrom(plan: LogicalPlan)(implicit context: LogicalPlanningContext): LogicalPlan = {
-    val types: Map[String, CypherType] = plan.availableSymbols.map {
-      case n if context.semanticTable.isNode(n.name) => n.name -> symbols.CTNode
-      case r if context.semanticTable.isRelationship(r.name) => r.name -> symbols.CTRelationship
-      case v => v.name -> symbols.CTAny
-    }.toMap
-    Argument(plan.availableSymbols)(plan.solved)(types)
-  }
+  def planArgumentRowFrom(plan: LogicalPlan)(implicit context: LogicalPlanningContext): LogicalPlan =
+    Argument(plan.availableSymbols)(plan.solved)(Map.empty)
 
   def planArgumentRow(patternNodes: Set[IdName], patternRels: Set[PatternRelationship] = Set.empty, other: Set[IdName] = Set.empty)
                      (implicit context: LogicalPlanningContext): LogicalPlan = {

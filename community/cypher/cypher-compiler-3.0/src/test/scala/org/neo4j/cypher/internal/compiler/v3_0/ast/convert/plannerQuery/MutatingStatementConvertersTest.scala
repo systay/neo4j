@@ -125,4 +125,44 @@ class MutatingStatementConvertersTest extends CypherFunSuite with LogicalPlannin
     third.queryGraph.patternNodes should equal(Set(IdName("o")))
     third.queryGraph.readOnly should be(true)
   }
+
+//  test("Arguments between MERGE and the rest of the plans is set up correctly") {
+//    val query = buildPlannerQuery("CREATE (a {p: 1}) MERGE (b {v: a.p}) CREATE (c)")
+//    query.horizon should equal(RegularQueryProjection(Map("a" -> varFor("a"))))
+//    query.queryGraph should equal(QueryGraph(mutatingPatterns = Seq(CreateNodePattern(IdName("a"), Seq.empty, None))))
+//
+//    val second = query.tail.get
+//
+//    second.queryGraph.patternNodes should equal(Set(IdName("b")))
+//    second.queryGraph.argumentIds should equal(Set(IdName("a")))
+//
+//    val third = second.tail.get
+//
+//    third.horizon should equal(RegularQueryProjection(Map("c" -> varFor("c"))))
+//    third.queryGraph shouldBe 'writeOnly
+//
+//    third.tail shouldBe 'Empty
+//  }
+
+  test("Arguments between MERGE and the rest of the plans is set up correctly") {
+    val query = buildPlannerQuery("MATCH (a) MERGE (a)-[r1:T]->(b) WITH * OPTIONAL MATCH (b)-[r2]->(c) RETURN *")
+    query.horizon should equal(RegularQueryProjection(Map("a" -> varFor("a"))))
+    query.queryGraph should equal(QueryGraph(patternNodes = Set(IdName("a"))))
+
+    val second = query.tail.get
+    second.horizon should equal(RegularQueryProjection(Map("a" -> varFor("a"), "b" -> varFor("b"), "r1" -> varFor("r1"))))
+    second.queryGraph.patternNodes shouldBe 'isEmpty
+    second.queryGraph.argumentIds should equal(Set(IdName("a")))
+    second.queryGraph.mutatingPatterns should equal(MergeRelationshipPattern(createNodePatterns = Seq.empty, createRelPatterns = Seq.empty, matchGraph = QueryGraph(patternNodes = Set(IdName("a"))), onCreate = Seq.empty, onMatch = Seq.empty))
+
+    val third = second.tail.get
+    third.horizon should equal(RegularQueryProjection(Map("a" -> varFor("a"), "b" -> varFor("b"), "r1" -> varFor("r1"), "r2" -> varFor("r2"), "c" -> varFor("c"))))
+    third.queryGraph shouldBe 'writeOnly
+
+    third.tail shouldBe 'Empty
+  }
+
+  ignore("do it") {
+    val query = "MERGE(a {p: 1}) MERGE(b {p: a.p}) MERGE(c {p: b.p})"
+  }
 }

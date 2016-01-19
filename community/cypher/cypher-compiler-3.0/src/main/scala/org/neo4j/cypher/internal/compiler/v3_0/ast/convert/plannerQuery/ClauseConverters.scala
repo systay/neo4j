@@ -250,18 +250,22 @@ object ClauseConverters {
       SetRelationshipPropertiesFromMapPattern(IdName.fromVariable(rel), expression, removeOtherProps = false)
   }
 
-  private def addMergeToLogicalPlanInput(acc: PlannerQueryBuilder, clause: Merge): PlannerQueryBuilder = {
+  private def addMergeToLogicalPlanInput(builder: PlannerQueryBuilder, clause: Merge): PlannerQueryBuilder = {
+
+    val neededProjections: Seq[AliasedReturnItem] = QueryProjection.forIds(builder.currentQueryGraph.allCoveredIds)
+
+
     val onCreate = clause.actions.collect {
-      case OnCreate(setClause) => setClause.items.map(toSetPattern(acc.semanticTable))
+      case OnCreate(setClause) => setClause.items.map(toSetPattern(builder.semanticTable))
     }.flatten
     val onMatch = clause.actions.collect {
-      case OnMatch(setClause) => setClause.items.map(toSetPattern(acc.semanticTable))
+      case OnMatch(setClause) => setClause.items.map(toSetPattern(builder.semanticTable))
     }.flatten
 
-    clause.pattern.patternParts.foldLeft(acc) {
+    clause.pattern.patternParts.foldLeft(builder) {
       //MERGE (n :L1:L2 {prop: 42})
-      case (builder, EveryPath(NodePattern(Some(id), labels, props))) =>
-        val currentlyAvailableVariables = acc.currentlyAvailableVariables
+      case (acc, EveryPath(NodePattern(Some(id), labels, props))) =>
+        val currentlyAvailableVariables = builder.currentlyAvailableVariables
         val labelPredicates = labels.map(l => HasLabels(id, Seq(l))(id.position))
         val propertyPredicates = toPropertySelection(id, toPropertyMap(props))
         val createNodePattern = CreateNodePattern(IdName.fromVariable(id), labels, props)
@@ -272,23 +276,25 @@ object ClauseConverters {
           argumentIds = currentlyAvailableVariables
         )
 
-        val queryGraph = matchGraph.addMutatingPatterns(MergeNodePattern(createNodePattern, matchGraph, onCreate, onMatch))
+        val queryGraph = QueryGraph.empty
+          .addMutatingPatterns(MergeNodePattern(createNodePattern, matchGraph, onCreate, onMatch))
 
-        builder
-          .withTail(
-            MergePlannerQuery(queryGraph = queryGraph))
+        acc
+          .withHorizon(asQueryProjection(distinct = false, neededProjections))
+          .withTail(MergePlannerQuery(queryGraph = queryGraph))
+          .withHorizon(asQueryProjection(distinct = false, QueryProjection.forIds(queryGraph.allCoveredIds)))
           .withTail(RegularPlannerQuery())
 
       //MERGE (n)-[r: R]->(m)
-      case (builder, EveryPath(pattern: RelationshipChain)) =>
+      case (acc, EveryPath(pattern: RelationshipChain)) =>
         val (nodes, rels) = allCreatePatterns(pattern)
         //remove duplicates from loops, (a:L)-[:ER1]->(a)
         val dedupedNodes = dedup(nodes)
 
         //create nodes that are not already matched or created
-        val nodesToCreate = dedupedNodes.filterNot(pattern => builder.allSeenPatternNodes(pattern.nodeName))
+        val nodesToCreate = dedupedNodes.filterNot(pattern => acc.allSeenPatternNodes(pattern.nodeName))
         //we must check that we are not trying to set a pattern or label on any already created nodes
-        val nodesCreatedBefore = dedupedNodes.filter(pattern => builder.allSeenPatternNodes(pattern.nodeName)).toSet
+        val nodesCreatedBefore = dedupedNodes.filter(pattern => acc.allSeenPatternNodes(pattern.nodeName)).toSet
 
         nodesCreatedBefore.collectFirst {
           case c if c.labels.nonEmpty || c.properties.nonEmpty =>
@@ -312,14 +318,17 @@ object ClauseConverters {
           patternRelationships = rels.map(r => PatternRelationship(r.relName, (r.leftNode, r.rightNode),
             r.direction, Seq(r.relType), SimplePatternLength)).toSet,
           selections = Selections.from(hasLabels ++ hasProps:_*),
-          argumentIds = acc.currentlyAvailableVariables ++ nodesCreatedBefore.map(_.nodeName)
+          argumentIds = builder.currentlyAvailableVariables ++ nodesCreatedBefore.map(_.nodeName)
         )
 
-        val queryGraph = matchGraph.addMutatingPatterns(MergeRelationshipPattern(nodesToCreate, rels, matchGraph, onCreate, onMatch))
+        val queryGraph = QueryGraph.empty.
+          addMutatingPatterns(MergeRelationshipPattern(nodesToCreate, rels, matchGraph, onCreate, onMatch))
 
-        builder
-          .withTail(MergePlannerQuery(queryGraph = queryGraph))
-          .withTail(RegularPlannerQuery())
+        acc.
+          withHorizon(asQueryProjection(distinct = false, neededProjections)).
+          withTail(MergePlannerQuery(queryGraph = queryGraph)).
+          withHorizon(asQueryProjection(distinct = false, QueryProjection.forIds(queryGraph.allCoveredIds))).
+          withTail(RegularPlannerQuery())
 
       case _ => throw new CantHandleQueryException("not supported yet")
     }

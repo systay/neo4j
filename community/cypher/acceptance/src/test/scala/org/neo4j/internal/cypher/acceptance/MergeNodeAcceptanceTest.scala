@@ -149,7 +149,7 @@ class MergeNodeAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisti
     createLabeledNode("Label")
 
     // When
-    val result = updateWithBothPlanners("merge (a:Label) on match set a:Foo return labels(a)")
+    val result = executeWithCostPlannerOnly("merge (a:Label) on match set a:Foo return labels(a)")
 
     // Then
     result.toList should equal(List(Map("labels(a)" -> List("Label", "Foo"))))

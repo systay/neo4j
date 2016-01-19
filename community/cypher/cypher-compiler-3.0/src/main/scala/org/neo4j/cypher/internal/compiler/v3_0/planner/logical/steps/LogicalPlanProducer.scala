@@ -382,6 +382,11 @@ case class LogicalPlanProducer(cardinalityModel: CardinalityModel) extends Colle
     UnwindCollection(inner, name, expression)(solved)
   }
 
+  def planPassAll(inner: LogicalPlan)(implicit context: LogicalPlanningContext) = {
+    val solved = inner.solved.updateTailOrSelf(_.withHorizon(PassthroughAllHorizon()))
+    inner.updateSolved(solved)
+  }
+
   def planLimit(inner: LogicalPlan, count: Expression, ties: Ties = DoNotIncludeTies)(implicit context: LogicalPlanningContext) = {
     val solved = inner.solved.updateTailOrSelf(_.updateQueryProjection(_.updateShuffle(_.withLimitExpression(count))))
     LimitPlan(inner, count, ties)(solved)

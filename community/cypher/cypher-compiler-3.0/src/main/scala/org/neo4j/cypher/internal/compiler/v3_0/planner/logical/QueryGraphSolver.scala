@@ -21,7 +21,6 @@ package org.neo4j.cypher.internal.compiler.v3_0.planner.logical
 
 import org.neo4j.cypher.internal.compiler.v3_0.planner.QueryGraph
 import org.neo4j.cypher.internal.compiler.v3_0.planner.logical.plans.{IdName, LogicalPlan}
-import org.neo4j.cypher.internal.frontend.v3_0.InternalException
 import org.neo4j.cypher.internal.frontend.v3_0.ast.{NodePattern, PatternExpression, RelationshipChain}
 
 trait QueryGraphSolver {
@@ -48,10 +47,4 @@ trait PatternExpressionSolving {
     val plan = self.plan(qg)(patternPlanningContext, argLeafPlan)
     (plan, namedExpr)
   }
-}
-
-trait TentativeQueryGraphSolver extends QueryGraphSolver with PatternExpressionSolving {
-  def tryPlan(queryGraph: QueryGraph)(implicit context: LogicalPlanningContext, leafPlan: Option[LogicalPlan] = None): Option[LogicalPlan]
-  def plan(queryGraph: QueryGraph)(implicit context: LogicalPlanningContext, leafPlan: Option[LogicalPlan] = None): LogicalPlan =
-    tryPlan(queryGraph).getOrElse(throw new InternalException("Failed to create a plan for the given QueryGraph " + queryGraph))
 }

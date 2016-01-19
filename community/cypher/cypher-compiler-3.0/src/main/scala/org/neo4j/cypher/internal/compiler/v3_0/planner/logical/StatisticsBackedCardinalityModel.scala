@@ -83,7 +83,7 @@ class StatisticsBackedCardinalityModel(queryGraphCardinalityModel: QueryGraphCar
     case _: LoadCSVProjection =>
       in
 
-    case _: RegularQueryProjection =>
+    case _: RegularQueryProjection | _: PassthroughAllHorizon =>
       in
   }
 

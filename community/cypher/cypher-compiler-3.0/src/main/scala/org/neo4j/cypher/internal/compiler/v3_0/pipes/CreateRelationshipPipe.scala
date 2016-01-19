@@ -58,7 +58,8 @@ abstract class BaseRelationshipPipe(src: Pipe, key: String, startNode: String, t
   private def getNode(row: ExecutionContext, name: String): Node =
     row.get(name) match {
       case Some(n: Node) => n
-      case x => throw new InternalException(s"Expected to find a node at $name but found nothing $x")
+      case None => throw new InternalException(s"Expected to find a node at `$name` but found nothing")
+      case x => throw new InternalException(s"Expected to find a node at `$name` but found $x")
     }
 
   private def setProperties(context: ExecutionContext, state: QueryState, relId: Long) = {

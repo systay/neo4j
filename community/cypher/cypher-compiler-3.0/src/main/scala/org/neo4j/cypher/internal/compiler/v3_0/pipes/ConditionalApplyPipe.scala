@@ -21,6 +21,7 @@ package org.neo4j.cypher.internal.compiler.v3_0.pipes
 
 import org.neo4j.cypher.internal.compiler.v3_0.ExecutionContext
 import org.neo4j.cypher.internal.compiler.v3_0.executionplan.Effects
+import org.neo4j.cypher.internal.compiler.v3_0.planDescription.InternalPlanDescription.Arguments.KeyNames
 import org.neo4j.cypher.internal.compiler.v3_0.planDescription.{PlanDescriptionImpl, TwoChildren}
 import org.neo4j.cypher.internal.compiler.v3_0.symbols.SymbolTable
 
@@ -46,7 +47,7 @@ case class ConditionalApplyPipe(source: Pipe, inner: Pipe, items: Seq[String], n
   private def name = if (negated) "AntiConditionalApply" else "ConditionalApply"
 
   def planDescriptionWithoutCardinality =
-    PlanDescriptionImpl(this.id, name, TwoChildren(source.planDescription, inner.planDescription), Seq.empty, variables)
+    PlanDescriptionImpl(this.id, name, TwoChildren(source.planDescription, inner.planDescription), Seq(KeyNames(items)), variables)
 
   def symbols: SymbolTable = source.symbols.add(inner.symbols.variables)
 

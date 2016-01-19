@@ -1120,6 +1120,12 @@ class EagerizationAcceptanceTest extends ExecutionEngineFunSuite with TableDrive
     assertNumberOfEagerness(query, 0)
   }
 
+  test("never ending query should end - this is the query that prompted Eagerness in the first place") {
+    createNode()
+    val result = updateWithBothPlanners("MATCH (a) CREATE ()")
+    assertStats(result, nodesCreated = 1)
+  }
+
   test("should be eager when combining MATCH, MERGE, CREATE with UNWIND") {
     createNode()
     createNode()

@@ -252,9 +252,6 @@ object ClauseConverters {
 
   private def addMergeToLogicalPlanInput(builder: PlannerQueryBuilder, clause: Merge): PlannerQueryBuilder = {
 
-    val neededProjections: Seq[AliasedReturnItem] = QueryProjection.forIds(builder.currentQueryGraph.allCoveredIds)
-
-
     val onCreate = clause.actions.collect {
       case OnCreate(setClause) => setClause.items.map(toSetPattern(builder.semanticTable))
     }.flatten
@@ -277,10 +274,11 @@ object ClauseConverters {
         )
 
         val queryGraph = QueryGraph.empty
+          .withArgumentIds(matchGraph.argumentIds)
           .addMutatingPatterns(MergeNodePattern(createNodePattern, matchGraph, onCreate, onMatch))
 
         acc
-          .withHorizon(asQueryProjection(distinct = false, neededProjections))
+          .withHorizon(PassthroughAllHorizon())
           .withTail(RegularPlannerQuery(queryGraph = queryGraph))
           .withHorizon(asQueryProjection(distinct = false, QueryProjection.forIds(queryGraph.allCoveredIds)))
           .withTail(RegularPlannerQuery())
@@ -321,11 +319,12 @@ object ClauseConverters {
           argumentIds = builder.currentlyAvailableVariables ++ nodesCreatedBefore.map(_.nodeName)
         )
 
-        val queryGraph = QueryGraph.empty.
-          addMutatingPatterns(MergeRelationshipPattern(nodesToCreate, rels, matchGraph, onCreate, onMatch))
+        val queryGraph = QueryGraph.empty
+          .withArgumentIds(matchGraph.argumentIds)
+          .addMutatingPatterns(MergeRelationshipPattern(nodesToCreate, rels, matchGraph, onCreate, onMatch))
 
         acc.
-          withHorizon(asQueryProjection(distinct = false, neededProjections)).
+          withHorizon(PassthroughAllHorizon()).
           withTail(RegularPlannerQuery(queryGraph = queryGraph)).
           withHorizon(asQueryProjection(distinct = false, QueryProjection.forIds(queryGraph.allCoveredIds))).
           withTail(RegularPlannerQuery())

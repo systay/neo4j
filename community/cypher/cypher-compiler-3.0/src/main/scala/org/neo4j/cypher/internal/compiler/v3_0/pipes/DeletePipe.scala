@@ -24,6 +24,7 @@ import org.neo4j.cypher.internal.compiler.v3_0.commands.expressions.Expression
 import org.neo4j.cypher.internal.compiler.v3_0.executionplan.Effects
 import org.neo4j.cypher.internal.compiler.v3_0.helpers.CollectionSupport
 import org.neo4j.cypher.internal.compiler.v3_0.mutation.GraphElementPropertyFunctions
+import org.neo4j.cypher.internal.compiler.v3_0.planDescription.InternalPlanDescription.Arguments.LegacyExpression
 import org.neo4j.cypher.internal.frontend.v3_0.{CypherTypeException, SemanticDirection}
 import org.neo4j.graphdb.{Node, Path, Relationship}
 
@@ -71,8 +72,10 @@ case class DeletePipe(src: Pipe, expression: Expression, forced: Boolean)(val es
       throw new CypherTypeException(s"Expected a Node or Relationship, but got a ${other.getClass.getSimpleName}")
   }
 
-  override def planDescriptionWithoutCardinality =
-    src.planDescription.andThen(this.id, if (forced) "DetachDelete" else "Delete", variables)
+  override def planDescriptionWithoutCardinality = {
+    val name = if (forced) "DetachDelete" else "Delete"
+    src.planDescription.andThen(this.id, name, variables, LegacyExpression(expression))
+  }
 
   override def symbols = src.symbols
 

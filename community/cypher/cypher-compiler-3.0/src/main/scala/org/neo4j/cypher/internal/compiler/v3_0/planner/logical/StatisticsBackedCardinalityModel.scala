@@ -38,10 +38,7 @@ class StatisticsBackedCardinalityModel(queryGraphCardinalityModel: QueryGraphCar
         QueryGraphSolverInput(newLabels, horizonCardinality, lazyness)
 
       case (input, MergePlannerQuery(graph, horizon, _)) =>
-        val QueryGraphSolverInput(newLabels, graphCardinality, lazyness) = calculateCardinalityForQueryGraph(graph, input, semanticTable)
-
-        val horizonCardinality = calculateCardinalityForQueryHorizon(graphCardinality, horizon)
-        QueryGraphSolverInput(newLabels, horizonCardinality, lazyness)
+        throw new IllegalStateException("MergePlannerQuery should not exist")
     }
     output.inboundCardinality
   }

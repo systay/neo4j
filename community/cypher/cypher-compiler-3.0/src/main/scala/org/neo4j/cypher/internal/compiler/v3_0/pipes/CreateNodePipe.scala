@@ -24,6 +24,7 @@ import org.neo4j.cypher.internal.compiler.v3_0.commands.expressions.Expression
 import org.neo4j.cypher.internal.compiler.v3_0.executionplan.{CreatesAnyNode, CreatesNodesWithLabels, Effects}
 import org.neo4j.cypher.internal.compiler.v3_0.helpers.{CollectionSupport, IsMap}
 import org.neo4j.cypher.internal.compiler.v3_0.mutation.{GraphElementPropertyFunctions, makeValueNeoSafe}
+import org.neo4j.cypher.internal.compiler.v3_0.planDescription.InternalPlanDescription.Arguments.KeyNames
 import org.neo4j.cypher.internal.compiler.v3_0.spi.QueryContext
 import org.neo4j.cypher.internal.frontend.v3_0.symbols._
 import org.neo4j.cypher.internal.frontend.v3_0.{CypherTypeException, InvalidSemanticsException}
@@ -88,7 +89,7 @@ case class CreateNodePipe(src: Pipe, key: String, labels: Seq[LazyLabel], proper
 
   override def withEstimatedCardinality(estimated: Double) = copy()(Some(estimated))
 
-  override def planDescriptionWithoutCardinality = src.planDescription.andThen(this.id, "CreateNode", variables)
+  override def planDescriptionWithoutCardinality = src.planDescription.andThen(this.id, "CreateNode", variables, KeyNames(Seq(key)))
 
   override def dup(sources: List[Pipe]): Pipe = {
     val (onlySource :: Nil) = sources
@@ -109,7 +110,7 @@ case class MergeCreateNodePipe(src: Pipe, key: String, labels: Seq[LazyLabel], p
 
   override def withEstimatedCardinality(estimated: Double) = copy()(Some(estimated))
 
-  override def planDescriptionWithoutCardinality = src.planDescription.andThen(this.id, "MergeCreateNode", variables)
+  override def planDescriptionWithoutCardinality = src.planDescription.andThen(this.id, "MergeCreateNode", variables, KeyNames(Seq(key)))
 
   override def dup(sources: List[Pipe]): Pipe = {
     val (onlySource :: Nil) = sources

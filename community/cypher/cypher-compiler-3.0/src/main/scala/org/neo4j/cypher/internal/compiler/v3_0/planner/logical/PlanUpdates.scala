@@ -99,32 +99,29 @@ case object PlanUpdates
     }
 
   /*
-   * Merges either match or create. It is planned as following.
+   * Merges either matches or creates. It is planned as following:
    *
    *
-   *      apply
-   *      /    \
-   *   (source) \
-   *             \
-   *          anti-cond-apply
+   *            antiCondApply
    *              /     \
-   *             /    on-create
+   *             /    onCreate
    *            /         \
-   *           /    merge-create-part
+   *           /      mergeCreatePart
    *          /
    *       cond-apply
    *        /     \
-   *    optional  on-match
-   *      /
-   *  merge-read-part
+   *    apply  onMatch
+   *    /   \
+   * source optional
+   *           \
+   *         mergeReadPart
    *
    * Note also that merge uses a special leaf planner to enforce the correct behavior
-   * when having uniqueness constraints.
+   * when having uniqueness constraints, and unnestApply will remove a lot of the extra Applies
    */
-  def planMerge(query: PlannerQuery, source: LogicalPlan, matchGraph: QueryGraph, createNodePatterns: Seq[CreateNodePattern],
-                createRelationshipPatterns: Seq[CreateRelationshipPattern],
-                onCreate: Seq[SetMutatingPattern], onMatch: Seq[SetMutatingPattern])
-               (implicit context: LogicalPlanningContext): LogicalPlan = {
+  private def planMerge(query: PlannerQuery, source: LogicalPlan, matchGraph: QueryGraph, createNodePatterns: Seq[CreateNodePattern],
+                createRelationshipPatterns: Seq[CreateRelationshipPattern], onCreatePatterns: Seq[SetMutatingPattern],
+                onMatchPatterns: Seq[SetMutatingPattern])(implicit context: LogicalPlanningContext): LogicalPlan = {
 
     val producer = context.logicalPlanProducer
 
@@ -139,46 +136,46 @@ case object PlanUpdates
     //        /   \
     //       /  optional
     //      /       \
-    //(source)  merge-read-part
-    val matchPart = innerContext.strategy.plan(matchGraph)(innerContext)
-    if (matchPart.solved.queryGraph != matchGraph)
-      throw new CantHandleQueryException(s"The planner was unable to successfully plan the MERGE read: ${matchPart.solved.queryGraph} not equal to $matchGraph")
+    // source  mergeReadPart
+    val mergeReadPart = innerContext.strategy.plan(matchGraph)(innerContext, None)
+    if (mergeReadPart.solved.queryGraph != matchGraph)
+      throw new CantHandleQueryException(s"The planner was unable to successfully plan the MERGE read: ${mergeReadPart.solved.queryGraph} not equal to $matchGraph")
 
-    val rhs = producer.planOptional(matchPart, matchGraph.argumentIds)(innerContext)
+    val rhs = producer.planOptional(mergeReadPart, matchGraph.argumentIds)(innerContext)
     val apply = producer.planApply(source, rhs)(innerContext)
 
-    //           cond-apply
+    //            condApply
     //             /   \
-    //          apply  on-match
+    //          apply  onMatch
     val ids = createNodePatterns.map(_.nodeName) ++ createRelationshipPatterns.map(_.relName)
 
-    val conditionalApply = if (onMatch.nonEmpty) {
+    val condApply = if (onMatchPatterns.nonEmpty) {
       val qgWithAllNeededArguments = matchGraph.addArgumentIds(matchGraph.allCoveredIds.toSeq)
-      val onMatchPlan = onMatch.foldLeft[LogicalPlan](producer.planQueryArgumentRow(qgWithAllNeededArguments)) {
+      val onMatch = onMatchPatterns.foldLeft[LogicalPlan](producer.planQueryArgumentRow(qgWithAllNeededArguments)) {
         case (src, current) => planUpdate(query, src, current)
       }
-      producer.planConditionalApply(apply, onMatchPlan, ids)(innerContext)
+      producer.planConditionalApply(apply, onMatch, ids)(innerContext)
     } else apply
 
-    //       anti-cond-apply
+    //       antiCondApply
     //         /     \
-    //        /    on-create
-    //       /        \
-    //      /   merge-create-part
-    //cond-apply
+    //        /    onCreate
+    //       /         \
+    //      /     mergeCreatePart
+    // condApply
     val createNodes = createNodePatterns.foldLeft(producer.planQueryArgumentRow(matchGraph): LogicalPlan){
       case (acc, current) => producer.planMergeCreateNode(acc, current)
     }
-    val createRels = createRelationshipPatterns.foldLeft(createNodes) {
+    val mergeCreatePart = createRelationshipPatterns.foldLeft(createNodes) {
       case (acc, current) => producer.planMergeCreateRelationship(acc, current)
     }
 
-    val onCreatePlan = onCreate.foldLeft(createRels) {
+    val onCreate = onCreatePatterns.foldLeft(mergeCreatePart) {
       case (src, current) => planUpdate(query, src, current)
     }
 
-    val antiConditionalApply = producer.planAntiConditionalApply(conditionalApply, onCreatePlan, ids)(innerContext)
+    val antiCondApply = producer.planAntiConditionalApply(condApply, onCreate, ids)(innerContext)
 
-    antiConditionalApply
+    antiCondApply
   }
 }

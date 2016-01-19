@@ -1266,6 +1266,15 @@ class EagerizationAcceptanceTest extends ExecutionEngineFunSuite with TableDrive
     assertNumberOfEagerness(query, 0)
   }
 
+  test("apa") {
+    val query = "MERGE(a {p: 1}) MERGE(b {p: a.p}) MERGE(c {p: b.p}) RETURN count(*)"
+
+    val result = updateWithBothPlanners(query)
+    result.columnAs[Long]("count(*)").next shouldBe 1
+    assertStats(result, nodesCreated = 1)
+    assertNumberOfEagerness(query, 0)
+  }
+
   test("should not be eager when merging on already bound variables") {
     val query = "MERGE (city:City) MERGE (country:Country) MERGE (city)-[:IN]->(country) RETURN count(*)"
 

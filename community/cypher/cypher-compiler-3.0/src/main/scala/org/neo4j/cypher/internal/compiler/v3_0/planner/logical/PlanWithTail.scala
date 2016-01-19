@@ -66,12 +66,14 @@ case class PlanWithTail(expressionRewriterFactory: (LogicalPlanningContext => Re
     remaining match {
       case Some(plannerQuery) =>
         val lhsContext = context.recurse(lhs)
-        val partPlan = planPart(plannerQuery, lhsContext, Some(context.logicalPlanProducer.planQueryArgumentRow(plannerQuery.queryGraph)))
+        val row = context.logicalPlanProducer.planArgumentRowFrom(lhs)
+        val partPlan = planPart(plannerQuery, lhsContext, Some(row))
         ///use eager if configured to do so
         val alwaysEager = context.config.updateStrategy.alwaysEager
         //If reads interfere with writes, make it a RepeatableRead
         var shouldPlanEagerBeforeTail = false
         val planWithEffects =
+          // TODO:H Fix this eagerness logic
           if (!plannerQuery.isInstanceOf[MergePlannerQuery] &&
             (alwaysEager || Eagerness.conflictInTail(plannerQuery, plannerQuery)))
             context.logicalPlanProducer.planEager(partPlan)

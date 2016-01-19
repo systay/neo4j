@@ -26,6 +26,7 @@ import org.neo4j.cypher.internal.frontend.v3_0.{bottomUp, Rewriter, SemanticDire
 
 import scala.annotation.tailrec
 
+// TODO: Should this be a trait on PlannerQuery?
 object Eagerness {
 
   /**

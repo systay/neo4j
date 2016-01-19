@@ -132,8 +132,6 @@ trait UpdateGraph {
         deleteOverlap(qg) || removeLabelOverlap(qg) || setLabelOverlap(qg) || setPropertyOverlap(qg)
         || deleteOverlapWithMergeIn(this))
 
-  def overlapsXXX(ug: UpdateGraph) = deleteOverlapWithMergeIn(ug)
-
   /*
    * Checks for overlap between nodes being read in the query graph
    * and those being created here

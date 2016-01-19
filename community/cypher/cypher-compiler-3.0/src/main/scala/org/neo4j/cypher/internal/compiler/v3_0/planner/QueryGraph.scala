@@ -142,8 +142,8 @@ case class QueryGraph(patternRelationships: Set[PatternRelationship] = Set.empty
   }
 
   def allCoveredIds: Set[IdName] = {
-    val optionalMatchIds = optionalMatches.flatMap(_.allCoveredIds)
-    coveredIds ++ optionalMatchIds
+    val otherSymbols = optionalMatches.flatMap(_.allCoveredIds) ++ mutatingPatterns.flatMap(_.coveredIds)
+    coveredIds ++ otherSymbols
   }
 
   val allHints: Set[Hint] =

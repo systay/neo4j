@@ -52,6 +52,9 @@ case object PlanEventHorizon
       case UnwindProjection(variable, expression) =>
         context.logicalPlanProducer.planUnwind(plan, variable, expression)
 
+      case PassthroughAllHorizon() =>
+        context.logicalPlanProducer.planPassAll(plan)
+
       case _ =>
         throw new CantHandleQueryException
     }

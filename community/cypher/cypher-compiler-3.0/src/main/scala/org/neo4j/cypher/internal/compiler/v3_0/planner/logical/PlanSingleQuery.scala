@@ -36,15 +36,8 @@ case class PlanSingleQuery(planPart: (PlannerQuery, LogicalPlanningContext, Opti
 
   override def apply(in: PlannerQuery)(implicit context: LogicalPlanningContext): LogicalPlan = {
     val partPlan = countStorePlanner(in).getOrElse(planPart(in, context, None))
-   //always use eager if configured to do so
-    val alwaysEager = context.config.updateStrategy.alwaysEager
 
-    // TODO: Pass planEffects as a LogicalPlanningFunction? (Default PlanEffects, alwaysEager could be another implementation)
-    val planWithEffect =
-      if (alwaysEager || Eagerness.conflictInHead(partPlan, in))
-        context.logicalPlanProducer.planEager(partPlan)
-      else partPlan
-    val planWithUpdates = planUpdates(in, planWithEffect)(context)
+    val planWithUpdates = planUpdates(in, partPlan)(context)
     val projectedPlan = planEventHorizon(in, planWithUpdates)
     val projectedContext = context.recurse(projectedPlan)
     val expressionRewriter = expressionRewriterFactory(projectedContext)

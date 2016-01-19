@@ -42,13 +42,8 @@ case class PlannerQueryBuilder(private val q: PlannerQuery, semanticTable: Seman
   def currentlyAvailableVariables: Set[IdName] = q.allPlannerQueries.flatMap(pq =>
     pq.allQueryGraphs.flatMap(_.allCoveredIds) ++ pq.horizon.exposedSymbols(pq.queryGraph)).toSet
 
-  def currentQueryGraph: QueryGraph = {
-    var current = q
-    while (current.tail.nonEmpty) {
-      current = current.tail.get
-    }
-    current.queryGraph
-  }
+  def currentQueryGraph: QueryGraph = q.lastQueryGraph
+  def currentHorizon: QueryHorizon = q.lastQueryHorizon
 
   def allSeenPatternNodes: Set[IdName] =
     q.allPlannerQueries.flatMap(_.queryGraph.allPatternNodes).toSet

@@ -35,9 +35,22 @@ case class QueryGraph(patternRelationships: Set[PatternRelationship] = Set.empty
                       hints: Set[Hint] = Set.empty,
                       shortestPathPatterns: Set[ShortestPathPattern] = Set.empty,
                       mutatingPatterns: Seq[MutatingPattern] = Seq.empty)
-  extends UpdateGraph with PageDocFormatting { // with ToPrettyString[QueryGraph] {
-//  def toDefaultPrettyString(formatter: DocFormatter) =
-//    toPrettyString(formatter)(InternalDocHandler.docGen)
+  extends UpdateGraph with PageDocFormatting {
+
+  def readQG: QueryGraph = if (containsMerge) {
+    mutatingPatterns.collectFirst {
+      case p: MergeNodePattern => p.matchGraph
+      case p: MergeRelationshipPattern => p.matchGraph
+    }.getOrElse(throw new IllegalStateException("Expected this to be a QG with MERGE"))
+  } else copy(mutatingPatterns = Seq.empty)
+
+  def writeQG: QueryGraph = if (containsMerge) {
+    val creates: Seq[MutatingPattern] = mutatingPatterns.collect {
+      case p: MergeNodePattern => Seq(p.createNodePattern)
+      case p: MergeRelationshipPattern => p.createNodePatterns ++ p.createRelPatterns
+    }.flatten
+    QueryGraph(mutatingPatterns = creates)
+  } else QueryGraph(mutatingPatterns = mutatingPatterns)
 
   def size = patternRelationships.size
 
@@ -205,7 +218,10 @@ case class QueryGraph(patternRelationships: Set[PatternRelationship] = Set.empty
   }
 
   def withoutPatternRelationships(patterns: Set[PatternRelationship]): QueryGraph =
-    copy( patternRelationships = patternRelationships -- patterns )
+    copy(patternRelationships = patternRelationships -- patterns)
+
+  def withoutPatternNode(patterns: IdName): QueryGraph =
+    copy(patternNodes = patternNodes - patterns)
 
   def joinHints: Set[UsingJoinHint] =
     hints.collect { case hint: UsingJoinHint => hint }

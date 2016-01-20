@@ -20,10 +20,13 @@
 package org.neo4j.cypher.internal.compiler.v3_0.planner.logical
 
 import org.neo4j.cypher.internal.compiler.v3_0.planner._
-import org.neo4j.cypher.internal.compiler.v3_0.planner.logical.Eagerness.{headEagerize, conflictInHead, tailEagerize}
+import org.neo4j.cypher.internal.compiler.v3_0.planner.logical.Eagerness.{headEagerize, tailEagerize}
 import org.neo4j.cypher.internal.compiler.v3_0.planner.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.compiler.v3_0.planner.logical.steps.mergeUniqueIndexSeekLeafPlanner
 import org.neo4j.cypher.internal.frontend.v3_0.ast.{ContainerIndex, PathExpression, Variable}
+
+
+
 
 /*
  * This coordinates PlannerQuery planning of updates.
@@ -36,6 +39,9 @@ case object PlanUpdates
       tailEagerize(in, query, query)
     else
       headEagerize(in, query)
+
+    // Eagerness pass 1 -- does previously planned reads conflict with future writes?
+
 
     val updatePlan = query.queryGraph.mutatingPatterns.foldLeft(plan) {
       case (acc, pattern) => planUpdate(query, acc, pattern, firstPlannerQuery)

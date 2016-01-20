@@ -33,6 +33,11 @@ case object cleanUpEager extends Rewriter {
     // E U => U E
     case eager@Eager(unwind@UnwindCollection(source, _, _)) =>
       unwind.copy(left = eager.copy(inner = source)(eager.solved))(eager.solved)
+
+    // E S => S E
+    // do sorting
+//    case eager@Eager(unwind@UnwindCollection(source, _, _)) =>
+//      unwind.copy(left = eager.copy(inner = source)(eager.solved))(eager.solved)
   }
 
   override def apply(input: AnyRef) = bottomUp(instance).apply(input)

@@ -24,9 +24,12 @@ import org.mockito.Matchers._
 import org.neo4j.cypher.internal.compiler.v3_0.planner._
 import org.neo4j.cypher.internal.compiler.v3_0.planner.logical.plans._
 import org.neo4j.cypher.internal.compiler.v3_0.planner.logical.steps.LogicalPlanProducer
+import org.neo4j.cypher.internal.frontend.v3_0.{SemanticDirection, InputPosition}
+import org.neo4j.cypher.internal.frontend.v3_0.ast.functions.Exists
+import org.neo4j.cypher.internal.frontend.v3_0.ast._
 import org.neo4j.cypher.internal.frontend.v3_0.test_helpers.CypherFunSuite
 
-class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestSupport {
+class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestSupport with AstConstructionTestSupport {
 
   implicit var context: LogicalPlanningContext = null
   var lpp: LogicalPlanProducer = null
@@ -52,7 +55,7 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
     val fakeUpdate = mock[LogicalPlan]
     val codeUndertest = PlanEagerness(FakePlanner(fakeUpdate))
     val lhs = mock[LogicalPlan]
-    val pq = RegularPlannerQuery(QueryGraph(patternNodes = Set('a), mutatingPatterns = Seq(createNode("a"))))
+    val pq = RegularPlannerQuery(QueryGraph(patternNodes = Set('a), mutatingPatterns = Seq(createNode("x"))))
 
     // when
     val result = codeUndertest.apply(pq, lhs, head = false)
@@ -64,7 +67,7 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
   test("read one node and create one in head") {
     val codeUndertest = PlanEagerness(FakePlanner(mock[LogicalPlan]))
     val lhs = AllNodesScan('a, Set.empty)(null)
-    val pq = RegularPlannerQuery(QueryGraph(patternNodes = Set('a), mutatingPatterns = Seq(createNode("a"))))
+    val pq = RegularPlannerQuery(QueryGraph(patternNodes = Set('a), mutatingPatterns = Seq(createNode("x"))))
     val result = codeUndertest.apply(pq, lhs, head = true)
 
     verify(lpp, never()).planEager(any())
@@ -77,7 +80,7 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
     when(context.logicalPlanProducer).thenReturn(lpp)
     val codeUndertest = PlanEagerness(FakePlanner(mock[LogicalPlan]))
     val lhs = CartesianProduct(AllNodesScan('a, Set.empty)(null), AllNodesScan('b, Set.empty)(null))(null)
-    val pq = RegularPlannerQuery(QueryGraph(patternNodes = Set('a, 'b), mutatingPatterns = Seq(createNode("a"))))
+    val pq = RegularPlannerQuery(QueryGraph(patternNodes = Set('a, 'b), mutatingPatterns = Seq(createNode("x"))))
 
     // when
     val result = codeUndertest.apply(pq, lhs, head = true)
@@ -86,7 +89,155 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
     verify(lpp).planEager(lhs)
   }
 
-  private def createNode(name: String) = CreateNodePattern(IdName(name), Seq.empty, None)
+  test("stable read one labeled node, read one node, and create one node in head") {
+    // given
+    implicit val context = mock[LogicalPlanningContext]
+    val lpp = mock[LogicalPlanProducer]
+    when(context.logicalPlanProducer).thenReturn(lpp)
+    val codeUndertest = PlanEagerness(FakePlanner(mock[LogicalPlan]))
+    val name: LabelName = LabelName("L")(pos)
+    val lhs = CartesianProduct(NodeByLabelScan('a, name, Set.empty)(null), AllNodesScan('b, Set.empty)(null))(null)
+    val variable: Variable = Variable("a")(pos)
+    val pq = RegularPlannerQuery(QueryGraph(patternNodes = Set('a, 'b), selections = Selections.from(
+      HasLabels(variable, Seq(name))(pos)), mutatingPatterns = Seq(createNode("x"))))
+
+    // when
+    val result = codeUndertest.apply(pq, lhs, head = true)
+
+    // then
+    verify(lpp).planEager(lhs)
+  }
+
+  test("stable read one node, read one labeled node, and create one node in head") {
+    // given
+    implicit val context = mock[LogicalPlanningContext]
+    val lpp = mock[LogicalPlanProducer]
+    when(context.logicalPlanProducer).thenReturn(lpp)
+    val codeUndertest = PlanEagerness(FakePlanner(mock[LogicalPlan]))
+    val name: LabelName = LabelName("L")(pos)
+    val lhs = CartesianProduct(AllNodesScan('b, Set.empty)(null), NodeByLabelScan('a, name, Set.empty)(null))(null)
+    val variable: Variable = Variable("a")(pos)
+    val pq = RegularPlannerQuery(QueryGraph(patternNodes = Set('a, 'b), selections = Selections.from(
+      HasLabels(variable, Seq(name))(pos)), mutatingPatterns = Seq(createNode("x"))))
+
+    // when
+    val result = codeUndertest.apply(pq, lhs, head = true)
+
+    // then
+    verify(lpp, never()).planEager(lhs)
+  }
+
+  test("read one labeled node, read one node, and create one node in tail") {
+    // given
+    implicit val context = mock[LogicalPlanningContext]
+    val lpp = mock[LogicalPlanProducer]
+    when(context.logicalPlanProducer).thenReturn(lpp)
+    val codeUndertest = PlanEagerness(FakePlanner(mock[LogicalPlan]))
+    val name: LabelName = LabelName("L")(pos)
+    val lhs = CartesianProduct(NodeByLabelScan('a, name, Set.empty)(null), AllNodesScan('b, Set.empty)(null))(null)
+    val variable: Variable = Variable("a")(pos)
+    val pq = RegularPlannerQuery(QueryGraph(patternNodes = Set('a, 'b), selections = Selections.from(
+      HasLabels(variable, Seq(name))(pos)), mutatingPatterns = Seq(createNode("x"))))
+
+    // when
+    val result = codeUndertest.apply(pq, lhs, head = false)
+
+    // then
+    verify(lpp).planEager(lhs)
+  }
+
+  test("read one node, read one labeled node, and create one node in tail") {
+    // given
+    implicit val context = mock[LogicalPlanningContext]
+    val lpp = mock[LogicalPlanProducer]
+    when(context.logicalPlanProducer).thenReturn(lpp)
+    val codeUndertest = PlanEagerness(FakePlanner(mock[LogicalPlan]))
+    val name: LabelName = LabelName("L")(pos)
+    val lhs = CartesianProduct(AllNodesScan('b, Set.empty)(null), NodeByLabelScan('a, name, Set.empty)(null))(null)
+    val variable: Variable = Variable("a")(pos)
+    val pq = RegularPlannerQuery(QueryGraph(patternNodes = Set('a, 'b), selections = Selections.from(
+      HasLabels(variable, Seq(name))(pos)), mutatingPatterns = Seq(createNode("x"))))
+
+    // when
+    val result = codeUndertest.apply(pq, lhs, head = false)
+
+    // then
+    verify(lpp).planEager(lhs)
+  }
+
+  test("stable read one node, read one property node, and create one node in head") {
+    // given
+    implicit val context = mock[LogicalPlanningContext]
+    val lpp = mock[LogicalPlanProducer]
+    when(context.logicalPlanProducer).thenReturn(lpp)
+    val codeUndertest = PlanEagerness(FakePlanner(mock[LogicalPlan]))
+    val name: LabelName = LabelName("L")(pos)
+    val variable: Variable = Variable("a")(pos)
+    val lhs = CartesianProduct(AllNodesScan('b, Set.empty)(null), Selection(Seq(In(Property(variable, PropertyKeyName("p")(pos))(pos), Collection(Seq(Parameter("_")(pos)))(pos))(pos)), AllNodesScan('a, Set.empty)(null))(null))(null)
+    val pq = RegularPlannerQuery(QueryGraph(patternNodes = Set('a, 'b), selections = Selections.from(
+      HasLabels(variable, Seq(name))(pos)), mutatingPatterns = Seq(createNode("x"))))
+
+    // when
+    val result = codeUndertest.apply(pq, lhs, head = true)
+
+    // then
+    verify(lpp, never()).planEager(lhs)
+  }
+
+  test("stable read one node, merge one node in head") {
+    // given
+    implicit val context = mock[LogicalPlanningContext]
+    val lpp = mock[LogicalPlanProducer]
+    when(context.logicalPlanProducer).thenReturn(lpp)
+    val codeUndertest = PlanEagerness(FakePlanner(mock[LogicalPlan]))
+    val lhs = AllNodesScan('a, Set.empty)(null)
+    val pq = RegularPlannerQuery(QueryGraph(patternNodes = Set('a))).withTail(RegularPlannerQuery(QueryGraph(mutatingPatterns = Seq(mergeNode("x")))))
+
+    // when
+    val result = codeUndertest.apply(pq, lhs, head = true)
+
+    // then
+    verify(lpp, never()).planEager(lhs)
+  }
+
+  test("read one node, merge one node in tail") {
+    // given
+    implicit val context = mock[LogicalPlanningContext]
+    val lpp = mock[LogicalPlanProducer]
+    when(context.logicalPlanProducer).thenReturn(lpp)
+    val codeUndertest = PlanEagerness(FakePlanner(mock[LogicalPlan]))
+    val lhs = AllNodesScan('a, Set.empty)(null)
+    val pq = RegularPlannerQuery(QueryGraph(patternNodes = Set('a))).withTail(RegularPlannerQuery(QueryGraph(mutatingPatterns = Seq(mergeNode("x")))))
+
+    // when
+    val result = codeUndertest.apply(pq, lhs, head = false)
+
+    // then
+    verify(lpp).planEager(lhs)
+  }
+
+  test("read two nodes, merge one relationship in tail") {
+    // given
+    implicit val context = mock[LogicalPlanningContext]
+    val lpp = mock[LogicalPlanProducer]
+    when(context.logicalPlanProducer).thenReturn(lpp)
+    val codeUndertest = PlanEagerness(FakePlanner(mock[LogicalPlan]))
+    val lhs = CartesianProduct(AllNodesScan('a, Set.empty)(null), AllNodesScan('b, Set.empty)(null))(null)
+    val pq = RegularPlannerQuery(QueryGraph(patternNodes = Set('a, 'b))).withTail(RegularPlannerQuery(QueryGraph(mutatingPatterns = Seq(mergeRelationship("r")))))
+
+    // when
+    val result = codeUndertest.apply(pq, lhs, head = false)
+
+    // then
+    verify(lpp, never()).planEager(lhs)
+  }
+
+  private def createNode(name: String) =
+    CreateNodePattern(IdName(name), Seq.empty, None)
+  private def mergeNode(name: String) =
+    MergeNodePattern(createNode(name), QueryGraph(patternNodes = Set(IdName(name))), Seq.empty, Seq.empty)
+  private def mergeRelationship(name: String) =
+    MergeRelationshipPattern(Seq.empty, Seq(CreateRelationshipPattern(IdName(name), IdName("a"), RelTypeName("T")(pos), IdName("b"), None, SemanticDirection.OUTGOING)), QueryGraph(patternNodes = Set(IdName(name))), Seq.empty, Seq.empty)
 }
 
 case class FakePlanner(result: LogicalPlan)

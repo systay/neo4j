@@ -7,16 +7,22 @@ case class PlanEagerness(inner: LogicalPlanningFunction3[PlannerQuery, LogicalPl
   extends LogicalPlanningFunction3[PlannerQuery, LogicalPlan, Boolean, LogicalPlan] {
 
   override def apply(plannerQuery: PlannerQuery, lhs: LogicalPlan, head: Boolean)(implicit context: LogicalPlanningContext): LogicalPlan = {
+    /*
+     * Eagerness pass 1 -- protect already planned reads against future writes
+     */
+
     val thisRead: QueryGraph = if (head) {
-      val unstableLeaves = lhs.leaves.collect {
+      // The first leaf node is always reading through a stable iterator.
+      // We will only consider this analysis for all other node iterators.
+      val leaves = lhs.leaves.collect {
         case n: NodeLogicalLeafPlan => n.idName
       }
 
       val originalQG = plannerQuery.queryGraph.readQG
-      if (unstableLeaves.isEmpty)
+      if (leaves.isEmpty) // the query did not start with a read, possibly CREATE () ...
         originalQG
       else {
-        val stableLeaf = unstableLeaves.head
+        val stableLeaf = leaves.head
         originalQG.withoutPatternNode(stableLeaf)
       }
 
@@ -30,5 +36,13 @@ case class PlanEagerness(inner: LogicalPlanningFunction3[PlannerQuery, LogicalPl
     else lhs
 
     newLhs
+
+    // call inner
+
+    /*
+     * Eagerness pass 2 -- protect future reads against writes planned by inner
+     */
+
+    // check conflicts between results from inner and plannerQuery.tail.getOrElse(empty).allQueryGraphs.map(_.readQG)
   }
 }

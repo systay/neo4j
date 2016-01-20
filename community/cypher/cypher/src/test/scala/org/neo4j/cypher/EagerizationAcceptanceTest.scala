@@ -297,7 +297,7 @@ class EagerizationAcceptanceTest extends ExecutionEngineFunSuite with TableDrive
     val query = "MATCH (k) CREATE (l {prop: 44}) WITH * MATCH (m) CREATE (n {prop:45}) RETURN count(*)"
 
     val result = updateWithBothPlanners(query)
-    result should use("Eager")
+
     result.columnAs[Long]("count(*)").next shouldBe 8
     assertStats(result, nodesCreated = 10, propertiesWritten = 10)
     assertNumberOfEagerness(query, 2)
@@ -1235,7 +1235,7 @@ class EagerizationAcceptanceTest extends ExecutionEngineFunSuite with TableDrive
     assertNumberOfEagerness(query, 0)
   }
 
-  test("apa") {
+  test("Multiple single node merges building on each other through property values") {
     val query = "MERGE(a {p: 1}) MERGE(b {p: a.p}) MERGE(c {p: b.p}) RETURN count(*)"
 
     val result = updateWithBothPlanners(query)
@@ -1907,7 +1907,7 @@ class EagerizationAcceptanceTest extends ExecutionEngineFunSuite with TableDrive
       if (VERBOSE_INCLUDE_PLAN_DESCRIPTION)
         println(plan)
     }
-    withClue(s"Number of eagerness ") {
+    withClue(s"$plan\nNumber of eagerness") {
       length shouldBe expectedEagerCount
     }
   }

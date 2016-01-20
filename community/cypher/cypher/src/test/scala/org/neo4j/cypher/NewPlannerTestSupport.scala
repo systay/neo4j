@@ -209,8 +209,10 @@ trait NewPlannerTestSupport extends CypherTestSupport {
     compiledResult
   }
 
+
+
   private def assertResultsAreSame(ruleResult: InternalExecutionResult, costResult: InternalExecutionResult, queryText: String, errorMsg: String, replaceNaNs: Boolean = false) {
-    withClue(errorMsg) {
+    withClue(s"${costResult.executionPlanDescription().toString}\n$errorMsg") {
       if (queryText.toLowerCase contains "order by") {
         ruleResult.toComparableResultWithOptions(replaceNaNs) should contain theSameElementsInOrderAs costResult.toComparableResultWithOptions(replaceNaNs)
       } else {

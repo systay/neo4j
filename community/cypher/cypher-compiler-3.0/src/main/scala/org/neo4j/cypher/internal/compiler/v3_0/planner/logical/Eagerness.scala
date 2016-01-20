@@ -75,6 +75,49 @@ object Eagerness {
       headConflicts(head, tail.tail.get, unstableLeaves)
   }
 
+  def eagerApply(in: LogicalPlan, rhs: LogicalPlan, plannerQuery: PlannerQuery)(implicit context: LogicalPlanningContext) = {
+    val newLhs = {
+      val allQueryGraphs = plannerQuery.allQueryGraphs
+      val incomingQG = in.solved.last.queryGraph
+      val deleteOverlapsWithMerge = allQueryGraphs.exists(incomingQG.deleteOverlapWithMergeIn)
+      val notComingFromWriteOnly = !incomingQG.writeOnly
+      val futureReadOverlapsWithThisWrite = allQueryGraphs.exists(incomingQG.overlaps)
+
+      if (deleteOverlapsWithMerge || (notComingFromWriteOnly && futureReadOverlapsWithThisWrite))
+        context.logicalPlanProducer.planEager(in)
+      else
+        in
+    }
+
+    val apply = context.logicalPlanProducer.planTailApply(newLhs, rhs)
+
+    {
+      val merge = plannerQuery.queryGraph.containsMerge
+      val conflictWithTail = plannerQuery.tail.exists(tail => conflictInTail(plannerQuery, tail))
+      val apa = plannerQuery.tail.isDefined && Eagerness.conflictInTail(plannerQuery, plannerQuery.tail.get)
+
+      if (merge && conflictWithTail)
+        context.logicalPlanProducer.planEager(apply)
+      else apply
+    }
+  }
+
+  def tailEagerize(in: LogicalPlan, head: PlannerQuery, tail: PlannerQuery)
+                  (implicit context: LogicalPlanningContext): LogicalPlan = {
+    val merge = head.queryGraph.containsMerge
+
+    if (!merge && conflictInTail(head, tail))
+      context.logicalPlanProducer.planEager(in)
+    else
+      in
+  }
+
+  def headEagerize(in: LogicalPlan, head: PlannerQuery)
+                  (implicit context: LogicalPlanningContext): LogicalPlan =
+    if (conflictInHead(in, head))
+      context.logicalPlanProducer.planEager(in)
+    else
+      in
 
   /**
     * Determines whether there is a conflict between the two PlannerQuery objects.
@@ -82,9 +125,22 @@ object Eagerness {
     * the head of the PlannerQuery chain.
     */
   @tailrec
-  def conflictInTail(head: PlannerQuery, tail: PlannerQuery): Boolean = {
-    val conflict = if (tail.queryGraph.readOnly) false
-    else tail.queryGraph overlaps head.queryGraph
+  private def conflictInTail(head: PlannerQuery, tail: PlannerQuery): Boolean = {
+    val readOnly = head.queryGraph.readOnly
+    val conflict = if (readOnly) false
+    else {
+      if (head.queryGraph.containsMerge) {
+        println("apa")
+        val allMergeGraphs = head.queryGraph.mergeNodePatterns.map(_.matchGraph).collect {
+          case c: MergePattern => c.matchGraph
+        }
+        val exists: Boolean = allMergeGraphs.exists(qg => qg.overlaps(tail.queryGraph))
+        println(exists)
+        allMergeGraphs.exists(tail.queryGraph.overlaps)
+      }
+      else
+        tail.queryGraph overlaps head.queryGraph
+    }
     if (conflict)
       true
     else if (tail.tail.isEmpty)

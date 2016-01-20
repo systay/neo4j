@@ -64,13 +64,18 @@ case class RemoveLabelPattern(idName: IdName, labels: Seq[LabelName]) extends Mu
 
 case class DeleteExpression(expression: Expression, forced: Boolean) extends MutatingPattern with NoSymbols
 
+trait MergePattern {
+  self : MutatingPattern =>
+  def matchGraph: QueryGraph
+}
+
 case class MergeNodePattern(createNodePattern: CreateNodePattern, matchGraph: QueryGraph, onCreate: Seq[SetMutatingPattern],
-                            onMatch: Seq[SetMutatingPattern]) extends MutatingPattern {
+                            onMatch: Seq[SetMutatingPattern]) extends MutatingPattern with MergePattern {
   override def coveredIds = matchGraph.allCoveredIds
 }
 
 case class MergeRelationshipPattern(createNodePatterns: Seq[CreateNodePattern], createRelPatterns: Seq[CreateRelationshipPattern],
-                                    matchGraph: QueryGraph, onCreate: Seq[SetMutatingPattern], onMatch: Seq[SetMutatingPattern]) extends MutatingPattern {
+                                    matchGraph: QueryGraph, onCreate: Seq[SetMutatingPattern], onMatch: Seq[SetMutatingPattern]) extends MutatingPattern with MergePattern {
   override def coveredIds = matchGraph.allCoveredIds
 }
 

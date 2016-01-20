@@ -26,14 +26,13 @@ import org.neo4j.cypher.internal.frontend.v3_0.{Rewriter, bottomUp}
 
 import scala.annotation.tailrec
 
-// TODO: Should this be a trait on PlannerQuery?
 object Eagerness {
 
   /**
-   * Determines whether there is a conflict between the so-far planned LogicalPlan
-   * and the remaining parts of the PlannerQuery. This function assumes that the
-   * argument PlannerQuery is the very head of the PlannerQuery chain.
-   */
+    * Determines whether there is a conflict between the so-far planned LogicalPlan
+    * and the remaining parts of the PlannerQuery. This function assumes that the
+    * argument PlannerQuery is the very head of the PlannerQuery chain.
+    */
   def conflictInHead(plan: LogicalPlan, plannerQuery: PlannerQuery): Boolean = {
     // The first leaf node is always reading through a stable iterator.
     // We will only consider this analysis for all other node iterators.
@@ -44,7 +43,7 @@ object Eagerness {
     if (unstableLeaves.isEmpty)
       false // the query did not start with a read, possibly CREATE () ...
     else
-      // Start recursion by checking the given plannerQuery against itself
+    // Start recursion by checking the given plannerQuery against itself
       headConflicts(plannerQuery, plannerQuery, unstableLeaves.tail)
   }
 
@@ -75,49 +74,6 @@ object Eagerness {
       headConflicts(head, tail.tail.get, unstableLeaves)
   }
 
-  def eagerApply(in: LogicalPlan, rhs: LogicalPlan, plannerQuery: PlannerQuery)(implicit context: LogicalPlanningContext) = {
-    val newLhs = {
-      val allQueryGraphs = plannerQuery.allQueryGraphs
-      val incomingQG = in.solved.last.queryGraph
-      val deleteOverlapsWithMerge = allQueryGraphs.exists(incomingQG.deleteOverlapWithMergeIn)
-      val notComingFromWriteOnly = !incomingQG.writeOnly
-      val futureReadOverlapsWithThisWrite = allQueryGraphs.exists(incomingQG.overlaps)
-
-      if (deleteOverlapsWithMerge || (notComingFromWriteOnly && futureReadOverlapsWithThisWrite))
-        context.logicalPlanProducer.planEager(in)
-      else
-        in
-    }
-
-    val apply = context.logicalPlanProducer.planTailApply(newLhs, rhs)
-
-    {
-      val merge = plannerQuery.queryGraph.containsMerge
-      val conflictWithTail = plannerQuery.tail.exists(tail => conflictInTail(plannerQuery, tail))
-      val apa = plannerQuery.tail.isDefined && Eagerness.conflictInTail(plannerQuery, plannerQuery.tail.get)
-
-      if (merge && conflictWithTail)
-        context.logicalPlanProducer.planEager(apply)
-      else apply
-    }
-  }
-
-  def tailEagerize(in: LogicalPlan, head: PlannerQuery, tail: PlannerQuery)
-                  (implicit context: LogicalPlanningContext): LogicalPlan = {
-    val merge = head.queryGraph.containsMerge
-
-    if (!merge && conflictInTail(head, tail))
-      context.logicalPlanProducer.planEager(in)
-    else
-      in
-  }
-
-  def headEagerize(in: LogicalPlan, head: PlannerQuery)
-                  (implicit context: LogicalPlanningContext): LogicalPlan =
-    if (conflictInHead(in, head))
-      context.logicalPlanProducer.planEager(in)
-    else
-      in
 
   /**
     * Determines whether there is a conflict between the two PlannerQuery objects.
@@ -125,22 +81,9 @@ object Eagerness {
     * the head of the PlannerQuery chain.
     */
   @tailrec
-  private def conflictInTail(head: PlannerQuery, tail: PlannerQuery): Boolean = {
-    val readOnly = head.queryGraph.readOnly
-    val conflict = if (readOnly) false
-    else {
-      if (head.queryGraph.containsMerge) {
-        println("apa")
-        val allMergeGraphs = head.queryGraph.mergeNodePatterns.map(_.matchGraph).collect {
-          case c: MergePattern => c.matchGraph
-        }
-        val exists: Boolean = allMergeGraphs.exists(qg => qg.overlaps(tail.queryGraph))
-        println(exists)
-        allMergeGraphs.exists(tail.queryGraph.overlaps)
-      }
-      else
-        tail.queryGraph overlaps head.queryGraph
-    }
+  def conflictInTail(head: PlannerQuery, tail: PlannerQuery): Boolean = {
+    val conflict = if (tail.queryGraph.readOnly) false
+    else tail.queryGraph overlaps head.queryGraph
     if (conflict)
       true
     else if (tail.tail.isEmpty)
@@ -155,7 +98,7 @@ object Eagerness {
    * by the writes.
    */
   private def nodeOverlap(currentNode: IdName, headQueryGraph: QueryGraph, tail: PlannerQuery): Boolean = {
-    val labelsOnCurrentNode = headQueryGraph.allKnownLabelsOnNode(currentNode).toSet
+    val labelsOnCurrentNode = headQueryGraph.allKnownLabelsOnNode(currentNode)
     val propertiesOnCurrentNode = headQueryGraph.allKnownPropertiesOnIdentifier(currentNode).map(_.propertyKey)
     val labelsToCreate = tail.queryGraph.createLabels
     val propertiesToCreate = tail.queryGraph.createNodeProperties

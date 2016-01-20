@@ -1034,6 +1034,18 @@ class EagerizationAcceptanceTest
     assertNumberOfEagerness(query, 1)
   }
 
+  test("should be eager if merging node with properties after matching all nodes") {
+    createLabeledNode("Two")
+    createLabeledNode("Two")
+    createNode()
+    val query = "MATCH (m1:Two), (m2:Two), (n) MERGE (q {p: 1}) ON MATCH SET q:One RETURN count(*) AS c"
+
+    val result: InternalExecutionResult = updateWithBothPlanners(query)
+    assertStats(result, labelsAdded = 1, nodesCreated = 1, propertiesWritten = 1)
+    result.toList should equal(List(Map("c" -> 12)))
+    assertNumberOfEagerness(query, 1)
+  }
+
   test("on match set label on unstable iterator should not be eager if no overlap") {
     createLabeledNode("Two")
     createLabeledNode("Two")

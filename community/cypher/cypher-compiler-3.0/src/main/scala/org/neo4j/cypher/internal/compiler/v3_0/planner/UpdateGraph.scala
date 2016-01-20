@@ -126,11 +126,20 @@ trait UpdateGraph {
    * Checks if there is overlap between what's being read in the query graph
    * and what is being written here
    */
-  def overlaps(qg: QueryGraph) =
-      containsUpdates &&
-      (createNodeOverlap(qg) || relationshipOverlap(qg) ||
-        deleteOverlap(qg) || removeLabelOverlap(qg) || setLabelOverlap(qg) || setPropertyOverlap(qg)
-        || deleteOverlapWithMergeIn(this))
+  def overlaps(qg: QueryGraph) = {
+    val a = containsUpdates
+    val b = createNodeOverlap(qg)
+    val b2 = qg.mergeQueryGraphs.exists(g => createNodeOverlap(g))
+    val c = relationshipOverlap(qg)
+    val d = deleteOverlap(qg)
+    val e = removeLabelOverlap(qg)
+    val f = setLabelOverlap(qg)
+    val g = setPropertyOverlap(qg)
+    val h = deleteOverlapWithMergeIn(this) // henrik: I think "this" should be "qg"
+    a && (b || b2 || c || d || e || f || g || h)
+  }
+
+  def createsNodes = createNodePatterns.nonEmpty || mergeRelationshipPatterns.flatMap(_.createNodePatterns).nonEmpty || mergeNodePatterns.nonEmpty
 
   /*
    * Checks for overlap between nodes being read in the query graph
@@ -144,7 +153,9 @@ trait UpdateGraph {
       propsToRead.isEmpty || propsToRead.exists(propsToWrite.overlaps)
     }
 
-    qg.patternNodes.filterNot(qg.argumentIds).exists(p => {
+    val idNames: Set[IdName] = qg.patternNodes.filterNot(qg.argumentIds)
+
+    createsNodes && idNames.exists(p => {
       val readProps = qg.allKnownPropertiesOnIdentifier(p).map(_.propertyKey)
 
       //MATCH () CREATE ()?
@@ -317,5 +328,9 @@ trait UpdateGraph {
   private def setNodePropertyPatterns = mutatingPatterns.collect {
     case p: SetNodePropertyPattern => p
     case p: SetNodePropertiesFromMapPattern => p
+  }
+
+  def mergeQueryGraphs: Seq[QueryGraph] = mutatingPatterns.collect {
+    case c: MergePattern => c.matchGraph
   }
 }

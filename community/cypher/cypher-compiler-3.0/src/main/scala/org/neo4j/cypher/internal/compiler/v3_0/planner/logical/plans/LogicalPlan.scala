@@ -53,9 +53,13 @@ abstract class LogicalPlan
   def solved: PlannerQuery with CardinalityEstimation
   def availableSymbols: Set[IdName]
 
-  def leaves: Seq[LogicalPlan] = this.treeFold(Seq.empty[LogicalPlan]) {
-    case plan: LogicalPlan
-      if plan.lhs.isEmpty && plan.rhs.isEmpty => acc => (acc :+ plan, Some(identity))
+  def leftMost: LogicalPlan = lhs.map(_.leftMost).getOrElse(this)
+
+  def leaves: Seq[LogicalPlan] = (lhs, rhs) match {
+    case (None, None) => Seq(this)
+    case (Some(a), None) => a.leaves
+    case (None, Some(a)) => a.leaves
+    case (Some(a), Some(b)) => a.leaves ++ b.leaves
   }
 
   def updateSolved(newSolved: PlannerQuery with CardinalityEstimation): LogicalPlan = {
@@ -133,6 +137,9 @@ abstract class LogicalLeafPlan extends LogicalPlan with LazyLogicalPlan {
   def argumentIds: Set[IdName]
 }
 
+/*
+This is a logical plan that is a leaf and produces nodes
+ */
 abstract class NodeLogicalLeafPlan extends LogicalLeafPlan {
   def idName: IdName
 }

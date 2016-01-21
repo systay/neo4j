@@ -130,7 +130,7 @@ case object PlanUpdates
    *       cond-apply
    *        /     \
    *    apply  onMatch
-   *    /   \
+   *    /    \
    * source optional
    *           \
    *         mergeReadPart

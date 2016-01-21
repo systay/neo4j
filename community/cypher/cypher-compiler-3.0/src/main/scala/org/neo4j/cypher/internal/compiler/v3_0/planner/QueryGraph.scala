@@ -27,6 +27,54 @@ import org.neo4j.cypher.internal.frontend.v3_0.perty._
 import scala.collection.{GenTraversableOnce, mutable}
 
 
+trait Read {
+  def readsNodes: Boolean
+  def nodeIds: Set[IdName]
+  def labelsOn(x: IdName): Set[LabelName]
+}
+
+trait Update {
+  def overlaps(read: Read): Boolean = {
+    val b = updatesNodes && read.readsNodes
+    val c = read.nodeIds.exists { nodeId =>
+      val readLabels = read.labelsOn(nodeId)
+      readLabels.isEmpty || (readLabels containsAnyOf updateLabelsNotOn(nodeId))
+    }
+    nonEmpty && b && c
+  }
+
+  def updatesNodes: Boolean
+  def isEmpty: Boolean
+  def nonEmpty: Boolean = !isEmpty
+  def updateLabelsNotOn(id: IdName): Set[LabelName]
+
+  implicit class apa[T](my: Set[T]) {
+    def containsAnyOf(other:Set[T]) = (my intersect other).nonEmpty
+  }
+}
+
+case class ReadView(qg: QueryGraph) extends Read {
+    override def readsNodes = qg.patternNodes.nonEmpty
+    override def nodeIds = qg.patternNodes
+    override def labelsOn(x: IdName): Set[LabelName] = qg.allKnownLabelsOnNode(x)
+}
+
+case class UpdateView(mutatingPatterns: Seq[MutatingPattern]) extends Update {
+  override def updatesNodes = mutatingPatterns.exists {
+    case x: CreateNodePattern => true
+    case x: SetLabelPattern => true
+    case _ => false
+  }
+
+  override def isEmpty = mutatingPatterns.isEmpty
+
+  override def updateLabelsNotOn(id: IdName): Set[LabelName] = (mutatingPatterns collect {
+    case x: SetLabelPattern if x.idName != id => x.labels
+    case x: CreateNodePattern => x.labels
+  }).flatten.toSet
+
+  }
+
 case class QueryGraph(patternRelationships: Set[PatternRelationship] = Set.empty,
                       patternNodes: Set[IdName] = Set.empty,
                       argumentIds: Set[IdName] = Set.empty,
@@ -36,21 +84,24 @@ case class QueryGraph(patternRelationships: Set[PatternRelationship] = Set.empty
                       shortestPathPatterns: Set[ShortestPathPattern] = Set.empty,
                       mutatingPatterns: Seq[MutatingPattern] = Seq.empty)
   extends UpdateGraph with PageDocFormatting {
+  self =>
+  // TODO: Add assertions to make sure invalid QGs are rejected, such as mixing MERGE with other clauses
 
-  def readQG: QueryGraph = if (containsMerge) {
-    mutatingPatterns.collectFirst {
-      case p: MergeNodePattern => p.matchGraph
-      case p: MergeRelationshipPattern => p.matchGraph
-    }.getOrElse(throw new IllegalStateException("Expected this to be a QG with MERGE"))
-  } else copy(mutatingPatterns = Seq.empty)
+  def reads: Read = {
+    val queryGraph = if (containsMerge) mutatingPatterns.head.asInstanceOf[MergePattern].matchGraph else this
+    ReadView(queryGraph)
+  }
 
-  def writeQG: QueryGraph = if (containsMerge) {
-    val creates: Seq[MutatingPattern] = mutatingPatterns.collect {
-      case p: MergeNodePattern => Seq(p.createNodePattern)
-      case p: MergeRelationshipPattern => p.createNodePatterns ++ p.createRelPatterns
-    }.flatten
-    QueryGraph(mutatingPatterns = creates)
-  } else QueryGraph(mutatingPatterns = mutatingPatterns)
+  def updates: Update = {
+    val updateActions = if (containsMerge) {
+      mutatingPatterns.collect {
+        case x: MergeNodePattern => Seq(x.createNodePattern)
+        case x: MergeRelationshipPattern => x.createNodePatterns ++ x.createRelPatterns
+      }.flatten
+    } else mutatingPatterns
+
+    UpdateView(updateActions)
+  }
 
   def size = patternRelationships.size
 
@@ -123,12 +174,12 @@ case class QueryGraph(patternRelationships: Set[PatternRelationship] = Set.empty
   def knownProperties(idName: IdName): Set[Property] =
     selections.propertyPredicatesForSet.getOrElse(idName, Set.empty)
 
-  def knownLabelsOnNode(node: IdName): Seq[LabelName] =
+  private def knownLabelsOnNode(node: IdName): Set[LabelName] =
     selections
-      .labelPredicates.getOrElse(node, Seq.empty)
-      .flatMap(_.labels).toSeq
+      .labelPredicates.getOrElse(node, Set.empty)
+      .flatMap(_.labels)
 
-  def allKnownLabelsOnNode(node: IdName): Seq[LabelName] =
+  def allKnownLabelsOnNode(node: IdName): Set[LabelName] =
     knownLabelsOnNode(node) ++ optionalMatches.flatMap(_.allKnownLabelsOnNode(node))
 
   def allKnownPropertiesOnIdentifier(idName: IdName): Set[Property] =

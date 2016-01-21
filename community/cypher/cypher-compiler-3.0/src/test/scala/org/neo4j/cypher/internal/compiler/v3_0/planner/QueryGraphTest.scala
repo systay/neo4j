@@ -50,8 +50,8 @@ class QueryGraphTest extends CypherFunSuite with AstConstructionTestSupport with
     qg.findRelationshipsEndingOn('a) should equal(Set(r))
     qg.findRelationshipsEndingOn('b) should equal(Set(r, r2))
     qg.findRelationshipsEndingOn('c) should equal(Set(r2))
-    qg.readQG should equal(qg)
-    qg.writeQG should equal(QueryGraph.empty)
+    qg.reads should equal(qg)
+    qg.updates should equal(QueryGraph.empty)
   }
 
   test("extracts write patterns from single node merge QG") {
@@ -59,8 +59,8 @@ class QueryGraphTest extends CypherFunSuite with AstConstructionTestSupport with
     val mergeNode = MergeNodePattern(CreateNodePattern('a, Seq.empty, None), readQG, Seq.empty, Seq.empty)
     val qg = QueryGraph(mutatingPatterns = Seq(mergeNode))
 
-    qg.readQG should equal(readQG)
-    qg.writeQG should equal(QueryGraph(mutatingPatterns = Seq(CreateNodePattern('a, Seq.empty, None))))
+    qg.reads should equal(readQG)
+    qg.updates should equal(QueryGraph(mutatingPatterns = Seq(CreateNodePattern('a, Seq.empty, None))))
   }
 
   test("extracts write patterns from single relationship merge QG") {
@@ -72,15 +72,15 @@ class QueryGraphTest extends CypherFunSuite with AstConstructionTestSupport with
     val mergeNode = MergeRelationshipPattern(createNodes, createRels, readQG, Seq.empty, Seq.empty)
     val qg = QueryGraph(mutatingPatterns = Seq(mergeNode))
 
-    qg.readQG should equal(readQG)
-    qg.writeQG should equal(QueryGraph(mutatingPatterns = createNodes ++ createRels))
+    qg.reads should equal(readQG)
+    qg.updates should equal(QueryGraph(mutatingPatterns = createNodes ++ createRels))
   }
 
   test("QG with both reads and writes is split up accordingly") {
     val createNodes: Seq[CreateNodePattern] = Seq(CreateNodePattern('a, Seq.empty, None))
     val qg = QueryGraph(mutatingPatterns = createNodes, patternNodes = Set('b))
 
-    qg.readQG should equal(QueryGraph(patternNodes = Set('b)))
-    qg.writeQG should equal(QueryGraph(mutatingPatterns = createNodes))
+    qg.reads should equal(QueryGraph(patternNodes = Set('b)))
+    qg.updates should equal(QueryGraph(mutatingPatterns = createNodes))
   }
 }

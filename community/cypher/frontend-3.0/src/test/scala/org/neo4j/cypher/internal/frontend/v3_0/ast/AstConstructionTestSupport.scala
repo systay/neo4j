@@ -39,6 +39,9 @@ trait AstConstructionTestSupport extends CypherTestSupport {
   def propEquality(variable: String, propKey: String, intValue: Int) =
     Equals(prop(variable, propKey), literalInt(intValue))(pos)
 
+  def rewrittenPropEquality(variable: String, propKey: String, intValue: Int) =
+    In(prop(variable, propKey), Collection(Seq(literalInt(intValue)))(pos))(pos) // The shape after rewriteEqualityToInCollection
+
   def literalInt(intValue: Int): SignedDecimalIntegerLiteral =
     SignedDecimalIntegerLiteral(intValue.toString)(pos)
 }

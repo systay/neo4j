@@ -24,6 +24,7 @@ import org.neo4j.cypher.internal.compiler.v3_0.planner.logical.plans._
 import org.neo4j.cypher.internal.frontend.v3_0.ast._
 import org.neo4j.cypher.internal.frontend.v3_0.perty._
 
+import scala.annotation.tailrec
 import scala.collection.{GenTraversableOnce, mutable}
 
 
@@ -31,6 +32,7 @@ trait Read {
   def readsNodes: Boolean
   def nodeIds: Set[IdName]
   def labelsOn(x: IdName): Set[LabelName]
+  def readsProperties: Set[PropertyKeyName]
 }
 
 trait Update {
@@ -40,13 +42,15 @@ trait Update {
       val readLabels = read.labelsOn(nodeId)
       readLabels.isEmpty || (readLabels containsAnyOf updateLabelsNotOn(nodeId))
     }
-    nonEmpty && b && c
+    val d = read.readsProperties.exists(updatesProperties.overlaps)
+    nonEmpty && b && (c || d)
   }
 
   def updatesNodes: Boolean
   def isEmpty: Boolean
   def nonEmpty: Boolean = !isEmpty
   def updateLabelsNotOn(id: IdName): Set[LabelName]
+  def updatesProperties: CreatesPropertyKeys
 
   implicit class apa[T](my: Set[T]) {
     def containsAnyOf(other:Set[T]) = (my intersect other).nonEmpty
@@ -54,15 +58,21 @@ trait Update {
 }
 
 case class ReadView(qg: QueryGraph) extends Read {
-    override def readsNodes = qg.patternNodes.nonEmpty
-    override def nodeIds = qg.patternNodes
-    override def labelsOn(x: IdName): Set[LabelName] = qg.allKnownLabelsOnNode(x)
+  override def readsNodes = qg.patternNodes.nonEmpty
+  override def nodeIds = qg.patternNodes
+  override def labelsOn(x: IdName): Set[LabelName] = qg.allKnownLabelsOnNode(x)
+
+  override def readsProperties: Set[PropertyKeyName] =
+    qg.allKnownNodeProperties.map(_.propertyKey) ++
+    qg.allKnownRelProperties.map(_.propertyKey)
 }
 
 case class UpdateView(mutatingPatterns: Seq[MutatingPattern]) extends Update {
   override def updatesNodes = mutatingPatterns.exists {
     case x: CreateNodePattern => true
     case x: SetLabelPattern => true
+    case x: SetNodePropertyPattern => true
+    case x: SetNodePropertiesFromMapPattern => true
     case _ => false
   }
 
@@ -73,7 +83,59 @@ case class UpdateView(mutatingPatterns: Seq[MutatingPattern]) extends Update {
     case x: CreateNodePattern => x.labels
   }).flatten.toSet
 
+  override def updatesProperties = updatesNodeProperties + updatesRelationshipProperties
+
+  private def updatesNodeProperties = {
+    @tailrec
+    def toNodePropertyPattern(patterns: Seq[MutatingPattern], acc: CreatesPropertyKeys): CreatesPropertyKeys = {
+
+      def extractPropertyKey(patterns: Seq[SetMutatingPattern]): CreatesPropertyKeys = patterns.collect {
+        case SetNodePropertyPattern(_, key, _) => CreatesKnownPropertyKeys(key)
+        case SetNodePropertiesFromMapPattern(_, expression, _) => CreatesPropertyKeys(expression)
+      }.foldLeft[CreatesPropertyKeys](CreatesNoPropertyKeys)(_ + _)
+
+      patterns match {
+        case Nil => acc
+        case SetNodePropertiesFromMapPattern(_, expression, _) :: tl => CreatesPropertyKeys(expression)
+        case SetNodePropertyPattern(_, key, _) :: tl => toNodePropertyPattern(tl, acc + CreatesKnownPropertyKeys(key))
+        case MergeNodePattern(_, _, onCreate, onMatch) :: tl =>
+          toNodePropertyPattern(tl, acc + extractPropertyKey(onCreate) + extractPropertyKey(onMatch))
+        case MergeRelationshipPattern(_, _, _ , onCreate, onMatch) :: tl =>
+          toNodePropertyPattern(tl, acc + extractPropertyKey(onCreate) + extractPropertyKey(onMatch))
+
+        case hd :: tl => toNodePropertyPattern(tl, acc)
+      }
+    }
+
+    toNodePropertyPattern(mutatingPatterns, CreatesNoPropertyKeys)
   }
+
+  private def updatesRelationshipProperties = {
+    @tailrec
+    def toRelPropertyPattern(patterns: Seq[MutatingPattern], acc: CreatesPropertyKeys): CreatesPropertyKeys = {
+
+      def extractPropertyKey(patterns: Seq[SetMutatingPattern]): CreatesPropertyKeys = patterns.collect {
+        case SetRelationshipPropertyPattern(_, key, _) => CreatesKnownPropertyKeys(key)
+        case SetRelationshipPropertiesFromMapPattern(_, expression, _) => CreatesPropertyKeys(expression)
+      }.foldLeft[CreatesPropertyKeys](CreatesNoPropertyKeys)(_ + _)
+
+      patterns match {
+        case Nil => acc
+        case SetRelationshipPropertiesFromMapPattern(_, expression, _) :: tl => CreatesPropertyKeys(expression)
+        case SetRelationshipPropertyPattern(_, key, _) :: tl => toRelPropertyPattern(tl, acc + CreatesKnownPropertyKeys(key))
+        case MergeNodePattern(_, _, onCreate, onMatch) :: tl =>
+          toRelPropertyPattern(tl, acc + extractPropertyKey(onCreate) + extractPropertyKey(onMatch))
+        case MergeRelationshipPattern(_, _, _ , onCreate, onMatch) :: tl =>
+          toRelPropertyPattern(tl, acc + extractPropertyKey(onCreate) + extractPropertyKey(onMatch))
+
+        case hd :: tl => toRelPropertyPattern(tl, acc)
+      }
+    }
+
+    toRelPropertyPattern(mutatingPatterns, CreatesNoPropertyKeys)
+  }
+
+}
 
 case class QueryGraph(patternRelationships: Set[PatternRelationship] = Set.empty,
                       patternNodes: Set[IdName] = Set.empty,

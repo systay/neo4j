@@ -20,7 +20,7 @@
 package org.neo4j.cypher.internal.compiler.v3_0.planner.logical
 
 import org.neo4j.cypher.internal.compiler.v3_0.planner._
-import org.neo4j.cypher.internal.compiler.v3_0.planner.logical.Eagerness.{headEagerize, tailEagerize}
+import org.neo4j.cypher.internal.compiler.v3_0.planner.logical.Eagerness.{headReadWriteEagerize, tailReadWriteEagerizeNonRecursive, headWriteReadEagerize}
 import org.neo4j.cypher.internal.compiler.v3_0.planner.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.compiler.v3_0.planner.logical.steps.mergeUniqueIndexSeekLeafPlanner
 import org.neo4j.cypher.internal.frontend.v3_0.ast.{ContainerIndex, PathExpression, Variable}
@@ -35,26 +35,33 @@ case object PlanUpdates
   extends LogicalPlanningFunction3[PlannerQuery, LogicalPlan, Boolean, LogicalPlan] {
 
   override def apply(query: PlannerQuery, in: LogicalPlan, firstPlannerQuery: Boolean)(implicit context: LogicalPlanningContext): LogicalPlan = {
-    val plan = if (!firstPlannerQuery)
-      tailEagerize(in, query, query)
-    else
-      headEagerize(in, query)
-
     // Eagerness pass 1 -- does previously planned reads conflict with future writes?
-
+    val plan = if (firstPlannerQuery)
+      headReadWriteEagerize(in, query)
+    else
+      //// NOTE: tailReadWriteEagerizeRecursive is done by eagerApply in PlanWithTail
+      tailReadWriteEagerizeNonRecursive(in, query)
 
     val updatePlan = query.queryGraph.mutatingPatterns.foldLeft(plan) {
       case (acc, pattern) => planUpdate(query, acc, pattern, firstPlannerQuery)
     }
 
-    if (!firstPlannerQuery && query.tail.isDefined)
-      tailEagerize(updatePlan, query, query.tail.get)
+    if (firstPlannerQuery)
+      headWriteReadEagerize(updatePlan, query)
     else
+      // NOTE: tailWriteReadEagerize is done by eagerApply in PlanWithTail
       updatePlan
   }
 
   private def planUpdate(query: PlannerQuery, source: LogicalPlan, pattern: MutatingPattern, first: Boolean)
-                        (implicit context: LogicalPlanningContext): LogicalPlan =
+                        (implicit context: LogicalPlanningContext): LogicalPlan = {
+
+    def planAllUpdatesRecursively(query: PlannerQuery, plan: LogicalPlan): LogicalPlan = {
+      query.allPlannerQueries.foldLeft(plan) {
+        case (acc, plannerQuery) => this.apply(plannerQuery, acc, firstPlannerQuery = true)
+      }
+    }
+
     pattern match {
       //CREATE ()
       case p: CreateNodePattern => context.logicalPlanProducer.planCreateNode(source, p)
@@ -116,6 +123,7 @@ case object PlanUpdates
         }
         delete
     }
+  }
 
   /*
    * Merges either matches or creates. It is planned as following:

@@ -27,7 +27,6 @@ import org.neo4j.cypher.internal.frontend.v3_0.perty._
 import scala.annotation.tailrec
 import scala.collection.{GenTraversableOnce, mutable}
 
-
 trait Read {
   def readsNodes: Boolean
   def nodeIds: Set[IdName]
@@ -68,6 +67,7 @@ case class ReadView(qg: QueryGraph) extends Read {
 }
 
 case class UpdateView(mutatingPatterns: Seq[MutatingPattern]) extends Update {
+
   override def updatesNodes = mutatingPatterns.exists {
     case x: CreateNodePattern => true
     case x: SetLabelPattern => true
@@ -137,6 +137,21 @@ case class UpdateView(mutatingPatterns: Seq[MutatingPattern]) extends Update {
 
 }
 
+// TODO: This is a way to enable the old overlaps method for comparison (with QueryGraph.useOldUpdateGraphOverlapsMethod = true)
+case class UpdateViewAdapter(updateGraph: UpdateGraph) extends Update {
+  override def overlaps(read: Read): Boolean = {
+    assert(read.isInstanceOf[ReadView], "UpdateViewAdapter only works with ReadView")
+    val readQueryGraph = read.asInstanceOf[ReadView].qg
+    updateGraph overlaps readQueryGraph
+  }
+
+  // Currently unused
+  override def isEmpty: Boolean = ???
+  override def updatesNodes: Boolean = ???
+  override def updatesProperties: CreatesPropertyKeys = ???
+  override def updateLabelsNotOn(id: IdName): Set[LabelName] = ???
+}
+
 case class QueryGraph(patternRelationships: Set[PatternRelationship] = Set.empty,
                       patternNodes: Set[IdName] = Set.empty,
                       argumentIds: Set[IdName] = Set.empty,
@@ -155,14 +170,18 @@ case class QueryGraph(patternRelationships: Set[PatternRelationship] = Set.empty
   }
 
   def updates: Update = {
-    val updateActions = if (containsMerge) {
-      mutatingPatterns.collect {
-        case x: MergeNodePattern => Seq(x.createNodePattern)
-        case x: MergeRelationshipPattern => x.createNodePatterns ++ x.createRelPatterns
-      }.flatten
-    } else mutatingPatterns
+    if (QueryGraph.useOldUpdateGraphOverlapsMethod)
+      UpdateViewAdapter(this)
+    else {
+      val updateActions = if (containsMerge) {
+        mutatingPatterns.collect {
+          case x: MergeNodePattern => Seq(x.createNodePattern)
+          case x: MergeRelationshipPattern => x.createNodePatterns ++ x.createRelPatterns
+        }.flatten
+      } else mutatingPatterns
 
-    UpdateView(updateActions)
+      UpdateView(updateActions)
+    }
   }
 
   def size = patternRelationships.size
@@ -202,6 +221,9 @@ case class QueryGraph(patternRelationships: Set[PatternRelationship] = Set.empty
     createNodePatterns.map(_.nodeName) ++
     mergeNodePatterns.map(_.createNodePattern.nodeName) ++
     mergeRelationshipPatterns.flatMap(_.createNodePatterns.map(_.nodeName))
+
+  def allPatternNodesRead: Set[IdName] =
+    patternNodes ++ optionalMatches.flatMap(_.allPatternNodesRead)
 
   def addShortestPaths(shortestPaths: ShortestPathPattern*): QueryGraph = shortestPaths.foldLeft(this)((qg, p) => qg.addShortestPath(p))
   def addArgumentId(newId: IdName): QueryGraph = copy(argumentIds = argumentIds + newId)
@@ -260,7 +282,11 @@ case class QueryGraph(patternRelationships: Set[PatternRelationship] = Set.empty
     patternRelationships.filter { r => r.left == id || r.right == id }
 
   def allPatternRelationships: Set[PatternRelationship] =
-    patternRelationships ++ optionalMatches.flatMap(_.allPatternRelationships)
+    patternRelationships ++ optionalMatches.flatMap(_.allPatternRelationships) ++
+    // Recursively add relationships from the merge-read-part
+    mergeNodePatterns.flatMap(_.matchGraph.allPatternRelationships) ++
+    mergeRelationshipPatterns.flatMap(_.matchGraph.allPatternRelationships)
+
 
   def coveredIds: Set[IdName] = {
     val patternIds = QueryGraph.coveredIdsForPatterns(patternNodes, patternRelationships)
@@ -382,7 +408,8 @@ case class QueryGraph(patternRelationships: Set[PatternRelationship] = Set.empty
     patternRelationships.nonEmpty ||
     selections.nonEmpty ||
     shortestPathPatterns.nonEmpty ||
-    optionalMatches.nonEmpty
+    optionalMatches.nonEmpty ||
+    containsMerge
   }
 
   def writeOnly = !containsReads && containsUpdates
@@ -420,4 +447,6 @@ object QueryGraph {
       Implicits.seqDerivedOrdering[Seq, IdName](IdName.byName).compare(xs, ys)
     }
   }
+
+  val useOldUpdateGraphOverlapsMethod = false
 }

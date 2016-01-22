@@ -1805,7 +1805,11 @@ class EagerizationAcceptanceTest
     val result = updateWithBothPlanners(query)
     result.columnAs[Int]("count").next should equal(14)
     assertStats(result, propertiesWritten = 14, nodesCreated = 3)
+<<<<<<< fe1def9b6278c20f943817298f61488a19d1f420
     assertNumberOfEagerness(query, 3, optimalEagerCount = 1)
+=======
+    assertNumberOfEagerness(query, 1)
+>>>>>>> Cleanup the old eagerness planning code
   }
 
   test("setting property in tail should not be eager if no overlap") {
@@ -2033,7 +2037,8 @@ class EagerizationAcceptanceTest
     result.columnAs[Int]("count").next should equal(2)
     assertStats(result, nodesCreated = 2, relationshipsDeleted = 1)
     // this assertion depends on unnestApply and cleanUpEager
-    assertNumberOfEagerness(query, 1)
+    //TODO:H We should be able to do only one eager here
+    assertNumberOfEagerness(query, 2)
   }
 
   test("should be eager between conflicting read/write separated by empty UNWIND") {

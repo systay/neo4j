@@ -98,7 +98,7 @@ object Eagerness {
    * by the writes.
    */
   private def nodeOverlap(currentNode: IdName, headQueryGraph: QueryGraph, tail: PlannerQuery): Boolean = {
-    val labelsOnCurrentNode = headQueryGraph.allKnownLabelsOnNode(currentNode)
+    val labelsOnCurrentNode = headQueryGraph.allKnownLabelsOnNode(currentNode).toSet
     val propertiesOnCurrentNode = headQueryGraph.allKnownPropertiesOnIdentifier(currentNode).map(_.propertyKey)
     val labelsToCreate = tail.queryGraph.createLabels
     val propertiesToCreate = tail.queryGraph.createNodeProperties

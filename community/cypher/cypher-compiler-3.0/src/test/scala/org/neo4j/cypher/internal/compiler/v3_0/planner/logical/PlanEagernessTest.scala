@@ -236,6 +236,19 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
     result should equal(update(lhs))
   }
 
+  test("CREATE in head followed by MATCH") {
+    // given
+    val lhs = SingleRow()(solved)
+    val pq = RegularPlannerQuery(createNodeQG(name = "a"))
+    val tail = RegularPlannerQuery(matchNodeQG(name = "b"))
+
+    // when
+    val result = eagernessPlanner(pq.withTail(tail), lhs, head = true)
+
+    // then
+    result should equal(update(lhs))
+  }
+
   test("CREATE followed by MATCH on overlapping nodes with labels") {
     // given
     val lhs = SingleRow()(solved)

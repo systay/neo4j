@@ -7,35 +7,61 @@ case class PlanEagerness(planUpdates: LogicalPlanningFunction3[PlannerQuery, Log
   extends LogicalPlanningFunction3[PlannerQuery, LogicalPlan, Boolean, LogicalPlan] {
 
   override def apply(plannerQuery: PlannerQuery, lhs: LogicalPlan, head: Boolean)(implicit context: LogicalPlanningContext): LogicalPlan = {
-    val thisRead: Read = readQGWithoutStableNodeVariable(plannerQuery, lhs, head)
+    val containsMerge = plannerQuery.queryGraph.containsMerge
 
+    //--------------
+    // Plan eagerness before updates (on lhs)
+    // (I) Protect reads from future writes
+    val thisReadOverlapsFutureWrites = readOverlapsFutureWrites(plannerQuery, lhs, head, containsMerge)
+
+    // NOTE: In case this is a merge, eagerness has to be planned on top of updates, and not on lhs (see (III) below)
+    val newLhs = if (thisReadOverlapsFutureWrites && !containsMerge)
+      context.logicalPlanProducer.planEager(lhs)
+    else
+      lhs
+
+    //--------------
+    // Plan updates
+    val updatePlan = planUpdates(plannerQuery, newLhs, head)
+
+    //--------------
+    // Plan eagerness after updates
+    // (II) Protect writes from future reads
+    val thisWriteOverlapsFutureReads = writeOverlapsFutureReads(plannerQuery, head)
+    // (III) Protect merge reads from future writes
+    val thisMergeReadOverlapsFutureWrites = containsMerge && thisReadOverlapsFutureWrites
+
+    if (thisWriteOverlapsFutureReads || thisMergeReadOverlapsFutureWrites)
+      context.logicalPlanProducer.planEager(updatePlan)
+    else
+      updatePlan
+  }
+
+  private def readOverlapsFutureWrites(plannerQuery: PlannerQuery, lhs: LogicalPlan, head: Boolean,
+                                       containsMerge: Boolean): Boolean = {
+
+    val thisRead: Read = readQGWithoutStableNodeVariable(plannerQuery, lhs, head)
     val allUpdates = plannerQuery.allQueryGraphs.map(_.updates)
 
-    val containsMerge = plannerQuery.queryGraph.containsMerge
     // Merge needs to see it's own changes, so if the conflict is only between the reads and writes of MERGE,
-    // no need to protect
+    // we should not be eager
     val futureUpdates = if (containsMerge)
       allUpdates.tail
     else
       allUpdates
 
-    val thisReadOverlapsFutureWrite = futureUpdates.exists(_ overlaps thisRead)
+    futureUpdates.exists(_ overlaps thisRead)
+  }
 
-    val newLhs = if (thisReadOverlapsFutureWrite && !containsMerge)
-      context.logicalPlanProducer.planEager(lhs)
-    else
-      lhs
+  private def writeOverlapsFutureReads(plannerQuery: PlannerQuery, head: Boolean): Boolean = {
+    if (head && plannerQuery.queryGraph.writeOnly)
+      false // No conflict if the first query graph only contains writes
+    else {
+      val thisWrite = plannerQuery.queryGraph.updates
+      val futureReads = plannerQuery.allQueryGraphs.tail.map(_.reads)
 
-    val updatePlan = planUpdates(plannerQuery, newLhs, head)
-
-    val thisWrite = plannerQuery.queryGraph.updates
-
-    val futureReads = plannerQuery.allQueryGraphs.tail.map(_.reads)
-
-    if (futureReads.exists(thisWrite.overlaps) || (thisReadOverlapsFutureWrite && containsMerge))
-      context.logicalPlanProducer.planEager(updatePlan)
-    else
-      updatePlan
+      futureReads.exists(thisWrite.overlaps)
+    }
   }
 
   private def readQGWithoutStableNodeVariable(plannerQuery: PlannerQuery, lhs: LogicalPlan, head: Boolean): Read = {

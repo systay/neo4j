@@ -344,20 +344,20 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
   test("MATCH with property followed by SET property") {
     // given
     val lhs = SingleRow()(solved)
-    val readQG = matchNodeQG("a") withPredicate propEquality("a", "prop", 42)
+    val readQG = matchNodeQG("a") withPredicate rewrittenPropEquality("a", "prop", 42)
     val pq = RegularPlannerQuery(readQG withMutation setProperty("a", "prop"))
 
     // when
     val result = eagernessPlanner(pq, lhs, head = false)
 
     // then
-    result should equal(update(lhs))
+    result should equal(update(eager(lhs)))
   }
 
   test("two MATCHes with property followed by SET property") {
     // given
     val lhs = SingleRow()(solved)
-    val readQG = (matchNodeQG("a") withPredicate propEquality("a", "prop", 42)) ++ matchNodeQG("b")
+    val readQG = (matchNodeQG("a") withPredicate rewrittenPropEquality("a", "prop", 42)) ++ matchNodeQG("b")
     val pq = RegularPlannerQuery(readQG withMutation setProperty("b", "prop"))
 
     // when

@@ -135,7 +135,7 @@ trait UpdateGraph {
     val e = removeLabelOverlap(qg)
     val f = setLabelOverlap(qg)
     val g = setPropertyOverlap(qg)
-    val h = deleteOverlapWithMergeIn(this) // henrik: I think "this" should be "qg"
+    val h = deleteOverlapWithMergeIn(qg)
     a && (b || b2 || c || d || e || f || g || h)
   }
 

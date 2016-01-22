@@ -199,7 +199,7 @@ class EagerizationAcceptanceTest extends ExecutionEngineFunSuite with TableDrive
     val result = updateWithBothPlanners(query)
     assertStats(result, nodesCreated = 2, nodesDeleted = 2, propertiesWritten = 2, labelsAdded = 2)
     result.columnAs[Node]("b2.deleted").toList should equal(List(null, null))
-    //TODO:M We should be able to only have 1 eager plan
+    // TODO:H We should be able to do only one eagerness here if we fix UpdateGraph.deleteOverlap
     assertNumberOfEagerness(query, 2)
   }
 
@@ -1292,7 +1292,7 @@ class EagerizationAcceptanceTest extends ExecutionEngineFunSuite with TableDrive
     assertNumberOfEagerness(query, 2)
   }
 
-  test("Multiple single node merges should be protected from eachother") {
+  test("Multiple single node merges should be eager") {
     val query = "UNWIND [0, 1] AS i MERGE (a {p: i % 2}) MERGE (b {p: (i + 1) % 2}) ON CREATE SET b:ShouldNotBeSet RETURN count(*)"
 
     val result = updateWithBothPlanners(query)
@@ -1651,7 +1651,7 @@ class EagerizationAcceptanceTest extends ExecutionEngineFunSuite with TableDrive
     val result = updateWithBothPlanners(query)
     result.columnAs[Int]("count").next should equal(14)
     assertStats(result, propertiesWritten = 14, nodesCreated = 3)
-    assertNumberOfEagerness(query, 2)
+    assertNumberOfEagerness(query, 1)
   }
 
   test("setting property in tail should not be eager if no overlap") {
@@ -1875,7 +1875,8 @@ class EagerizationAcceptanceTest extends ExecutionEngineFunSuite with TableDrive
     result.columnAs[Int]("count").next should equal(2)
     assertStats(result, nodesCreated = 2, relationshipsDeleted = 1)
     // this assertion depends on unnestApply and cleanUpEager
-    assertNumberOfEagerness(query, 1)
+    //TODO:H We should be able to do only one eager here
+    assertNumberOfEagerness(query, 2)
   }
 
   test("should be eager between conflicting read/write separated by empty UNWIND") {

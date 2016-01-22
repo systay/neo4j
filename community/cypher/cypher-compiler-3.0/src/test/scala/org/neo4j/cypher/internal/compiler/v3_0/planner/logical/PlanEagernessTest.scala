@@ -306,7 +306,7 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
     // given
     val lhs = SingleRow()(solved)
     val readQG = matchNodeQG("a", "A")
-    val pq = RegularPlannerQuery(readQG ++ QueryGraph.empty.addMutatingPatterns(setLabel("a", "A")))
+    val pq = RegularPlannerQuery(readQG withMutation setLabel("a", "A"))
 
     // when
     val result = eagernessPlanner(pq, lhs, head = false)
@@ -318,7 +318,7 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
   test("two MATCHes with labels followed by SET label") {
     // given
     val lhs = SingleRow()(solved)
-    val qg = matchNodeQG("a", "A") ++ matchNodeQG("b") ++ QueryGraph.empty.addMutatingPatterns(setLabel("b", "A"))
+    val qg = matchNodeQG("a", "A") ++ matchNodeQG("b") withMutation setLabel("b", "A")
     val pq = RegularPlannerQuery(qg)
 
     // when
@@ -331,8 +331,8 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
   test("MATCH with property followed by SET property") {
     // given
     val lhs = SingleRow()(solved)
-    val readQG = matchNodeQG("a").withSelections(Selections.from(propEquality("a", "prop", 42)))
-    val pq = RegularPlannerQuery(readQG ++ QueryGraph.empty.addMutatingPatterns(setProperty("a", "prop")))
+    val readQG = matchNodeQG("a") withPredicate propEquality("a", "prop", 42)
+    val pq = RegularPlannerQuery(readQG withMutation setProperty("a", "prop"))
 
     // when
     val result = eagernessPlanner(pq, lhs, head = false)
@@ -344,14 +344,20 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
   test("two MATCHes with property followed by SET property") {
     // given
     val lhs = SingleRow()(solved)
-    val readQG = matchNodeQG("a").withSelections(Selections.from(propEquality("a", "prop", 42))) ++ matchNodeQG("b")
-    val pq = RegularPlannerQuery(readQG ++ QueryGraph.empty.addMutatingPatterns(setProperty("b", "prop")))
+    val readQG = (matchNodeQG("a") withPredicate propEquality("a", "prop", 42)) ++ matchNodeQG("b")
+    val pq = RegularPlannerQuery(readQG withMutation setProperty("b", "prop"))
 
     // when
     val result = eagernessPlanner(pq, lhs, head = false)
 
     // then
     result should equal(update(eager(lhs)))
+  }
+
+  implicit class qgHelper(qg: QueryGraph) {
+    def withPredicate(e: Expression): QueryGraph = qg.withSelections(qg.selections ++ Selections.from(e))
+
+    def withMutation(patterns: MutatingPattern*): QueryGraph = qg.addMutatingPatterns(patterns: _*)
   }
 
   private def eager(inner: LogicalPlan) = Eager(inner)(solved)

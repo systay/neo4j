@@ -121,6 +121,7 @@ trait UpdateGraph {
    * Does this UpdateGraph contains merges
    */
   def containsMerge: Boolean = mergeNodePatterns.nonEmpty || mergeRelationshipPatterns.nonEmpty
+  def containsDelete: Boolean = mutatingPatterns.exists(_.isInstanceOf[DeleteExpressionPattern])
 
   /*
    * Checks if there is overlap between what's being read in the query graph

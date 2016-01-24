@@ -221,7 +221,7 @@ class EagerizationAcceptanceTest
     createLabeledNode("B")
     createLabeledNode("B")
 
-   val query =
+    val query =
       """
         |MATCH (b:B)
         |DELETE b
@@ -1034,18 +1034,6 @@ class EagerizationAcceptanceTest
     assertNumberOfEagerness(query, 1)
   }
 
-  test("should be eager if merging node with properties after matching all nodes") {
-    createLabeledNode("Two")
-    createLabeledNode("Two")
-    createNode()
-    val query = "MATCH (m1:Two), (m2:Two), (n) MERGE (q {p: 1}) ON MATCH SET q:One RETURN count(*) AS c"
-
-    val result: InternalExecutionResult = updateWithBothPlanners(query)
-    assertStats(result, labelsAdded = 1, nodesCreated = 1, propertiesWritten = 1)
-    result.toList should equal(List(Map("c" -> 12)))
-    assertNumberOfEagerness(query, 1)
-  }
-
   test("on match set label on unstable iterator should not be eager if no overlap") {
     createLabeledNode("Two")
     createLabeledNode("Two")
@@ -1453,8 +1441,8 @@ class EagerizationAcceptanceTest
     createLabeledNode("LeftLabel")
     createLabeledNode("RightLabel")
     val query = """MATCH (src:LeftLabel), (dst:RightLabel)
-              |MERGE (src)-[r:IS_RELATED_TO ]->(dst)
-              |ON CREATE SET r.p3 = 42""".stripMargin
+                  |MERGE (src)-[r:IS_RELATED_TO ]->(dst)
+                  |ON CREATE SET r.p3 = 42""".stripMargin
     val result = updateWithBothPlanners(query)
 
     assertStats(result, relationshipsCreated = 1, propertiesWritten = 1)
@@ -1503,7 +1491,7 @@ class EagerizationAcceptanceTest
     val result = eengine.execute(s"cypher planner=rule $query")
     result.columnAs[Long]("count(*)").next shouldBe 2
     assertStatsResult(labelsAdded = 1)(result.queryStatistics())
-//    assertNumberOfEagerness(query, 1) -- not with rule planner
+    //    assertNumberOfEagerness(query, 1) -- not with rule planner
   }
 
   test("matching label on right-hand side and setting same label should be eager and get the count right") {
@@ -1805,11 +1793,7 @@ class EagerizationAcceptanceTest
     val result = updateWithBothPlanners(query)
     result.columnAs[Int]("count").next should equal(14)
     assertStats(result, propertiesWritten = 14, nodesCreated = 3)
-<<<<<<< fe1def9b6278c20f943817298f61488a19d1f420
     assertNumberOfEagerness(query, 3, optimalEagerCount = 1)
-=======
-    assertNumberOfEagerness(query, 1)
->>>>>>> Cleanup the old eagerness planning code
   }
 
   test("setting property in tail should not be eager if no overlap") {
@@ -2037,8 +2021,7 @@ class EagerizationAcceptanceTest
     result.columnAs[Int]("count").next should equal(2)
     assertStats(result, nodesCreated = 2, relationshipsDeleted = 1)
     // this assertion depends on unnestApply and cleanUpEager
-    //TODO:H We should be able to do only one eager here
-    assertNumberOfEagerness(query, 2)
+    assertNumberOfEagerness(query, 1)
   }
 
   test("should be eager between conflicting read/write separated by empty UNWIND") {

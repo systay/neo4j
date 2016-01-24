@@ -1,7 +1,7 @@
 package org.neo4j.cypher.internal.compiler.v3_0.planner.logical
 
 import org.neo4j.cypher.internal.compiler.v3_0.planner.logical.plans.{LogicalPlan, NodeLogicalLeafPlan}
-import org.neo4j.cypher.internal.compiler.v3_0.planner.{PlannerQuery, Read}
+import org.neo4j.cypher.internal.compiler.v3_0.planner.{QueryGraph, PlannerQuery, Read}
 
 case class PlanEagerness(planUpdates: LogicalPlanningFunction3[PlannerQuery, LogicalPlan, Boolean, LogicalPlan])
   extends LogicalPlanningFunction3[PlannerQuery, LogicalPlan, Boolean, LogicalPlan] {
@@ -54,22 +54,33 @@ case class PlanEagerness(planUpdates: LogicalPlanningFunction3[PlannerQuery, Log
   }
 
   private def writeOverlapsFutureReads(plannerQuery: PlannerQuery, head: Boolean): Boolean = {
-    if (head && plannerQuery.queryGraph.writeOnly)
+    val queryGraph = plannerQuery.queryGraph
+    if (head && queryGraph.writeOnly)
       false // No conflict if the first query graph only contains writes
     else {
-      val thisWrite = plannerQuery.queryGraph.updates
+      val thisWrite = queryGraph.updates
       val futureReads = plannerQuery.allQueryGraphs.tail.map(_.reads)
 
-      futureReads.exists(thisWrite.overlaps)
+      val knownFutureConflict = futureReads.exists(thisWrite.overlaps)
+      val deleteAndLaterMerge = queryGraph.containsDelete && plannerQuery.allQueryGraphs.exists(_.containsMerge)
+      knownFutureConflict || deleteAndLaterMerge
     }
   }
 
   private def readQGWithoutStableNodeVariable(plannerQuery: PlannerQuery, lhs: LogicalPlan, head: Boolean): Read = {
     val originalQG = plannerQuery.queryGraph
     val graph = lhs.leftMost match {
-      case n: NodeLogicalLeafPlan if head => originalQG.withoutPatternNode(n.idName)
+      case n: NodeLogicalLeafPlan if head && includesAllPredicates(originalQG, n)  => originalQG.withoutPatternNode(n.idName)
       case _ => originalQG
     }
     graph.reads
+  }
+
+  def includesAllPredicates(originalQG: QueryGraph, n: NodeLogicalLeafPlan): Boolean = {
+    def p(qg: QueryGraph) = qg.selections.predicatesGiven(qg.argumentIds + n.idName).toSet
+
+    val a = p(n.solved.lastQueryGraph)
+    val b = p(originalQG)
+    a == b
   }
 }

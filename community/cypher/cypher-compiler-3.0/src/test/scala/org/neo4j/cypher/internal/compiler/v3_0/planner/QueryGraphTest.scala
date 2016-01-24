@@ -50,37 +50,5 @@ class QueryGraphTest extends CypherFunSuite with AstConstructionTestSupport with
     qg.findRelationshipsEndingOn('a) should equal(Set(r))
     qg.findRelationshipsEndingOn('b) should equal(Set(r, r2))
     qg.findRelationshipsEndingOn('c) should equal(Set(r2))
-    qg.reads should equal(qg)
-    qg.updates should equal(QueryGraph.empty)
-  }
-
-  test("extracts write patterns from single node merge QG") {
-    val readQG = QueryGraph(patternNodes = Set('a))
-    val mergeNode = MergeNodePattern(CreateNodePattern('a, Seq.empty, None), readQG, Seq.empty, Seq.empty)
-    val qg = QueryGraph(mutatingPatterns = Seq(mergeNode))
-
-    qg.reads should equal(readQG)
-    qg.updates should equal(QueryGraph(mutatingPatterns = Seq(CreateNodePattern('a, Seq.empty, None))))
-  }
-
-  test("extracts write patterns from single relationship merge QG") {
-    val relationship = PatternRelationship('r, ('a, 'b), SemanticDirection.OUTGOING, Seq(RelTypeName("T")(pos)), SimplePatternLength)
-    val readQG = QueryGraph(patternNodes = Set('a), argumentIds = Set('b), patternRelationships = Set(relationship))
-    val createNodes: Seq[CreateNodePattern] = Seq(CreateNodePattern('a, Seq.empty, None))
-    val createRels = Seq(CreateRelationshipPattern('r, 'a, RelTypeName("T")(pos), 'b, None, SemanticDirection.OUTGOING))
-
-    val mergeNode = MergeRelationshipPattern(createNodes, createRels, readQG, Seq.empty, Seq.empty)
-    val qg = QueryGraph(mutatingPatterns = Seq(mergeNode))
-
-    qg.reads should equal(readQG)
-    qg.updates should equal(QueryGraph(mutatingPatterns = createNodes ++ createRels))
-  }
-
-  test("QG with both reads and writes is split up accordingly") {
-    val createNodes: Seq[CreateNodePattern] = Seq(CreateNodePattern('a, Seq.empty, None))
-    val qg = QueryGraph(mutatingPatterns = createNodes, patternNodes = Set('b))
-
-    qg.reads should equal(QueryGraph(patternNodes = Set('b)))
-    qg.updates should equal(QueryGraph(mutatingPatterns = createNodes))
   }
 }

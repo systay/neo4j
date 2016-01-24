@@ -26,6 +26,7 @@ import org.mockito.stubbing.Answer
 import org.neo4j.cypher.internal.compiler.v3_0.planner._
 import org.neo4j.cypher.internal.compiler.v3_0.planner.logical.plans._
 import org.neo4j.cypher.internal.compiler.v3_0.planner.logical.steps.LogicalPlanProducer
+import org.neo4j.cypher.internal.frontend.v3_0.SemanticDirection
 import org.neo4j.cypher.internal.frontend.v3_0.ast._
 import org.neo4j.cypher.internal.frontend.v3_0.test_helpers.CypherFunSuite
 
@@ -38,20 +39,27 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
 
   private def createNodeQG(name: String) = QueryGraph(mutatingPatterns = Seq(createNode(name)))
   private def createNodeQG(name: String, label: String) = QueryGraph(mutatingPatterns = Seq(createNode(name, Seq(label))))
-  private def matchNodeQG(name: String) = QueryGraph(patternNodes = Set(IdName(name)))
+  private def matchNode(name: String) = QueryGraph(patternNodes = Set(IdName(name)))
   private def matchNodeQG(name: String, label: String) = QueryGraph(patternNodes = Set(IdName(name))).withSelections(Selections.from(hasLabels(name, label)))
-  private val argumentQG = QueryGraph(argumentIds = Set('a))
-  private def mergeNodeQG(name: String, label: String) = {
-    val readQG: QueryGraph = matchNodeQG(name).withSelections(Selections.from(hasLabels(name, label)))
-    QueryGraph(
-      mutatingPatterns = Seq(MergeNodePattern(createNode(name, Seq(label)), readQG, Seq.empty, Seq.empty)))
+  private def matchBiDirectionalRel(from: String, name: String, to: String, typ: String*) = {
+    val fromId = IdName(from)
+    val toId = IdName(to)
+    val types = typ.map(x => RelTypeName(x)(pos))
+    val rel = PatternRelationship(IdName(name), (fromId, toId), SemanticDirection.BOTH, types, SimplePatternLength)
+    QueryGraph(patternNodes = Set(fromId, toId), patternRelationships = Set(rel))
   }
 
-  // PLANS
+  private def argumentQG(name: String) = QueryGraph(argumentIds = Set(IdName(name)))
+  private def mergeNodeQG(name: String, label: String) = {
+    val readQG = matchNode(name) withPredicate hasLabels(name, label)
+    QueryGraph.empty withMutation MergeNodePattern(createNode(name, Seq(label)), readQG, Seq.empty, Seq.empty)
+  }
+
+  // Logical Plans
   private val allNodesScan = (name: String) => AllNodesScan(IdName(name), Set.empty)(solved)
   private val argument = Argument(Set('x))(solved)(Map.empty)
   private val apply = Apply(argument, allNodesScan("a"))(solved)
-
+  private val singleRow = SingleRow()(solved)
   private val innerUpdatePlanner: FakePlanner = spy(FakePlanner())
   private val eagernessPlanner: PlanEagerness = PlanEagerness(innerUpdatePlanner)
 
@@ -69,7 +77,7 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
 
   test("MATCH only") {
     val lhs = allNodesScan("a")
-    val pq = RegularPlannerQuery(argumentQG)
+    val pq = RegularPlannerQuery(argumentQG("a"))
     val result = eagernessPlanner.apply(pq, lhs, head = false)
 
     result should equal(update(lhs))
@@ -79,7 +87,7 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
   test("overlapping MATCH and CREATE in a tail") {
     // given
     val lhs = allNodesScan("x")
-    val pq = RegularPlannerQuery(createNodeQG("b") ++ matchNodeQG("a"))
+    val pq = RegularPlannerQuery(createNodeQG("b") ++ matchNode("a"))
 
     // when
     val result = eagernessPlanner.apply(pq, lhs, head = false)
@@ -90,7 +98,7 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
 
   test("overlapping MATCH and CREATE in head") {
     val lhs = allNodesScan("a")
-    val pq = RegularPlannerQuery(createNodeQG("b") ++ matchNodeQG("a"))
+    val pq = RegularPlannerQuery(createNodeQG("b") ++ matchNode("a"))
     val result = eagernessPlanner.apply(pq, lhs, head = true)
 
     result should equal(update(lhs))
@@ -99,7 +107,7 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
   test("overlapping MATCH with two nodes and CREATE in head") {
     // given
     val lhs = CartesianProduct(allNodesScan("a"), allNodesScan("b"))(null)
-    val pq = RegularPlannerQuery(matchNodeQG("a") ++ matchNodeQG("b") ++ createNodeQG("b"))
+    val pq = RegularPlannerQuery(matchNode("a") ++ matchNode("b") ++ createNodeQG("b"))
 
     // when
     val result = eagernessPlanner.apply(pq, lhs, head = true)
@@ -111,7 +119,7 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
   test("do not consider stable node ids when checking overlapping MATCH and CREATE in head") {
     // given
     val lhs = apply
-    val pq = RegularPlannerQuery(argumentQG ++ matchNodeQG("b") ++ createNodeQG("b"))
+    val pq = RegularPlannerQuery(argumentQG("a") ++ matchNode("b") ++ createNodeQG("b"))
 
     // when
     val result = eagernessPlanner(pq, lhs, head = true)
@@ -122,7 +130,7 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
 
   test("single node MERGE") {
     // given
-    val lhs = SingleRow()(solved)
+    val lhs = singleRow
     val pq = RegularPlannerQuery(mergeNodeQG(name = "a", label = "A"))
 
     // when
@@ -134,7 +142,7 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
 
   test("MERGE followed by CREATE on overlapping nodes") {
     // given
-    val lhs = SingleRow()(solved)
+    val lhs = singleRow
     val pq = RegularPlannerQuery(mergeNodeQG(name = "a", label = "A"))
     val tail = RegularPlannerQuery(createNodeQG(name = "b", label = "A"))
 
@@ -147,7 +155,7 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
 
   test("CREATE followed by MERGE on overlapping nodes") {
     // given
-    val lhs = SingleRow()(solved)
+    val lhs = singleRow
     val pq = RegularPlannerQuery(createNodeQG(name = "b", label = "A"))
     val tail = RegularPlannerQuery(mergeNodeQG(name = "a", label = "A"))
 
@@ -160,7 +168,7 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
 
   test("MERGE followed by CREATE on not overlapping nodes") {
     // given
-    val lhs = SingleRow()(solved)
+    val lhs = singleRow
     val pq = RegularPlannerQuery(mergeNodeQG(name = "a", label = "A"))
     val tail = RegularPlannerQuery(createNodeQG(name = "b", label = "B"))
 
@@ -173,7 +181,7 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
 
   test("CREATE followed by MERGE on not overlapping nodes") {
     // given
-    val lhs = SingleRow()(solved)
+    val lhs = singleRow
     val pq = RegularPlannerQuery(createNodeQG(name = "b", label = "B"))
     val tail = RegularPlannerQuery(mergeNodeQG(name = "a", label = "A"))
 
@@ -186,7 +194,7 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
 
   test("MERGE followed by MATCH on overlapping nodes") {
     // given
-    val lhs = SingleRow()(solved)
+    val lhs = singleRow
     val pq = RegularPlannerQuery(mergeNodeQG(name = "a", label = "A"))
     val tail = RegularPlannerQuery(matchNodeQG(name = "b", label = "A"))
 
@@ -199,7 +207,7 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
 
   test("MATCH followed by MERGE on overlapping nodes") {
     // given
-    val lhs = SingleRow()(solved)
+    val lhs = singleRow
     val pq = RegularPlannerQuery(matchNodeQG(name = "b", label = "A"))
     val tail = RegularPlannerQuery(mergeNodeQG(name = "a", label = "A"))
 
@@ -212,7 +220,7 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
 
   test("MERGE followed by MATCH on not overlapping nodes") {
     // given
-    val lhs = SingleRow()(solved)
+    val lhs = singleRow
     val pq = RegularPlannerQuery(mergeNodeQG(name = "a", label = "A"))
     val tail = RegularPlannerQuery(matchNodeQG(name = "b", label = "B"))
 
@@ -225,7 +233,7 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
 
   test("MATCH followed by MERGE on not overlapping nodes") {
     // given
-    val lhs = SingleRow()(solved)
+    val lhs = singleRow
     val pq = RegularPlannerQuery(matchNodeQG(name = "b", label = "B"))
     val tail = RegularPlannerQuery(mergeNodeQG(name = "a", label = "A"))
 
@@ -238,9 +246,9 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
 
   test("CREATE in head followed by MATCH") {
     // given
-    val lhs = SingleRow()(solved)
+    val lhs = singleRow
     val pq = RegularPlannerQuery(createNodeQG(name = "a"))
-    val tail = RegularPlannerQuery(matchNodeQG(name = "b"))
+    val tail = RegularPlannerQuery(matchNode(name = "b"))
 
     // when
     val result = eagernessPlanner(pq.withTail(tail), lhs, head = true)
@@ -251,7 +259,7 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
 
   test("CREATE followed by MATCH on overlapping nodes with labels") {
     // given
-    val lhs = SingleRow()(solved)
+    val lhs = singleRow
     val pq = RegularPlannerQuery(createNodeQG(name = "a", label = "A"))
     val tail = RegularPlannerQuery(matchNodeQG(name = "b", label = "A"))
 
@@ -264,7 +272,7 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
 
   test("MATCH followed by CREATE on overlapping nodes with labels") {
     // given
-    val lhs = SingleRow()(solved)
+    val lhs = singleRow
     val pq = RegularPlannerQuery(matchNodeQG(name = "b", label = "A"))
     val tail = RegularPlannerQuery(createNodeQG(name = "a", label = "A"))
 
@@ -277,7 +285,7 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
 
   test("CREATE followed by MATCH on not overlapping nodes with labels") {
     // given
-    val lhs = SingleRow()(solved)
+    val lhs = singleRow
     val pq = RegularPlannerQuery(createNodeQG(name = "a", label = "A"))
     val tail = RegularPlannerQuery(matchNodeQG(name = "b", label = "B"))
 
@@ -290,7 +298,7 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
 
   test("MATCH followed by CREATE on not overlapping nodes with labels") {
     // given
-    val lhs = SingleRow()(solved)
+    val lhs = singleRow
     val pq = RegularPlannerQuery(matchNodeQG(name = "b", label = "B"))
     val tail = RegularPlannerQuery(createNodeQG(name = "a", label = "A"))
 
@@ -303,7 +311,7 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
 
   test("MATCH with labels followed by CREATE without") {
     // given
-    val lhs = SingleRow()(solved)
+    val lhs = singleRow
     val readQG = matchNodeQG("a", "A")
     val qg = readQG ++ createNodeQG("b")
     val pq = RegularPlannerQuery(qg ++ createNodeQG("b"))
@@ -317,7 +325,7 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
 
   test("MATCH with labels followed by SET label") {
     // given
-    val lhs = SingleRow()(solved)
+    val lhs = singleRow
     val readQG = matchNodeQG("a", "A")
     val pq = RegularPlannerQuery(readQG withMutation setLabel("a", "A"))
 
@@ -330,8 +338,8 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
 
   test("two MATCHes with labels followed by SET label") {
     // given
-    val lhs = SingleRow()(solved)
-    val qg = matchNodeQG("a", "A") ++ matchNodeQG("b") withMutation setLabel("b", "A")
+    val lhs = singleRow
+    val qg = matchNodeQG("a", "A") ++ matchNode("b") withMutation setLabel("b", "A")
     val pq = RegularPlannerQuery(qg)
 
     // when
@@ -343,9 +351,22 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
 
   test("MATCH with property followed by SET property") {
     // given
-    val lhs = SingleRow()(solved)
-    val readQG = matchNodeQG("a") withPredicate rewrittenPropEquality("a", "prop", 42)
+    val lhs = singleRow
+    val readQG = matchNode("a") withPredicate rewrittenPropEquality("a", "prop", 42)
     val pq = RegularPlannerQuery(readQG withMutation setProperty("a", "prop"))
+
+    // when
+    val result = eagernessPlanner(pq, lhs, head = false)
+
+    // then
+    result should equal(update(lhs))
+  }
+
+  test("two MATCHes with property followed by SET property") {
+    // given
+    val lhs = singleRow
+    val readQG = (matchNode("a") withPredicate rewrittenPropEquality("a", "prop", 42)) ++ matchNode("b")
+    val pq = RegularPlannerQuery(readQG withMutation setProperty("b", "prop"))
 
     // when
     val result = eagernessPlanner(pq, lhs, head = false)
@@ -354,11 +375,113 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
     result should equal(update(eager(lhs)))
   }
 
-  test("two MATCHes with property followed by SET property") {
+  test("Protect MERGE from DELETE") {
     // given
-    val lhs = SingleRow()(solved)
-    val readQG = (matchNodeQG("a") withPredicate rewrittenPropEquality("a", "prop", 42)) ++ matchNodeQG("b")
-    val pq = RegularPlannerQuery(readQG withMutation setProperty("b", "prop"))
+
+    val lhs = singleRow
+    val firstQG = matchNodeQG("a", "A") withMutation delete(varFor("a"))
+    val secondQG = argumentQG("a") withMutation delete(varFor("a"))
+    val pq = RegularPlannerQuery(firstQG, horizon = PassthroughAllHorizon()).withTail(RegularPlannerQuery(secondQG))
+
+    // when
+    val result = eagernessPlanner(pq, lhs, head = false)
+
+    // then
+    result should equal(update(eager(lhs)))
+  }
+
+  test("Protect MATCH from REMOVE label") {
+    // given
+
+    val lhs = singleRow
+    val firstQG = matchNodeQG("a", "A") ++ matchNode("b") withMutation removeLabel("b", "A")
+    val pq = RegularPlannerQuery(firstQG)
+
+    // when
+    val result = eagernessPlanner(pq, lhs, head = false)
+
+    // then
+    result should equal(update(eager(lhs)))
+  }
+
+  test("When removing label from variable found through said label, no eagerness is needed") {
+    // given
+
+    val lhs = singleRow
+    val firstQG = matchNodeQG("a", "A") withMutation removeLabel("a", "A")
+    val pq = RegularPlannerQuery(firstQG)
+
+    // when
+    val result = eagernessPlanner(pq, lhs, head = false)
+
+    // then
+    result should equal(update(lhs))
+  }
+
+  test("Matching on one label and removing another is OK") {
+    // given
+
+    val lhs = singleRow
+    val firstQG = matchNode("a") ++
+                  matchNodeQG("b", "B") withMutation removeLabel("b", "B")
+    val pq = RegularPlannerQuery(firstQG)
+
+    // when
+    val result = eagernessPlanner(pq, lhs, head = false)
+
+    // then
+    result should equal(update(lhs))
+  }
+
+  test("MATCH (n) CREATE (m) WITH * MATCH (o {prop:42}) SET n.prop2 = 42") {
+    // given
+
+    val lhs = allNodesScan("n")
+    val firstQG = matchNode("n") withMutation createNode("m")
+    val secondQG = matchNode("o") withPredicate propEquality("o","prop",42)  withMutation setProperty("n", "prop2")
+    val pq = RegularPlannerQuery(firstQG) withTail RegularPlannerQuery(secondQG)
+
+    // when
+    val result = eagernessPlanner(pq, lhs, head = true)
+
+    // then
+    result should equal(update(lhs))
+  }
+
+  test("MATCH (n) CREATE (m) in tail is not safe") {
+    // given
+    val lhs = allNodesScan("n")
+    val firstQG = matchNode("n") withMutation createNode("m")
+    val pq = RegularPlannerQuery(firstQG)
+
+    // when
+    val result = eagernessPlanner(pq, lhs, head = false)
+
+    // then
+    result should equal(update(eager(lhs)))
+  }
+
+  test("Protect MATCH from SET label") {
+    // given
+
+    val lhs = singleRow
+    val firstQG = matchNodeQG("a", "A") ++ matchNode("b") withMutation setLabel("b", "A")
+    val pq = RegularPlannerQuery(firstQG)
+
+    // when
+    val result = eagernessPlanner(pq, lhs, head = false)
+
+    // then
+    result should equal(update(eager(lhs)))
+  }
+
+  test("Protect OPTIONAL MATCH from SET label") {
+    // given
+
+    val lhs = singleRow
+
+    val firstQG =  QueryGraph.empty.withAddedOptionalMatch(matchNodeQG("a", "A")) ++ matchNode("b") withMutation setLabel("b", "A")
+    val pq = RegularPlannerQuery(firstQG)
 
     // when
     val result = eagernessPlanner(pq, lhs, head = false)
@@ -378,8 +501,13 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
     CreateNodePattern(IdName(name), labels.map(x => LabelName(x)(pos)), None)
   private def setLabel(name: String, labels: String*): SetLabelPattern =
     SetLabelPattern(IdName(name), labels.map(x => LabelName(x)(pos)))
+  private def removeLabel(name: String, labels: String*): RemoveLabelPattern =
+    RemoveLabelPattern(IdName(name), labels.map(x => LabelName(x)(pos)))
   private def setProperty(name: String, propKey: String): SetNodePropertyPattern =
     SetNodePropertyPattern(IdName(name), PropertyKeyName(propKey)(pos), StringLiteral("new property value")(pos))
+  private def delete(exp: Expression) =
+    DeleteExpressionPattern(exp, forced = false)
+
 }
 
 case class update(inner: LogicalPlan) extends LogicalPlan {

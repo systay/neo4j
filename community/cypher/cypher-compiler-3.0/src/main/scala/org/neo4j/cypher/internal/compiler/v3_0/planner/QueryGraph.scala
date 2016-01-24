@@ -31,25 +31,41 @@ trait Read {
   def readsNodes: Boolean
   def nodeIds: Set[IdName]
   def labelsOn(x: IdName): Set[LabelName]
+  def propertiesOn(x: IdName): Set[PropertyKeyName]
   def readsProperties: Set[PropertyKeyName]
 }
 
 trait Update {
-  def overlaps(read: Read): Boolean = {
-    val b = updatesNodes && read.readsNodes
-    val c = read.nodeIds.exists { nodeId =>
+  def overlaps(read: Read): Boolean = nonEmpty && nodeOverlaps(read)
+
+  private def nodeOverlaps(read: Read): Boolean = {
+    containsDeletes && read.readsNodes || read.nodeIds.exists { nodeId =>
       val readLabels = read.labelsOn(nodeId)
-      readLabels.isEmpty || (readLabels containsAnyOf updateLabelsNotOn(nodeId))
+      val readProps = read.propertiesOn(nodeId)
+      val readsNoLabels = readLabels.isEmpty
+      val readsNoProps = readProps.isEmpty
+      val a = readsNoLabels && readsNoProps && createsNodes
+
+      val updatedLabels = addedLabelsNotOn(nodeId) ++ removedLabelsNotOn(nodeId)
+      val b = readLabels containsAnyOf updatedLabels
+
+      val updatedProperties = updatesNodePropertiesNotOn(nodeId)
+      val c = readProps exists updatedProperties.overlaps
+
+      a || b || c
     }
-    val d = read.readsProperties.exists(updatesProperties.overlaps)
-    nonEmpty && b && (c || d)
   }
 
-  def updatesNodes: Boolean
+  def createsNodes: Boolean
+
   def isEmpty: Boolean
   def nonEmpty: Boolean = !isEmpty
-  def updateLabelsNotOn(id: IdName): Set[LabelName]
-  def updatesProperties: CreatesPropertyKeys
+
+  def addedLabelsNotOn(id: IdName): Set[LabelName]
+  def removedLabelsNotOn(id: IdName): Set[LabelName]
+
+  def updatesNodePropertiesNotOn(id: IdName): CreatesPropertyKeys
+  def containsDeletes: Boolean
 
   implicit class apa[T](my: Set[T]) {
     def containsAnyOf(other:Set[T]) = (my intersect other).nonEmpty
@@ -62,28 +78,27 @@ case class ReadView(qg: QueryGraph) extends Read {
   override def labelsOn(x: IdName): Set[LabelName] = qg.allKnownLabelsOnNode(x)
 
   override def readsProperties: Set[PropertyKeyName] =
-    qg.allKnownNodeProperties.map(_.propertyKey) ++
-    qg.allKnownRelProperties.map(_.propertyKey)
+    qg.allKnownNodeProperties.map(_.propertyKey)
+
+  override def propertiesOn(x: IdName): Set[PropertyKeyName] = {
+    val map: Set[PropertyKeyName] = qg.knownProperties(x).map(_.propertyKey)
+    map
+  }
 }
 
 case class UpdateView(mutatingPatterns: Seq[MutatingPattern]) extends Update {
 
-  override def updatesNodes = mutatingPatterns.exists {
-    case x: CreateNodePattern => true
-    case x: SetLabelPattern => true
-    case x: SetNodePropertyPattern => true
-    case x: SetNodePropertiesFromMapPattern => true
-    case _ => false
-  }
-
   override def isEmpty = mutatingPatterns.isEmpty
 
-  override def updateLabelsNotOn(id: IdName): Set[LabelName] = (mutatingPatterns collect {
+  override def addedLabelsNotOn(id: IdName): Set[LabelName] = (mutatingPatterns collect {
     case x: SetLabelPattern if x.idName != id => x.labels
     case x: CreateNodePattern => x.labels
+
   }).flatten.toSet
 
-  override def updatesProperties = updatesNodeProperties + updatesRelationshipProperties
+  override def removedLabelsNotOn(id: IdName): Set[LabelName] = (mutatingPatterns collect {
+    case x: RemoveLabelPattern if x.idName != id => x.labels
+  }).flatten.toSet
 
   private def updatesNodeProperties = {
     @tailrec
@@ -100,7 +115,7 @@ case class UpdateView(mutatingPatterns: Seq[MutatingPattern]) extends Update {
         case SetNodePropertyPattern(_, key, _) :: tl => toNodePropertyPattern(tl, acc + CreatesKnownPropertyKeys(key))
         case MergeNodePattern(_, _, onCreate, onMatch) :: tl =>
           toNodePropertyPattern(tl, acc + extractPropertyKey(onCreate) + extractPropertyKey(onMatch))
-        case MergeRelationshipPattern(_, _, _ , onCreate, onMatch) :: tl =>
+        case MergeRelationshipPattern(_, _, _, onCreate, onMatch) :: tl =>
           toNodePropertyPattern(tl, acc + extractPropertyKey(onCreate) + extractPropertyKey(onMatch))
 
         case hd :: tl => toNodePropertyPattern(tl, acc)
@@ -125,7 +140,7 @@ case class UpdateView(mutatingPatterns: Seq[MutatingPattern]) extends Update {
         case SetRelationshipPropertyPattern(_, key, _) :: tl => toRelPropertyPattern(tl, acc + CreatesKnownPropertyKeys(key))
         case MergeNodePattern(_, _, onCreate, onMatch) :: tl =>
           toRelPropertyPattern(tl, acc + extractPropertyKey(onCreate) + extractPropertyKey(onMatch))
-        case MergeRelationshipPattern(_, _, _ , onCreate, onMatch) :: tl =>
+        case MergeRelationshipPattern(_, _, _, onCreate, onMatch) :: tl =>
           toRelPropertyPattern(tl, acc + extractPropertyKey(onCreate) + extractPropertyKey(onMatch))
 
         case hd :: tl => toRelPropertyPattern(tl, acc)
@@ -135,21 +150,14 @@ case class UpdateView(mutatingPatterns: Seq[MutatingPattern]) extends Update {
     toRelPropertyPattern(mutatingPatterns, CreatesNoPropertyKeys)
   }
 
-}
+  override def containsDeletes = mutatingPatterns.exists(_.isInstanceOf[DeleteExpressionPattern])
 
-// TODO: This is a way to enable the old overlaps method for comparison (with QueryGraph.useOldUpdateGraphOverlapsMethod = true)
-case class UpdateViewAdapter(updateGraph: UpdateGraph) extends Update {
-  override def overlaps(read: Read): Boolean = {
-    assert(read.isInstanceOf[ReadView], "UpdateViewAdapter only works with ReadView")
-    val readQueryGraph = read.asInstanceOf[ReadView].qg
-    updateGraph overlaps readQueryGraph
+  override def createsNodes = mutatingPatterns.exists(_.isInstanceOf[CreateNodePattern])
+
+  override def updatesNodePropertiesNotOn(id: IdName): CreatesPropertyKeys = mutatingPatterns.foldLeft[CreatesPropertyKeys](CreatesNoPropertyKeys) {
+    case (acc, c: SetNodePropertyPattern) if c.idName != id => acc + CreatesKnownPropertyKeys(Set(c.propertyKey))
+    case (acc, _) => acc
   }
-
-  // Currently unused
-  override def isEmpty: Boolean = ???
-  override def updatesNodes: Boolean = ???
-  override def updatesProperties: CreatesPropertyKeys = ???
-  override def updateLabelsNotOn(id: IdName): Set[LabelName] = ???
 }
 
 case class QueryGraph(patternRelationships: Set[PatternRelationship] = Set.empty,
@@ -165,23 +173,24 @@ case class QueryGraph(patternRelationships: Set[PatternRelationship] = Set.empty
   // TODO: Add assertions to make sure invalid QGs are rejected, such as mixing MERGE with other clauses
 
   def reads: Read = {
-    val queryGraph = if (containsMerge) mutatingPatterns.head.asInstanceOf[MergePattern].matchGraph else this
+    val queryGraph = if (containsMerge)
+      mutatingPatterns.head.asInstanceOf[MergePattern].matchGraph
+    else
+      optionalMatches.foldLeft(this) {
+        case (acc, qg) => acc ++ qg
+      }
     ReadView(queryGraph)
   }
 
   def updates: Update = {
-    if (QueryGraph.useOldUpdateGraphOverlapsMethod)
-      UpdateViewAdapter(this)
-    else {
-      val updateActions = if (containsMerge) {
-        mutatingPatterns.collect {
-          case x: MergeNodePattern => Seq(x.createNodePattern)
-          case x: MergeRelationshipPattern => x.createNodePatterns ++ x.createRelPatterns
-        }.flatten
-      } else mutatingPatterns
+    val updateActions = if (containsMerge) {
+      mutatingPatterns.collect {
+        case x: MergeNodePattern => Seq(x.createNodePattern)
+        case x: MergeRelationshipPattern => x.createNodePatterns ++ x.createRelPatterns
+      }.flatten
+    } else mutatingPatterns
 
-      UpdateView(updateActions)
-    }
+    UpdateView(updateActions)
   }
 
   def size = patternRelationships.size

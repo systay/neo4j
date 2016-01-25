@@ -106,7 +106,7 @@ class EagerizationAcceptanceTest extends ExecutionEngineFunSuite with TableDrive
     assertNumberOfEagerness(query, 1)
   }
 
-  test("github issue ##5653") {
+  test("github issue #5653") {
     (0 to 1).foreach { i =>
       eengine.execute("CREATE (:Person {name:'Michal'})-[:FRIEND_OF {since:2007}]->(:Person {name:'Daniela'})")
     }
@@ -1131,16 +1131,6 @@ class EagerizationAcceptanceTest extends ExecutionEngineFunSuite with TableDrive
     result.columnAs[Long]("count(*)").next shouldBe 4
     assertStats(result, relationshipsCreated = 3, labelsAdded = 2)
     assertNumberOfEagerness(query, 1)
-  }
-
-  ignore("should not add eagerness when reading and merging nodes and relationships when matching different label") {
-    createLabeledNode("A")
-    val query = "MATCH (a:A) MERGE (a)-[:BAR]->(b:B) WITH a MATCH (a) WHERE (a)-[:FOO]->() RETURN count(*)"
-
-    val result = updateWithBothPlanners(query)
-    result.columnAs[Long]("count(*)").next shouldBe 0
-    assertStats(result, relationshipsCreated = 1, nodesCreated = 1, labelsAdded = 1)
-    assertNumberOfEagerness(query, 0)
   }
 
   test("should add eagerness when reading and merging nodes and relationships on matching same label") {

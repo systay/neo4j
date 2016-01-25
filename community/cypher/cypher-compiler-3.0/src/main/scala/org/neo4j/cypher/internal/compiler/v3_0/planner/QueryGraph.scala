@@ -29,34 +29,72 @@ import scala.collection.{GenTraversableOnce, mutable}
 
 trait Read {
   def readsNodes: Boolean
+  def readsRelationships: Boolean
   def nodeIds: Set[IdName]
+  def relationshipIds: Set[IdName]
   def labelsOn(x: IdName): Set[LabelName]
+  def typesOn(x: IdName): Set[RelTypeName]
   def propertiesOn(x: IdName): Set[PropertyKeyName]
   def readsProperties: Set[PropertyKeyName]
 }
 
 trait Update {
-  def overlaps(read: Read): Boolean = nonEmpty && nodeOverlaps(read)
+
+  def overlaps(read: Read): Boolean = nonEmpty && (nodeOverlaps(read) || relOverlaps(read))
 
   private def nodeOverlaps(read: Read): Boolean = {
     containsDeletes && read.readsNodes || read.nodeIds.exists { nodeId =>
       val readLabels = read.labelsOn(nodeId)
       val readProps = read.propertiesOn(nodeId)
-      val readsNoLabels = readLabels.isEmpty
-      val readsNoProps = readProps.isEmpty
-      val a = readsNoLabels && readsNoProps && createsNodes
 
-      val updatedLabels = addedLabelsNotOn(nodeId) ++ removedLabelsNotOn(nodeId)
-      val b = readLabels containsAnyOf updatedLabels
+      val a = {
+        val readsNoLabels = readLabels.isEmpty
+        val readsNoProps = readProps.isEmpty
+        readsNoLabels && readsNoProps && createsNodes
+      }
 
-      val updatedProperties = updatesNodePropertiesNotOn(nodeId)
-      val c = readProps exists updatedProperties.overlaps
+      val b = {
+        val updatedLabels = addedLabelsNotOn(nodeId) ++ removedLabelsNotOn(nodeId)
+        readLabels containsAnyOf updatedLabels
+      }
+
+      val c = {
+        val updatedProperties = updatesNodePropertiesNotOn(nodeId)
+        readProps exists updatedProperties.overlaps
+      }
 
       a || b || c
     }
   }
 
+  private def relOverlaps(read: Read): Boolean = {
+    read.readsRelationships && read.relationshipIds.exists { rel =>
+      val readTypes = read.typesOn(rel)
+      val readProps = read.propertiesOn(rel)
+
+      val a = {
+        val readsNoLabels = readTypes.isEmpty
+        val readsNoProps = readProps.isEmpty
+        readsNoLabels && readsNoProps && createsNodes
+      }
+
+      val b = {
+        val created: Set[RelTypeName] = relTypesCreated
+        readTypes containsAnyOf created
+      }
+
+//      val c = {
+//        val updatedProperties = updatesNodePropertiesNotOn(nodeId)
+//        readProps exists updatedProperties.overlaps
+//      }
+
+      a || b
+    }
+  }
+
+
   def createsNodes: Boolean
+  def createsRelationships: Boolean
 
   def isEmpty: Boolean
   def nonEmpty: Boolean = !isEmpty
@@ -67,6 +105,8 @@ trait Update {
   def updatesNodePropertiesNotOn(id: IdName): CreatesPropertyKeys
   def containsDeletes: Boolean
 
+  def relTypesCreated: Set[RelTypeName]
+
   implicit class apa[T](my: Set[T]) {
     def containsAnyOf(other:Set[T]) = (my intersect other).nonEmpty
   }
@@ -74,19 +114,29 @@ trait Update {
 
 case class ReadView(qg: QueryGraph) extends Read {
   override def readsNodes = qg.patternNodes.nonEmpty
+  override def readsRelationships = qg.patternRelationships.nonEmpty
+
   override def nodeIds = qg.patternNodes
-  override def labelsOn(x: IdName): Set[LabelName] = qg.allKnownLabelsOnNode(x)
+  override def labelsOn(x: IdName): Set[LabelName] = qg.selections
+    .labelPredicates.getOrElse(x, Set.empty)
+    .flatMap(_.labels)
+
+  override def relationshipIds: Set[IdName] = qg.patternRelationships.map(_.name)
+
+  override def typesOn(x: IdName): Set[RelTypeName] = qg.patternRelationships.collect {
+    case rel if rel.name == x => rel.types
+  }.flatten
 
   override def readsProperties: Set[PropertyKeyName] =
     qg.allKnownNodeProperties.map(_.propertyKey)
 
-  override def propertiesOn(x: IdName): Set[PropertyKeyName] = {
-    val map: Set[PropertyKeyName] = qg.knownProperties(x).map(_.propertyKey)
-    map
-  }
+  override def propertiesOn(x: IdName): Set[PropertyKeyName] =
+    qg.knownProperties(x).map(_.propertyKey)
 }
 
 case class UpdateView(mutatingPatterns: Seq[MutatingPattern]) extends Update {
+
+  override def createsRelationships: Boolean = mutatingPatterns.exists(_.isInstanceOf[CreateRelationshipPattern])
 
   override def isEmpty = mutatingPatterns.isEmpty
 
@@ -99,31 +149,6 @@ case class UpdateView(mutatingPatterns: Seq[MutatingPattern]) extends Update {
   override def removedLabelsNotOn(id: IdName): Set[LabelName] = (mutatingPatterns collect {
     case x: RemoveLabelPattern if x.idName != id => x.labels
   }).flatten.toSet
-
-  private def updatesNodeProperties = {
-    @tailrec
-    def toNodePropertyPattern(patterns: Seq[MutatingPattern], acc: CreatesPropertyKeys): CreatesPropertyKeys = {
-
-      def extractPropertyKey(patterns: Seq[SetMutatingPattern]): CreatesPropertyKeys = patterns.collect {
-        case SetNodePropertyPattern(_, key, _) => CreatesKnownPropertyKeys(key)
-        case SetNodePropertiesFromMapPattern(_, expression, _) => CreatesPropertyKeys(expression)
-      }.foldLeft[CreatesPropertyKeys](CreatesNoPropertyKeys)(_ + _)
-
-      patterns match {
-        case Nil => acc
-        case SetNodePropertiesFromMapPattern(_, expression, _) :: tl => CreatesPropertyKeys(expression)
-        case SetNodePropertyPattern(_, key, _) :: tl => toNodePropertyPattern(tl, acc + CreatesKnownPropertyKeys(key))
-        case MergeNodePattern(_, _, onCreate, onMatch) :: tl =>
-          toNodePropertyPattern(tl, acc + extractPropertyKey(onCreate) + extractPropertyKey(onMatch))
-        case MergeRelationshipPattern(_, _, _, onCreate, onMatch) :: tl =>
-          toNodePropertyPattern(tl, acc + extractPropertyKey(onCreate) + extractPropertyKey(onMatch))
-
-        case hd :: tl => toNodePropertyPattern(tl, acc)
-      }
-    }
-
-    toNodePropertyPattern(mutatingPatterns, CreatesNoPropertyKeys)
-  }
 
   private def updatesRelationshipProperties = {
     @tailrec
@@ -156,8 +181,13 @@ case class UpdateView(mutatingPatterns: Seq[MutatingPattern]) extends Update {
 
   override def updatesNodePropertiesNotOn(id: IdName): CreatesPropertyKeys = mutatingPatterns.foldLeft[CreatesPropertyKeys](CreatesNoPropertyKeys) {
     case (acc, c: SetNodePropertyPattern) if c.idName != id => acc + CreatesKnownPropertyKeys(Set(c.propertyKey))
+    case (acc, c: SetNodePropertiesFromMapPattern) if c.idName != id => acc + CreatesPropertyKeys(c.expression)
     case (acc, _) => acc
   }
+
+  override def relTypesCreated: Set[RelTypeName] = mutatingPatterns.collect {
+    case p: CreateRelationshipPattern => p.relType
+  }.toSet
 }
 
 case class QueryGraph(patternRelationships: Set[PatternRelationship] = Set.empty,

@@ -41,11 +41,11 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
   private def createNodeQG(name: String, label: String) = QueryGraph(mutatingPatterns = Seq(createNode(name, Seq(label))))
   private def matchNode(name: String) = QueryGraph(patternNodes = Set(IdName(name)))
   private def matchNodeQG(name: String, label: String) = QueryGraph(patternNodes = Set(IdName(name))).withSelections(Selections.from(hasLabels(name, label)))
-  private def matchBiDirectionalRel(from: String, name: String, to: String, typ: String*) = {
+  private def matchRel(from: String, name: String, to: String, typ: Seq[String], dir: SemanticDirection) = {
     val fromId = IdName(from)
     val toId = IdName(to)
     val types = typ.map(x => RelTypeName(x)(pos))
-    val rel = PatternRelationship(IdName(name), (fromId, toId), SemanticDirection.BOTH, types, SimplePatternLength)
+    val rel = PatternRelationship(IdName(name), (fromId, toId), dir, types, SimplePatternLength)
     QueryGraph(patternNodes = Set(fromId, toId), patternRelationships = Set(rel))
   }
 
@@ -81,7 +81,6 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
     val result = eagernessPlanner.apply(pq, lhs, head = false)
 
     result should equal(update(lhs))
-    verify(innerUpdatePlanner).apply(any(), any(), any())(any())
   }
 
   test("overlapping MATCH and CREATE in a tail") {
@@ -490,13 +489,123 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
     result should equal(update(eager(lhs)))
   }
 
+  test("match relationship without any updates") {
+    // given
+    val lhs = singleRow
+    val qg = MATCH('a -> ('r :: 'T) -> 'c)
+    val pq = RegularPlannerQuery(qg)
+
+    // when
+    val result = eagernessPlanner(pq, lhs, head = false)
+
+    // then
+    result should equal(update(lhs))
+  }
+
+  test("match relationship and then create relationship of same type") {
+    // given
+    val lhs = singleRow
+    val qg = MATCH('a  -> ('r :: 'T) -> 'b) withMutation createRel('a -> ('r2 :: 'T) -> 'b)
+    val pq = RegularPlannerQuery(qg)
+
+    // when
+    val result = eagernessPlanner(pq, lhs, head = false)
+
+    // then
+    result should equal(update(eager(lhs)))
+  }
+
+  test("match relationship and then create relationship of different type needs no eager") {
+    // given
+    val lhs = singleRow
+    val qg = MATCH('a  -> ('r :: 'T) -> 'b) withMutation createRel('a -> ('r2 :: 'T2) -> 'b)
+    val pq = RegularPlannerQuery(qg)
+
+    // when
+    val result = eagernessPlanner(pq, lhs, head = false)
+
+    // then
+    result should equal(update(lhs))
+  }
+
+  test("match relationship and set properties on node from unknown map") {
+    // given MATCH (a)-[r:T]->(b {prop: 42}) SET a = {param}
+    val lhs = singleRow
+    val readPart = MATCH('a -> ('r :: 'T) -> 'b) withPredicate propEquality("b", "prop", 42)
+    val qg = readPart withMutation SetNodePropertiesFromMapPattern("a", Parameter("param")(pos), removeOtherProps = false)
+    val pq = RegularPlannerQuery(qg)
+
+    // when
+    val result = eagernessPlanner(pq, lhs, head = false)
+
+    // then
+    result should equal(update(eager(lhs)))
+  }
+
+  test("match relationship and set properties on node from known map") {
+    // given MATCH (a)-[r:T]->(b {prop: 42}) SET a = {other: 42}
+    val lhs = singleRow
+    val readPart = MATCH('a -> ('r :: 'T) -> 'b) withPredicate propEquality("b", "prop", 42)
+
+    val mapExpression = MapExpression(Seq((PropertyKeyName("other")(pos), literalInt(42))))(pos)
+    val qg = readPart withMutation SetNodePropertiesFromMapPattern("a", mapExpression, removeOtherProps = false)
+    val pq = RegularPlannerQuery(qg)
+
+    // when
+    val result = eagernessPlanner(pq, lhs, head = false)
+
+    // then
+    result should equal(update(lhs))
+  }
+
   implicit class qgHelper(qg: QueryGraph) {
     def withPredicate(e: Expression): QueryGraph = qg.withSelections(qg.selections ++ Selections.from(e))
 
     def withMutation(patterns: MutatingPattern*): QueryGraph = qg.addMutatingPatterns(patterns: _*)
   }
 
+  implicit private class crazyDslStart(in: Symbol) {
+    def ->(rel: VarAndType) = new LeftNodeAndRel(VarWithoutType(in), rel)
+    def ::(other: Symbol) = new VarAndType(other, in)
+  }
+
+  private sealed case class LeftNodeAndRel(from: Var, rel: Var) {
+    def -> (to: Symbol) = new Pattern(from, rel, VarWithoutType(to))
+  }
+
+  trait Var {
+    def relName: Symbol
+  }
+  private sealed case class VarAndType(relName: Symbol, relType: Symbol) extends Var {
+    def ->(rel: VarAndType) = new LeftNodeAndRel(rel, this)
+  }
+  private sealed case class VarWithoutType(relName: Symbol) extends Var {
+    def ->(rel: VarAndType) = new LeftNodeAndRel(this, rel)
+  }
+
+  private sealed case class Pattern(from: Var, rel: Var, to: Var)
+
+  // capitalized because `match` is a Scala keyword
+  private def MATCH(pattern: Pattern): QueryGraph = {
+    matchRel(pattern.from.relName.name, pattern.rel.relName.name, pattern.to.relName.name, readTypes(pattern), SemanticDirection.OUTGOING)
+  }
+
+  private def readTypes(xx: Pattern) = xx.rel match {
+    case VarAndType(_, typ) => Seq(typ.name)
+    case VarWithoutType(_) => Seq.empty
+  }
+  private def writeType(xx: Pattern) = xx.rel match {
+    case VarAndType(_, typ) => RelTypeName(typ.name)(pos)
+    case VarWithoutType(_) => ???
+  }
+
+
+  private def createRel(pattern: Pattern): MutatingPattern = {
+    CreateRelationshipPattern(pattern.rel.relName, pattern.from.relName, writeType(pattern), pattern.to.relName, None, SemanticDirection.OUTGOING)
+  }
+
   private def eager(inner: LogicalPlan) = Eager(inner)(solved)
+
   private def createNode(name: String, labels: Seq[String] = Seq.empty): CreateNodePattern =
     CreateNodePattern(IdName(name), labels.map(x => LabelName(x)(pos)), None)
   private def setLabel(name: String, labels: String*): SetLabelPattern =

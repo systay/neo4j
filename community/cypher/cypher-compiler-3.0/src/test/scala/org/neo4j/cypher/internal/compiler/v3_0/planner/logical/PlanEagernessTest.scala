@@ -782,12 +782,55 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
     result should equal(update(lhs))
   }
 
-  test("match relationship and then create single node") {
+  test("cartesian product and then create one node that matches both") {
     // given
     val lhs = singleRow
-    val firstQG = MATCH('a -> 'r -> 'b) withMutation delete("r")
-    val secondQG = merge('a -> 'r -> 'b)
-    val pq = RegularPlannerQuery(firstQG) withTail RegularPlannerQuery(secondQG)
+    val readQg = matchNode("a") ++ matchNode("b") withPredicate
+      propEquality("a", "prop1", 42) withPredicate
+      propEquality("b", "prop2", 42)
+    val qg = readQg withMutation (createNode("c") andSetProperty("prop1", 42) andSetProperty("prop2", 42))
+
+    val pq = RegularPlannerQuery(qg)
+
+    // when
+    val result = eagernessPlanner(pq, lhs, head = true)
+
+    // then
+    result should equal(update(eager(lhs)))
+  }
+
+  test("when eager is needed to protect a read against a future write, apply eagerness after the updates instead of before") {
+    // given
+    // MATCH (b {prop: 42}) -- QG1
+    // CREATE (c)
+    // WITH *
+    // MATCH (d) -- QG2
+    // SET c.prop = 42
+    // RETURN count(*) as count
+    val lhs = singleRow
+    val qg1 = matchNode("b") withPredicate propEquality("b", "prop", 42) withMutation createNode("c")
+    val qg2 = matchNode("d") withMutation setNodeProperty("c", "prop")
+
+    val pq = RegularPlannerQuery(qg1) withTail RegularPlannerQuery(qg2)
+
+    // when
+    val result = eagernessPlanner(pq, lhs, head = true)
+
+    // then
+    result should equal(eager(update(lhs)))
+  }
+
+  ignore("match single directed relationship and delete it does not need eagerness") {
+    /*given
+    MATCH (a)-[t]->(b)
+    DELETE t
+    MERGE (a)-[t2:T2]->(b)
+    RETURN exists(t2.id)
+    */
+    val lhs = singleRow
+    val qg = MATCH('a -> 'r -> 'b) withMutation delete("r")
+    val mergeQG = merge('a -> 'r -> 'b)
+    val pq = RegularPlannerQuery(qg)
 
     // when
     val result = eagernessPlanner(pq, lhs, head = true)

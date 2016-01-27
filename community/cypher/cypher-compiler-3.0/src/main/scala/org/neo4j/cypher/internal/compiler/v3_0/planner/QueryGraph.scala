@@ -59,7 +59,6 @@ trait Update {
           false // Looking for rels, but not creating any
       }
 
-
       val b = {
         val updatedLabels = addedLabelsNotOn(nodeId) ++ removedLabelsNotOn(nodeId)
         readLabels containsAnyOf updatedLabels
@@ -225,6 +224,7 @@ case class UpdateView(mutatingPatterns: Seq[MutatingPattern]) extends Update {
   override def updatesNodePropertiesNotOn(id: IdName): CreatesPropertyKeys = mutatingPatterns.foldLeft[CreatesPropertyKeys](CreatesNoPropertyKeys) {
     case (acc, c: SetNodePropertyPattern) if c.idName != id => acc + CreatesKnownPropertyKeys(Set(c.propertyKey))
     case (acc, c: SetNodePropertiesFromMapPattern) if c.idName != id => acc + CreatesPropertyKeys(c.expression)
+    case (acc, CreateNodePattern(_, _, Some(properties))) => acc + CreatesPropertyKeys(properties)
     case (acc, _) => acc
   }
 
@@ -269,8 +269,8 @@ case class QueryGraph(patternRelationships: Set[PatternRelationship] = Set.empty
   def updates: Update = {
     val updateActions = if (containsMerge) {
       mutatingPatterns.collect {
-        case x: MergeNodePattern => Seq(x.createNodePattern)
-        case x: MergeRelationshipPattern => x.createNodePatterns ++ x.createRelPatterns
+        case x: MergeNodePattern => Seq(x.createNodePattern) ++ x.onCreate ++ x.onMatch
+        case x: MergeRelationshipPattern => x.createNodePatterns ++ x.createRelPatterns ++ x.onCreate ++ x.onMatch
       }.flatten
     } else mutatingPatterns
 

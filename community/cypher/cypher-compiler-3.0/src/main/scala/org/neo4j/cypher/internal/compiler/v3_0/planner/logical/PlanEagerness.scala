@@ -11,11 +11,12 @@ case class PlanEagerness(planUpdates: LogicalPlanningFunction3[PlannerQuery, Log
 
     //--------------
     // Plan eagerness before updates (on lhs)
+    // This is needed to protect the reads from updates from the same QG.
     // (I) Protect reads from future writes
-    val thisReadOverlapsFutureWrites = readOverlapsFutureWrites(plannerQuery, lhs, head, containsMerge)
+    val (thisReadOverlapsWrites, conflictIsInThisQG) = readOverlapsFutureWrites(plannerQuery, lhs, head, containsMerge)
 
     // NOTE: In case this is a merge, eagerness has to be planned on top of updates, and not on lhs (see (III) below)
-    val newLhs = if (thisReadOverlapsFutureWrites && !containsMerge)
+    val newLhs = if (thisReadOverlapsWrites && !containsMerge && conflictIsInThisQG)
       context.logicalPlanProducer.planEager(lhs)
     else
       lhs
@@ -28,17 +29,17 @@ case class PlanEagerness(planUpdates: LogicalPlanningFunction3[PlannerQuery, Log
     // Plan eagerness after updates
     // (II) Protect writes from future reads
     val thisWriteOverlapsFutureReads = writeOverlapsFutureReads(plannerQuery, head)
-    // (III) Protect merge reads from future writes
-    val thisMergeReadOverlapsFutureWrites = containsMerge && thisReadOverlapsFutureWrites
+    // (III) Protect merge reads from future writes, or normal reads against updates down the line
+    val thisReadOverlapsFutureWrites = (containsMerge || !conflictIsInThisQG)&& thisReadOverlapsWrites
 
-    if (thisWriteOverlapsFutureReads || thisMergeReadOverlapsFutureWrites)
+    if (thisWriteOverlapsFutureReads || thisReadOverlapsFutureWrites)
       context.logicalPlanProducer.planEager(updatePlan)
     else
       updatePlan
   }
 
   private def readOverlapsFutureWrites(plannerQuery: PlannerQuery, lhs: LogicalPlan, head: Boolean,
-                                       containsMerge: Boolean): Boolean = {
+                                       containsMerge: Boolean): (Boolean, Boolean) = {
 
     val thisRead: Read = readQGWithoutStableNodeVariable(plannerQuery, lhs, head)
     val allUpdates = plannerQuery.allQueryGraphs.map(_.updates)
@@ -50,7 +51,11 @@ case class PlanEagerness(planUpdates: LogicalPlanningFunction3[PlannerQuery, Log
     else
       allUpdates
 
-    futureUpdates.exists(_ overlaps thisRead)
+    val (overlaps, onFirstWrite) = futureUpdates.collectFirst {
+      case update if update overlaps thisRead => (true, update == plannerQuery.queryGraph.updates)
+    }.getOrElse(false -> false)
+
+    (overlaps, onFirstWrite)
   }
 
   private def writeOverlapsFutureReads(plannerQuery: PlannerQuery, head: Boolean): Boolean = {

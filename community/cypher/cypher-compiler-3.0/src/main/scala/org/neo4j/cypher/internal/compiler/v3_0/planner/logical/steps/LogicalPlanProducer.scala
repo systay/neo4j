@@ -383,7 +383,7 @@ case class LogicalPlanProducer(cardinalityModel: CardinalityModel) extends Colle
   }
 
   def planPassAll(inner: LogicalPlan)(implicit context: LogicalPlanningContext) = {
-    val solved = inner.solved.updateTailOrSelf(_.withHorizon(PassthroughAllHorizon()))
+    val solved = inner.solved.updateTailOrSelf(_.withHorizon(PassThroughAllHorizon()))
     inner.updateSolved(solved)
   }
 

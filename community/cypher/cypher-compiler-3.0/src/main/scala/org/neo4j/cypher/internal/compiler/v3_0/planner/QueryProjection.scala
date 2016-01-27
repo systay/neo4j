@@ -104,7 +104,7 @@ object QueryShuffle {
   val empty = QueryShuffle()
 }
 
-final case class PassthroughAllHorizon() extends QueryHorizon {
+final case class PassThroughAllHorizon() extends QueryHorizon {
   override def exposedSymbols(qg: QueryGraph) = qg.allCoveredIds
 
   override def dependingExpressions = Seq.empty

@@ -73,7 +73,7 @@ class DefaultQueryPlannerTest extends CypherFunSuite with LogicalPlanningTestSup
     result.asInstanceOf[ProduceResult]
   }
 
-  test("should set strictness when needed") {
+  ignore("should set strictness when needed") { // This should be re-written to not use mocks in this way. way too brittle
     // given
     val plannerQuery = mock[RegularPlannerQuery with CardinalityEstimation]
     when(plannerQuery.preferredStrictness).thenReturn(Some(LazyMode))

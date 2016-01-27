@@ -20,7 +20,6 @@
 package org.neo4j.cypher.internal.compiler.v3_0.planner.logical
 
 import org.neo4j.cypher.internal.compiler.v3_0.planner.PlannerQuery
-import org.neo4j.cypher.internal.compiler.v3_0.planner.logical.Eagerness.eagerApply
 import org.neo4j.cypher.internal.compiler.v3_0.planner.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.frontend.v3_0.Rewriter
 
@@ -31,19 +30,19 @@ which in most cases is then rewritten away by LogicalPlan rewriting.
 case class PlanWithTail(expressionRewriterFactory: (LogicalPlanningContext => Rewriter) = ExpressionRewriterFactory,
                         planEventHorizon: LogicalPlanningFunction2[PlannerQuery, LogicalPlan, LogicalPlan] = PlanEventHorizon,
                         planPart: (PlannerQuery, LogicalPlanningContext, Option[LogicalPlan]) => LogicalPlan = planPart,
-                        planUpdates: LogicalPlanningFunction3[PlannerQuery, LogicalPlan, Boolean, LogicalPlan] = PlanUpdates)
+                        planUpdates: LogicalPlanningFunction3[PlannerQuery, LogicalPlan, Boolean, LogicalPlan] = PlanEagerness(PlanUpdates))
   extends LogicalPlanningFunction2[LogicalPlan, Option[PlannerQuery], LogicalPlan] {
 
   override def apply(lhs: LogicalPlan, remaining: Option[PlannerQuery])(implicit context: LogicalPlanningContext): LogicalPlan = {
     remaining match {
       case Some(plannerQuery) =>
         val lhsContext = context.recurse(lhs)
-        val row = context.logicalPlanProducer.planArgumentRowFrom(lhs)
-        val partPlan = planPart(plannerQuery, lhsContext, Some(row))
-        val firstPlannerQuery = false
-        val planWithUpdates = planUpdates(plannerQuery, partPlan, firstPlannerQuery)(context)
+        val partPlan = planPart(plannerQuery, lhsContext, Some(context.logicalPlanProducer.planQueryArgumentRow(plannerQuery.queryGraph)))
 
-        val applyPlan = eagerApply(lhs, planWithUpdates, plannerQuery)
+        val planWithUpdates = planUpdates(plannerQuery, partPlan, false)(context)
+
+        //If previous update interferes with any of the reads here or in tail, add Eager
+        val applyPlan = context.logicalPlanProducer.planTailApply(lhs, planWithUpdates)
 
         val applyContext = lhsContext.recurse(applyPlan)
         val projectedPlan = planEventHorizon(plannerQuery, applyPlan)(applyContext)
@@ -51,6 +50,7 @@ case class PlanWithTail(expressionRewriterFactory: (LogicalPlanningContext => Re
 
         val completePlan = {
           val expressionRewriter = expressionRewriterFactory(projectedContext)
+
           projectedPlan.endoRewrite(expressionRewriter)
         }
 

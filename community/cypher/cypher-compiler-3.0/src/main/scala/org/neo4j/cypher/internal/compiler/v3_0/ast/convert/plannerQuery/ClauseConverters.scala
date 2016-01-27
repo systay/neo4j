@@ -289,7 +289,7 @@ object ClauseConverters {
           .addMutatingPatterns(MergeNodePattern(createNodePattern, matchGraph, onCreate, onMatch))
 
         acc
-          .withHorizon(PassthroughAllHorizon())
+          .withHorizon(PassThroughAllHorizon())
           .withTail(RegularPlannerQuery(queryGraph = queryGraph))
           .withHorizon(asQueryProjection(distinct = false, QueryProjection.forIds(queryGraph.allCoveredIds)))
           .withTail(RegularPlannerQuery())
@@ -335,7 +335,7 @@ object ClauseConverters {
           .addMutatingPatterns(MergeRelationshipPattern(nodesToCreate, rels, matchGraph, onCreate, onMatch))
 
         acc.
-          withHorizon(PassthroughAllHorizon()).
+          withHorizon(PassThroughAllHorizon()).
           withTail(RegularPlannerQuery(queryGraph = queryGraph)).
           withHorizon(asQueryProjection(distinct = false, QueryProjection.forIds(queryGraph.allCoveredIds))).
           withTail(RegularPlannerQuery())

@@ -220,7 +220,7 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
     val result = eagernessPlanner(pq.withTail(tail), lhs, head = false)
 
     // then
-    result should equal(update(eager(lhs)))
+    result should equal(eager(update(lhs)))
   }
 
   test("MERGE followed by MATCH on not overlapping nodes") {
@@ -285,7 +285,7 @@ class PlanEagernessTest extends CypherFunSuite with LogicalPlanConstructionTestS
     val result = eagernessPlanner(pq.withTail(tail), lhs, head = false)
 
     // then
-    result should equal(update(eager(lhs)))
+    result should equal(eager(update(lhs)))
   }
 
   test("CREATE followed by MATCH on not overlapping nodes with labels") {

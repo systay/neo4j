@@ -214,7 +214,7 @@ class EagerizationAcceptanceTest
     val result = updateWithBothPlanners(query)
     assertStats(result, nodesCreated = 2, nodesDeleted = 2, propertiesWritten = 2, labelsAdded = 2)
     result.columnAs[Node]("b2.deleted").toList should equal(List(null, null))
-    assertNumberOfEagerness(query, 2, optimalEagerCount = 1)
+    assertNumberOfEagerness(query, 1)
   }
 
   test("should introduce eagerness between DELETE and MERGE for nodes when there merge matches all labels") {
@@ -275,7 +275,7 @@ class EagerizationAcceptanceTest
 
     // Merge should not be able to match on deleted relationship
     result.toList should equal(List(Map("exists(t2.id)" -> false), Map("exists(t2.id)" -> false)))
-    assertNumberOfEagerness(query, 2, optimalEagerCount = 1)
+    assertNumberOfEagerness(query, 1)
   }
 
   test("should introduce eagerness between MATCH and DELETE + DELETE and MERGE for relationship, direction reversed") {
@@ -293,7 +293,7 @@ class EagerizationAcceptanceTest
     val result = updateWithBothPlanners(query)
     assertStats(result, relationshipsDeleted = 1, relationshipsCreated = 1)
     result.columnAs[Long]("count(*)").next shouldBe 1
-    assertNumberOfEagerness(query, 2)
+    assertNumberOfEagerness(query, 1)
   }
 
   test("should introduce eagerness between DELETE and MERGE for relationships when there is no read matching the merge") {
@@ -312,7 +312,7 @@ class EagerizationAcceptanceTest
     val result = updateWithBothPlanners(query)
     assertStats(result, relationshipsDeleted = 2, relationshipsCreated = 1)
     result.toList should equal(List(Map("exists(t2.id)" -> false), Map("exists(t2.id)" -> false)))
-    assertNumberOfEagerness(query, 2, optimalEagerCount = 1)
+    assertNumberOfEagerness(query, 1)
   }
 
   test("should introduce eagerness between DELETE and MERGE for relationships when there is a read matching the merge") {
@@ -331,7 +331,7 @@ class EagerizationAcceptanceTest
     val result = updateWithBothPlanners(query)
     assertStats(result, relationshipsDeleted = 2, relationshipsCreated = 1)
     result.toList should equal(List(Map("exists(t2.id)" -> false), Map("exists(t2.id)" -> false)))
-    assertNumberOfEagerness(query, 2, optimalEagerCount = 1)
+    assertNumberOfEagerness(query, 1)
   }
 
   test("should introduce eagerness between DELETE and MERGE for relationships when there is a read matching the merge, direction reversed") {
@@ -350,7 +350,7 @@ class EagerizationAcceptanceTest
     val result = updateWithBothPlanners(query)
     assertStats(result, relationshipsDeleted = 2, relationshipsCreated = 1)
     result.columnAs[Long]("count(*)").next shouldBe 2
-    assertNumberOfEagerness(query, 2)
+    assertNumberOfEagerness(query, 1)
   }
 
   // TESTS FOR MATCH AND CREATE
@@ -492,7 +492,7 @@ class EagerizationAcceptanceTest
     val result = updateWithBothPlanners(query)
     result.columnAs[Long]("count(*)").next shouldBe 1
     assertStats(result, nodesCreated = 1, relationshipsCreated = 1)
-    assertNumberOfEagerness(query, 0)
+    assertNumberOfEagerness(query, 1, optimalEagerCount = 0)
   }
 
   test("should not be eager when creating single node after matching on pattern with relationship") {
@@ -698,7 +698,7 @@ class EagerizationAcceptanceTest
     val result = updateWithBothPlanners(query)
     result.columnAs[Long]("count(*)").next shouldBe 2
     assertStats(result, nodesCreated = 4, relationshipsCreated = 2)
-    assertNumberOfEagerness(query, 0)
+    assertNumberOfEagerness(query, 1, optimalEagerCount = 0)
   }
 
   // TESTS FOR MATCH AND DELETE
@@ -795,7 +795,7 @@ class EagerizationAcceptanceTest
 
     result.toList should equal (List(Map("count(*)" -> 2)))
     assertStats(result, relationshipsDeleted = 2)
-    assertNumberOfEagerness(query, 1, optimalEagerCount = 0)
+    assertNumberOfEagerness(query, 0)
   }
 
   test("matching directional relationship, deleting relationship and labeled nodes should not be eager") {
@@ -1210,7 +1210,7 @@ class EagerizationAcceptanceTest
     assertStats(result, relationshipsCreated = 3, labelsAdded = 1)
 
     //TODO this we need to consider not only overlap but also what known labels the node we set has
-    assertNumberOfEagerness(query, 1, optimalEagerCount = 0)
+    assertNumberOfEagerness(query, 0)
   }
 
   test("should introduce eagerness when the ON MATCH includes writing to a right-side matched label") {
@@ -1241,7 +1241,7 @@ class EagerizationAcceptanceTest
     result.columnAs[Long]("count(*)").next shouldBe 4
     assertStats(result, relationshipsCreated = 3, labelsAdded = 2)
     //TODO this we need to consider not only overlap but also what known labels the node we set has
-    assertNumberOfEagerness(query, 1, optimalEagerCount = 0)
+    assertNumberOfEagerness(query, 0)
   }
 
   test("should introduce eagerness when the ON CREATE includes writing to a right-side matched label") {
@@ -1772,7 +1772,7 @@ class EagerizationAcceptanceTest
     val result = updateWithBothPlanners(query)
     result.columnAs[Int]("count").next should equal(12)
     assertStats(result, propertiesWritten = 12, nodesCreated = 2)
-    assertNumberOfEagerness(query, 2, optimalEagerCount = 1)
+    assertNumberOfEagerness(query, 1)
   }
 
   test("setting property in tail should be eager if overlap first tail") {
@@ -1781,9 +1781,7 @@ class EagerizationAcceptanceTest
     createNode("prop" -> 42)
     createNode("prop" -> 42)
     val query =
-      """CREATE ()
-        |WITH *
-        |MATCH (n {prop: 42})
+      """MATCH (n {prop: 42})
         |CREATE (m)
         |WITH *
         |MATCH (o)
@@ -1791,9 +1789,9 @@ class EagerizationAcceptanceTest
         |RETURN count(*) as count""".stripMargin
 
     val result = updateWithBothPlanners(query)
-    result.columnAs[Int]("count").next should equal(14)
-    assertStats(result, propertiesWritten = 14, nodesCreated = 3)
-    assertNumberOfEagerness(query, 3, optimalEagerCount = 1)
+    result.columnAs[Int]("count").next should equal(12)
+    assertStats(result, propertiesWritten = 12, nodesCreated = 2)
+    assertNumberOfEagerness(query, 1)
   }
 
   test("setting property in tail should not be eager if no overlap") {
@@ -2197,7 +2195,9 @@ class EagerizationAcceptanceTest
     } else {
       "Too many eagers: "
     }
-    withClue(msg) {
+    withClue(
+      s"""$plan
+         |$msg""".stripMargin) {
       eagers shouldBe expectedEagerCount
     }
   }

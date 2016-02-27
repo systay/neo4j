@@ -20,6 +20,7 @@
 package org.neo4j.cypher.internal.javacompat;
 
 import java.util.Map;
+import java.util.function.Function;
 
 import org.neo4j.cypher.CypherException;
 import org.neo4j.graphdb.Result;
@@ -29,6 +30,7 @@ import org.neo4j.kernel.impl.query.QueryExecutionKernelException;
 import org.neo4j.kernel.impl.query.QuerySession;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 /**
  * To run a Cypher query, use this class.
@@ -166,5 +168,20 @@ public class ExecutionEngine implements QueryExecutionEngine
         {
             throw new QueryExecutionKernelException( e );
         }
+    }
+
+    @Override
+    public Function<Object,Object> doIt( String expression )
+    {
+        return ( str ) -> {
+            if ( str != null && str instanceof String )
+            {
+                return ((String) str).toUpperCase();
+            }
+            else
+            {
+                return null;
+            }
+        };
     }
 }

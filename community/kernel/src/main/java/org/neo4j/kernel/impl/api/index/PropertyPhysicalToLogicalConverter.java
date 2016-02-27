@@ -26,11 +26,14 @@ import java.util.Map;
 import java.util.Set;
 
 import org.neo4j.kernel.api.index.NodePropertyUpdate;
+import org.neo4j.kernel.api.index.NodePropertyUpdateImpl;
 import org.neo4j.kernel.impl.store.PropertyStore;
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.transaction.state.LabelChangeSummary;
 import org.neo4j.kernel.impl.transaction.state.PropertyRecordChange;
+
+import static org.neo4j.kernel.api.index.NodePropertyUpdateImpl.change;
 
 public class PropertyPhysicalToLogicalConverter
 {
@@ -67,7 +70,8 @@ public class PropertyPhysicalToLogicalConverter
                 {
                     Object beforeVal = valueOf( beforeBlock );
                     Object afterVal = valueOf( afterBlock );
-                    update = NodePropertyUpdate.change( nodeId, key, beforeVal, labelsBefore, afterVal, labelsAfter );
+                    update = change( nodeId, key, beforeVal, labelsBefore, afterVal,
+                            labelsAfter );
                 }
             }
             else
@@ -78,13 +82,13 @@ public class PropertyPhysicalToLogicalConverter
                     final LabelChangeSummary summary = new LabelChangeSummary( labelsBefore, labelsAfter );
                     if ( summary.hasUnchangedLabels() )
                     {
-                        update = NodePropertyUpdate.add( nodeId, key, valueOf( afterBlock ),
+                        update = NodePropertyUpdateImpl.add( nodeId, key, valueOf( afterBlock ),
                                 summary.getUnchangedLabels() );
                     }
                 }
                 else if ( beforeBlock != null )
                 {
-                    update = NodePropertyUpdate.remove( nodeId, key, valueOf( beforeBlock ), labelsBefore );
+                    update = NodePropertyUpdateImpl.remove( nodeId, key, valueOf( beforeBlock ), labelsBefore );
                 }
                 else
                 {

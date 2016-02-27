@@ -56,6 +56,7 @@ import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.api.index.NodePropertyUpdateImpl;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.api.index.IndexConfiguration;
 import org.neo4j.kernel.api.index.IndexDescriptor;
@@ -1069,7 +1070,7 @@ public class BatchInsertTest
         verify( provider ).getPopulator( anyLong(), any( IndexDescriptor.class ), any( IndexConfiguration.class ),
                 any( IndexSamplingConfig.class ) );
         verify( populator ).create();
-        verify( populator ).add( singletonList( NodePropertyUpdate.add( nodeId, 0, "Jakewins", new long[]{0} ) ) );
+        verify( populator ).add( singletonList( NodePropertyUpdateImpl.add( nodeId, 0, "Jakewins", new long[]{0} ) ) );
         verify( populator ).verifyDeferredConstraints( any( PropertyAccessor.class ) );
         verify( populator ).close( true );
         verify( provider ).stop();
@@ -1104,7 +1105,7 @@ public class BatchInsertTest
         verify( provider ).getPopulator( anyLong(), any( IndexDescriptor.class ), any( IndexConfiguration.class ),
                 any( IndexSamplingConfig.class ) );
         verify( populator ).create();
-        verify( populator ).add( singletonList( NodePropertyUpdate.add( nodeId, 0, "Jakewins", new long[]{0} ) ) );
+        verify( populator ).add( singletonList( NodePropertyUpdateImpl.add( nodeId, 0, "Jakewins", new long[]{0} ) ) );
         verify( populator ).verifyDeferredConstraints( any( PropertyAccessor.class ) );
         verify( populator ).close( true );
         verify( provider ).stop();
@@ -1139,8 +1140,8 @@ public class BatchInsertTest
         verify( provider ).getPopulator( anyLong(), any( IndexDescriptor.class ), any( IndexConfiguration.class ),
                 any( IndexSamplingConfig.class ) );
         verify( populator ).create();
-        verify( populator ).add( singletonList( NodePropertyUpdate.add( jakewins, 0, "Jakewins", new long[]{0} ) ) );
-        verify( populator ).add( singletonList( NodePropertyUpdate.add( boggle, 0, "b0ggl3", new long[]{0} ) ) );
+        verify( populator ).add( singletonList( NodePropertyUpdateImpl.add( jakewins, 0, "Jakewins", new long[]{0} ) ) );
+        verify( populator ).add( singletonList( NodePropertyUpdateImpl.add( boggle, 0, "b0ggl3", new long[]{0} ) ) );
         verify( populator ).verifyDeferredConstraints( any( PropertyAccessor.class ) );
         verify( populator ).close( true );
         verify( provider ).stop();

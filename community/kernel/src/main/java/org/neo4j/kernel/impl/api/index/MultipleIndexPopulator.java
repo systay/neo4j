@@ -45,8 +45,6 @@ import org.neo4j.kernel.api.index.SchemaIndexProvider;
 import org.neo4j.kernel.api.index.SchemaIndexProvider.Descriptor;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.register.Register.DoubleLongRegister;
-import org.neo4j.register.Registers;
 import org.neo4j.storageengine.api.schema.IndexSample;
 
 import static java.lang.String.format;
@@ -531,7 +529,6 @@ public class MultipleIndexPopulator implements IndexPopulator
         {
             flipper.flip( () -> {
                 populateFromQueueIfAvailable( Long.MAX_VALUE );
-                DoubleLongRegister result = Registers.newDoubleLongRegister();
                 IndexSample sample = populator.sampleResult();
                 storeView.replaceIndexCounts( descriptor, sample.uniqueValues(), sample.sampleSize(),
                         sample.indexSize() );

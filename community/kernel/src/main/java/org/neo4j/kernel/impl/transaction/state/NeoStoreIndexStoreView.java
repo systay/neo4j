@@ -51,7 +51,7 @@ import org.neo4j.storageengine.api.EntityType;
 import org.neo4j.storageengine.api.schema.PopulationProgress;
 
 import static org.neo4j.collection.primitive.PrimitiveLongCollections.EMPTY_LONG_ARRAY;
-import static org.neo4j.kernel.api.index.NodePropertyUpdate.add;
+import static org.neo4j.kernel.api.index.NodePropertyUpdateImpl.add;
 import static org.neo4j.kernel.api.labelscan.NodeLabelUpdate.labelChanges;
 import static org.neo4j.kernel.impl.store.NodeLabelsField.parseLabelsField;
 import static org.neo4j.kernel.impl.store.record.RecordLoad.FORCE;

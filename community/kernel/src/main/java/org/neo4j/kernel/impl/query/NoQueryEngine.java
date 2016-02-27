@@ -20,6 +20,7 @@
 package org.neo4j.kernel.impl.query;
 
 import java.util.Map;
+import java.util.function.Function;
 
 import org.neo4j.graphdb.Result;
 
@@ -41,6 +42,12 @@ enum NoQueryEngine implements QueryExecutionEngine
 
     @Override
     public Result profileQuery( String query, Map<String, Object> parameter, QuerySession session )
+    {
+        throw noQueryEngine();
+    }
+
+    @Override
+    public Function<Object, Object> doIt(String expression)
     {
         throw noQueryEngine();
     }

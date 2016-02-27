@@ -41,6 +41,7 @@ import static org.junit.Assert.assertThat;
 import static java.util.Arrays.asList;
 import static java.util.Collections.EMPTY_LIST;
 import static java.util.Collections.singletonList;
+import static org.neo4j.kernel.api.index.NodePropertyUpdateImpl.add;
 
 public abstract class IndexAccessorCompatibility extends IndexProviderCompatibilityTestSuite.Compatibility
 {
@@ -77,11 +78,11 @@ public abstract class IndexAccessorCompatibility extends IndexProviderCompatibil
     public void testIndexSeekByNumber() throws Exception
     {
         updateAndCommit( asList(
-                NodePropertyUpdate.add( 1L, PROPERTY_KEY_ID, -5, new long[]{1000} ),
-                NodePropertyUpdate.add( 2L, PROPERTY_KEY_ID, 0, new long[]{1000} ),
-                NodePropertyUpdate.add( 3L, PROPERTY_KEY_ID, 5.5, new long[]{1000} ),
-                NodePropertyUpdate.add( 4L, PROPERTY_KEY_ID, 10.0, new long[]{1000} ),
-                NodePropertyUpdate.add( 5L, PROPERTY_KEY_ID, 100.0, new long[]{1000} ) ) );
+                add( 1L, PROPERTY_KEY_ID, -5, new long[]{1000} ),
+                add( 2L, PROPERTY_KEY_ID, 0, new long[]{1000} ),
+                add( 3L, PROPERTY_KEY_ID, 5.5, new long[]{1000} ),
+                add( 4L, PROPERTY_KEY_ID, 10.0, new long[]{1000} ),
+                add( 5L, PROPERTY_KEY_ID, 100.0, new long[]{1000} ) ) );
 
         assertThat( getAllNodesFromInclusiveIndexSeekByNumber( 0, 10 ), equalTo( asList( 2L, 3L, 4L ) ) );
         assertThat( getAllNodesFromInclusiveIndexSeekByNumber( 10, null ), equalTo( asList( 4L, 5L ) ) );
@@ -96,11 +97,11 @@ public abstract class IndexAccessorCompatibility extends IndexProviderCompatibil
     public void testIndexSeekByString() throws Exception
     {
         updateAndCommit( asList(
-                NodePropertyUpdate.add( 1L, PROPERTY_KEY_ID, "Anabelle", new long[]{1000} ),
-                NodePropertyUpdate.add( 2L, PROPERTY_KEY_ID, "Anna", new long[]{1000} ),
-                NodePropertyUpdate.add( 3L, PROPERTY_KEY_ID, "Bob", new long[]{1000} ),
-                NodePropertyUpdate.add( 4L, PROPERTY_KEY_ID, "Harriet", new long[]{1000} ),
-                NodePropertyUpdate.add( 5L, PROPERTY_KEY_ID, "William", new long[]{1000} ) ) );
+                add( 1L, PROPERTY_KEY_ID, "Anabelle", new long[]{1000} ),
+                add( 2L, PROPERTY_KEY_ID, "Anna", new long[]{1000} ),
+                add( 3L, PROPERTY_KEY_ID, "Bob", new long[]{1000} ),
+                add( 4L, PROPERTY_KEY_ID, "Harriet", new long[]{1000} ),
+                add( 5L, PROPERTY_KEY_ID, "William", new long[]{1000} ) ) );
 
         assertThat( getAllNodesFromIndexSeekByString( "Anna", true, "Harriet", false ), equalTo( asList( 2L, 3L ) ) );
         assertThat( getAllNodesFromIndexSeekByString( "Harriet", true, null, false ), equalTo( asList( 4L, 5L ) ) );
@@ -117,11 +118,11 @@ public abstract class IndexAccessorCompatibility extends IndexProviderCompatibil
     public void testIndexSeekByPrefix() throws Exception
     {
         updateAndCommit( asList(
-                NodePropertyUpdate.add( 1L, PROPERTY_KEY_ID, "a", new long[]{1000} ),
-                NodePropertyUpdate.add( 2L, PROPERTY_KEY_ID, "A", new long[]{1000} ),
-                NodePropertyUpdate.add( 3L, PROPERTY_KEY_ID, "apa", new long[]{1000} ),
-                NodePropertyUpdate.add( 4L, PROPERTY_KEY_ID, "apA", new long[]{1000} ),
-                NodePropertyUpdate.add( 5L, PROPERTY_KEY_ID, "b", new long[]{1000} ) ) );
+                add( 1L, PROPERTY_KEY_ID, "a", new long[]{1000} ),
+                add( 2L, PROPERTY_KEY_ID, "A", new long[]{1000} ),
+                add( 3L, PROPERTY_KEY_ID, "apa", new long[]{1000} ),
+                add( 4L, PROPERTY_KEY_ID, "apA", new long[]{1000} ),
+                add( 5L, PROPERTY_KEY_ID, "b", new long[]{1000} ) ) );
 
         assertThat( getAllNodesFromIndexSeekByPrefix( "a" ), equalTo( asList( 1L, 3L, 4L ) ) );
         assertThat( getAllNodesFromIndexSeekByPrefix( "A" ), equalTo( Collections.singletonList( 2L ) ) );
@@ -133,8 +134,8 @@ public abstract class IndexAccessorCompatibility extends IndexProviderCompatibil
     public void testIndexSeekByPrefixOnNonStrings() throws Exception
     {
         updateAndCommit( asList(
-                NodePropertyUpdate.add( 1L, PROPERTY_KEY_ID, "a", new long[]{1000} ),
-                NodePropertyUpdate.add( 2L, PROPERTY_KEY_ID, 2L, new long[]{1000} ) ) );
+                add( 1L, PROPERTY_KEY_ID, "a", new long[]{1000} ),
+                add( 2L, PROPERTY_KEY_ID, 2L, new long[]{1000} ) ) );
         assertThat( getAllNodesFromIndexSeekByPrefix( "2" ), equalTo( EMPTY_LIST ) );
     }
 

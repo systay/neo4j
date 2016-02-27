@@ -60,6 +60,7 @@ import org.neo4j.kernel.api.index.IndexPopulator;
 import org.neo4j.kernel.api.index.IndexUpdater;
 import org.neo4j.kernel.api.index.InternalIndexState;
 import org.neo4j.kernel.api.index.NodePropertyUpdate;
+import org.neo4j.kernel.api.index.NodePropertyUpdateImpl;
 import org.neo4j.kernel.api.index.SchemaIndexProvider;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingConfig;
@@ -612,8 +613,8 @@ public class IndexingServiceTest
 
         // When
         indexing.apply( updates( asList(
-                NodePropertyUpdate.add( 1, propertyKeyId, "foo", new long[]{labelId1} ),
-                NodePropertyUpdate.add( 2, propertyKeyId, "bar", new long[]{labelId2} ) ) ) );
+                NodePropertyUpdateImpl.add( 1, propertyKeyId, "foo", new long[]{labelId1} ),
+                NodePropertyUpdateImpl.add( 2, propertyKeyId, "bar", new long[]{labelId2} ) ) ) );
 
         // Then
         verify( updater1 ).close();
@@ -795,7 +796,7 @@ public class IndexingServiceTest
         };
         // leaving out the IndexRule here will have the index being populated from scratch
         IndexingService indexing = newIndexingServiceWithMockedDependencies( populator, accessor,
-                withData( NodePropertyUpdate.add( 0, 0, "value", new long[] {1} ) ), monitor );
+                withData( NodePropertyUpdateImpl.add( 0, 0, "value", new long[] {1} ) ), monitor );
 
         // WHEN initializing, i.e. preparing for recovery
         life.init();
@@ -817,7 +818,7 @@ public class IndexingServiceTest
         // GIVEN
         IndexingService.Monitor monitor = IndexingService.NO_MONITOR;
         IndexingService indexing = newIndexingServiceWithMockedDependencies( populator, accessor,
-                withData( NodePropertyUpdate.add( 0, 0, "value", new long[] {1} ) ), monitor );
+                withData( NodePropertyUpdateImpl.add( 0, 0, "value", new long[] {1} ) ), monitor );
         life.start();
 
         // WHEN
@@ -874,7 +875,7 @@ public class IndexingServiceTest
 
     private NodePropertyUpdate add( long nodeId, Object propertyValue )
     {
-        return NodePropertyUpdate.add( nodeId, propertyKeyId, propertyValue, new long[]{labelId} );
+        return NodePropertyUpdateImpl.add( nodeId, propertyKeyId, propertyValue, new long[]{labelId} );
     }
 
     private IndexingService newIndexingServiceWithMockedDependencies( IndexPopulator populator,

@@ -37,6 +37,7 @@ import org.neo4j.kernel.api.index.IndexDescriptor;
 import org.neo4j.kernel.api.index.IndexPopulator;
 import org.neo4j.kernel.api.index.IndexUpdater;
 import org.neo4j.kernel.api.index.NodePropertyUpdate;
+import org.neo4j.kernel.api.index.NodePropertyUpdateImpl;
 import org.neo4j.kernel.api.index.PropertyAccessor;
 import org.neo4j.kernel.api.index.SchemaIndexProvider;
 import org.neo4j.logging.LogProvider;
@@ -55,6 +56,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
+import static org.neo4j.kernel.api.index.NodePropertyUpdateImpl.add;
 
 @RunWith( MockitoJUnitRunner.class )
 public class MultipleIndexPopulatorTest
@@ -317,8 +319,8 @@ public class MultipleIndexPopulatorTest
             throws IOException, IndexEntryConflictException
     {
         PropertyAccessor propertyAccessor = mock( PropertyAccessor.class );
-        NodePropertyUpdate update1 = NodePropertyUpdate.add( 1, 1, "foo", new long[]{1} );
-        NodePropertyUpdate update2 = NodePropertyUpdate.add( 2, 1, "bar", new long[]{1} );
+        NodePropertyUpdate update1 = add( 1, 1, "foo", new long[]{1} );
+        NodePropertyUpdate update2 = add( 2, 1, "bar", new long[]{1} );
         IndexUpdater updater = mock( IndexUpdater.class );
         IndexPopulator populator = createIndexPopulator( updater );
 
@@ -339,7 +341,7 @@ public class MultipleIndexPopulatorTest
 
     private NodePropertyUpdate createNodePropertyUpdate()
     {
-        return NodePropertyUpdate.add( 1, 1, null, new long[]{1} );
+        return add( 1, 1, null, new long[]{1} );
     }
 
     private RuntimeException getSampleError()

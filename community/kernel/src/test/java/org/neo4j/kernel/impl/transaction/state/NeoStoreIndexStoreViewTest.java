@@ -35,6 +35,7 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.collection.Visitor;
+import org.neo4j.kernel.api.index.NodePropertyUpdateImpl;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.exceptions.EntityNotFoundException;
@@ -59,6 +60,7 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.helpers.collection.IteratorUtil.asSet;
 import static org.neo4j.helpers.collection.IteratorUtil.emptySetOf;
+import static org.neo4j.kernel.api.index.NodePropertyUpdateImpl.add;
 
 public class NeoStoreIndexStoreViewTest
 {
@@ -95,8 +97,8 @@ public class NeoStoreIndexStoreViewTest
         // then
         assertEquals(
             asSet(
-                NodePropertyUpdate.add( alistair.getId(), propertyKeyId, "Alistair", new long[] { labelId } ),
-                NodePropertyUpdate.add( stefan.getId(), propertyKeyId, "Stefan", new long[] { labelId } )
+                add( alistair.getId(), propertyKeyId, "Alistair", new long[] { labelId } ),
+                add( stefan.getId(), propertyKeyId, "Stefan", new long[] { labelId } )
             ), visitor.getUpdates() );
     }
 

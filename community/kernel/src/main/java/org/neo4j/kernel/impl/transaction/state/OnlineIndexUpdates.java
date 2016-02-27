@@ -47,8 +47,8 @@ import org.neo4j.kernel.impl.transaction.command.Command.Mode;
 import org.neo4j.kernel.impl.transaction.command.Command.NodeCommand;
 import org.neo4j.kernel.impl.transaction.command.Command.PropertyCommand;
 
-import static org.neo4j.kernel.api.index.NodePropertyUpdate.add;
-import static org.neo4j.kernel.api.index.NodePropertyUpdate.remove;
+import static org.neo4j.kernel.api.index.NodePropertyUpdateImpl.add;
+import static org.neo4j.kernel.api.index.NodePropertyUpdateImpl.remove;
 import static org.neo4j.kernel.impl.store.NodeLabelsField.parseLabelsField;
 
 /**

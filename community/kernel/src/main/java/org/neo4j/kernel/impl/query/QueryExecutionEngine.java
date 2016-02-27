@@ -20,6 +20,7 @@
 package org.neo4j.kernel.impl.query;
 
 import java.util.Map;
+import java.util.function.Function;
 
 import org.neo4j.graphdb.Result;
 
@@ -32,5 +33,7 @@ public interface QueryExecutionEngine
     String prettify( String query );
 
     Result profileQuery( String query, Map<String, Object> parameters, QuerySession querySession) throws QueryExecutionKernelException;
+
+    Function<Object, Object> doIt(String expression );
 }
 

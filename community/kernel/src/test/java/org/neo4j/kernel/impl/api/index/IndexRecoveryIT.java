@@ -42,6 +42,7 @@ import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.graphdb.schema.Schema;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.api.index.NodePropertyUpdateImpl;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
@@ -362,7 +363,7 @@ public class IndexRecoveryIT
                 {
                     Node node = db.createNode( label );
                     node.setProperty( key, number );
-                    updates.add( NodePropertyUpdate.add( node.getId(),
+                    updates.add( NodePropertyUpdateImpl.add( node.getId(),
                             statement.readOperations().propertyKeyGetForName( key ), number,
                             new long[]{statement.readOperations().labelGetForName( label.name() )} ) );
                 }

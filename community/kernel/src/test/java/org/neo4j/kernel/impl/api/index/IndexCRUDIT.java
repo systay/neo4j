@@ -38,6 +38,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.api.index.NodePropertyUpdateImpl;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.api.DataWriteOperations;
 import org.neo4j.kernel.api.ReadOperations;
@@ -95,7 +96,7 @@ public class IndexCRUDIT
             int propertyKey1 = statement.propertyKeyGetForName( indexProperty );
             long[] labels = new long[]{statement.labelGetForName( myLabel.name() )};
             assertThat( writer.updatesCommitted, equalTo( asSet(
-                    NodePropertyUpdate.add( node.getId(), propertyKey1, value1, labels ) ) ) );
+                    NodePropertyUpdateImpl.add( node.getId(), propertyKey1, value1, labels ) ) ) );
             tx.success();
         }
         // We get two updates because we both add a label and a property to be indexed
@@ -134,7 +135,7 @@ public class IndexCRUDIT
             int propertyKey1 = statement.propertyKeyGetForName( indexProperty );
             long[] labels = new long[]{statement.labelGetForName( myLabel.name() )};
             assertThat( writer.updatesCommitted, equalTo( asSet(
-                    NodePropertyUpdate.add( node.getId(), propertyKey1, value, labels ) ) ) );
+                    NodePropertyUpdateImpl.add( node.getId(), propertyKey1, value, labels ) ) ) );
             tx.success();
         }
     }

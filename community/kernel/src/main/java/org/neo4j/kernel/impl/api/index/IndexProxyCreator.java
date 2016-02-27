@@ -20,6 +20,7 @@
 package org.neo4j.kernel.impl.api.index;
 
 import java.io.IOException;
+import java.util.function.Function;
 
 import org.neo4j.kernel.api.TokenNameLookup;
 import org.neo4j.kernel.api.index.IndexAccessor;
@@ -97,7 +98,7 @@ public class IndexProxyCreator
                 monitor.populationCompleteOn( descriptor );
                 OnlineIndexProxy onlineProxy = new OnlineIndexProxy(
                         descriptor, config, onlineAccessorFromProvider( providerDescriptor, ruleId,
-                        config, samplingConfig ), storeView, providerDescriptor, true
+                        config, samplingConfig ), storeView, providerDescriptor, true, Function.identity()
                 );
                 if ( constraint )
                 {
@@ -135,7 +136,8 @@ public class IndexProxyCreator
             IndexAccessor onlineAccessor =
                     onlineAccessorFromProvider( providerDescriptor, ruleId, config, samplingConfig );
             IndexProxy proxy;
-            proxy = new OnlineIndexProxy( descriptor, config, onlineAccessor, storeView, providerDescriptor, false );
+            proxy = new OnlineIndexProxy( descriptor, config, onlineAccessor, storeView, providerDescriptor, false,
+                    Function.identity() );
             proxy = new ContractCheckingIndexProxy( proxy, true );
             return proxy;
         }

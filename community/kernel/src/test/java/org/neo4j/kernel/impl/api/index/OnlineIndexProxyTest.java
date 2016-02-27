@@ -20,6 +20,7 @@
 package org.neo4j.kernel.impl.api.index;
 
 import java.io.IOException;
+import java.util.function.Function;
 
 import org.junit.Test;
 
@@ -45,7 +46,7 @@ public class OnlineIndexProxyTest
     {
         // given
         OnlineIndexProxy index = new OnlineIndexProxy( descriptor, config, accessor,
-                storeView, providerDescriptor, false );
+                storeView, providerDescriptor, false, Function.identity() );
 
         // when
         index.drop();

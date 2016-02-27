@@ -50,6 +50,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.kernel.api.index.NodePropertyUpdateImpl.add;
 import static org.neo4j.kernel.impl.api.index.BatchingMultipleIndexPopulator.AWAIT_TIMEOUT_MINUTES_NAME;
 import static org.neo4j.kernel.impl.api.index.BatchingMultipleIndexPopulator.BATCH_SIZE_NAME;
 import static org.neo4j.kernel.impl.api.index.BatchingMultipleIndexPopulator.QUEUE_THRESHOLD_NAME;
@@ -79,8 +80,8 @@ public class BatchingMultipleIndexPopulatorTest
         IndexUpdater updater = mock( IndexUpdater.class );
         when( populator.newPopulatingUpdater( any() ) ).thenReturn( updater );
 
-        NodePropertyUpdate update1 = NodePropertyUpdate.add( 1, 1, "foo", new long[]{1} );
-        NodePropertyUpdate update2 = NodePropertyUpdate.add( 2, 1, "bar", new long[]{1} );
+        NodePropertyUpdate update1 = add( 1, 1, "foo", new long[]{1} );
+        NodePropertyUpdate update2 = add( 2, 1, "bar", new long[]{1} );
         batchingPopulator.queue( update1 );
         batchingPopulator.queue( update2 );
 
@@ -106,9 +107,9 @@ public class BatchingMultipleIndexPopulatorTest
         IndexUpdater updater2 = mock( IndexUpdater.class );
         when( populator2.newPopulatingUpdater( any() ) ).thenReturn( updater2 );
 
-        NodePropertyUpdate update1 = NodePropertyUpdate.add( 1, 1, "foo", new long[]{1} );
-        NodePropertyUpdate update2 = NodePropertyUpdate.add( 2, 2, "bar", new long[]{2} );
-        NodePropertyUpdate update3 = NodePropertyUpdate.add( 3, 1, "baz", new long[]{1} );
+        NodePropertyUpdate update1 = add( 1, 1, "foo", new long[]{1} );
+        NodePropertyUpdate update2 = add( 2, 2, "bar", new long[]{2} );
+        NodePropertyUpdate update3 = add( 3, 1, "baz", new long[]{1} );
         batchingPopulator.queue( update1 );
         batchingPopulator.queue( update2 );
         batchingPopulator.queue( update3 );
@@ -123,7 +124,7 @@ public class BatchingMultipleIndexPopulatorTest
     @Test
     public void executorShutdownAfterStoreScanCompletes() throws Exception
     {
-        NodePropertyUpdate update = NodePropertyUpdate.add( 1, 1, "foo", new long[]{1} );
+        NodePropertyUpdate update = add( 1, 1, "foo", new long[]{1} );
         IndexStoreView storeView = newStoreView( update );
 
         ExecutorService executor = mock( ExecutorService.class );
@@ -176,10 +177,10 @@ public class BatchingMultipleIndexPopulatorTest
     @Test
     public void pendingBatchesFlushedAfterStoreScan() throws Exception
     {
-        NodePropertyUpdate update1 = NodePropertyUpdate.add( 1, 1, "foo", new long[]{1} );
-        NodePropertyUpdate update2 = NodePropertyUpdate.add( 2, 1, "bar", new long[]{1} );
-        NodePropertyUpdate update3 = NodePropertyUpdate.add( 3, 1, "baz", new long[]{1} );
-        NodePropertyUpdate update42 = NodePropertyUpdate.add( 4, 42, "42", new long[]{42} );
+        NodePropertyUpdate update1 = add( 1, 1, "foo", new long[]{1} );
+        NodePropertyUpdate update2 = add( 2, 1, "bar", new long[]{1} );
+        NodePropertyUpdate update3 = add( 3, 1, "baz", new long[]{1} );
+        NodePropertyUpdate update42 = add( 4, 42, "42", new long[]{42} );
         IndexStoreView storeView = newStoreView( update1, update2, update3, update42 );
 
         BatchingMultipleIndexPopulator batchingPopulator = new BatchingMultipleIndexPopulator( storeView,
@@ -199,9 +200,9 @@ public class BatchingMultipleIndexPopulatorTest
     {
         setProperty( BATCH_SIZE_NAME, 2 );
 
-        NodePropertyUpdate update1 = NodePropertyUpdate.add( 1, 1, "foo", new long[]{1} );
-        NodePropertyUpdate update2 = NodePropertyUpdate.add( 2, 1, "bar", new long[]{1} );
-        NodePropertyUpdate update3 = NodePropertyUpdate.add( 3, 1, "baz", new long[]{1} );
+        NodePropertyUpdate update1 = add( 1, 1, "foo", new long[]{1} );
+        NodePropertyUpdate update2 = add( 2, 1, "bar", new long[]{1} );
+        NodePropertyUpdate update3 = add( 3, 1, "baz", new long[]{1} );
         IndexStoreView storeView = newStoreView( update1, update2, update3 );
 
         BatchingMultipleIndexPopulator batchingPopulator = new BatchingMultipleIndexPopulator( storeView,
@@ -220,8 +221,8 @@ public class BatchingMultipleIndexPopulatorTest
     {
         setProperty( BATCH_SIZE_NAME, 2 );
 
-        NodePropertyUpdate update1 = NodePropertyUpdate.add( 1, 1, "aaa", new long[]{1} );
-        NodePropertyUpdate update2 = NodePropertyUpdate.add( 1, 1, "bbb", new long[]{1} );
+        NodePropertyUpdate update1 = add( 1, 1, "aaa", new long[]{1} );
+        NodePropertyUpdate update2 = add( 1, 1, "bbb", new long[]{1} );
         IndexStoreView storeView = newStoreView( update1, update2 );
 
         RuntimeException batchFlushError = new RuntimeException( "Batch failed" );

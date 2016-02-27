@@ -22,15 +22,13 @@ package org.neo4j.kernel.impl.api.index;
 import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.Future;
+import java.util.function.Function;
 
+import org.neo4j.collection.primitive.PrimitiveLongSet;
 import org.neo4j.graphdb.ResourceIterator;
+import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
 import org.neo4j.kernel.api.exceptions.index.IndexPopulationFailedKernelException;
-import org.neo4j.kernel.api.index.IndexAccessor;
-import org.neo4j.kernel.api.index.IndexConfiguration;
-import org.neo4j.kernel.api.index.IndexDescriptor;
-import org.neo4j.kernel.api.index.IndexUpdater;
-import org.neo4j.kernel.api.index.InternalIndexState;
-import org.neo4j.kernel.api.index.SchemaIndexProvider;
+import org.neo4j.kernel.api.index.*;
 import org.neo4j.storageengine.api.schema.IndexReader;
 import org.neo4j.storageengine.api.schema.PopulationProgress;
 import org.neo4j.kernel.impl.api.index.updater.UpdateCountingIndexUpdater;
@@ -71,10 +69,11 @@ public class OnlineIndexProxy implements IndexProxy
     //   it will be in this forced idempotency mode where it applies additions idempotently, which may be
     //   slightly more costly, but shouldn't make that big of a difference hopefully.
     private final boolean forcedIdempotentMode;
+    private Function<Object,Object> map;
 
     public OnlineIndexProxy( IndexDescriptor descriptor, IndexConfiguration configuration, IndexAccessor accessor,
                              IndexStoreView storeView, SchemaIndexProvider.Descriptor providerDescriptor,
-                             boolean forcedIdempotentMode )
+                             boolean forcedIdempotentMode, Function<Object,Object> map )
     {
         this.descriptor = descriptor;
         this.storeView = storeView;
@@ -82,6 +81,7 @@ public class OnlineIndexProxy implements IndexProxy
         this.accessor = accessor;
         this.configuration = configuration;
         this.forcedIdempotentMode = forcedIdempotentMode;
+        this.map = map;
         this.indexCountsRemover = new IndexCountsRemover( storeView, descriptor );
     }
 
@@ -93,7 +93,41 @@ public class OnlineIndexProxy implements IndexProxy
     @Override
     public IndexUpdater newUpdater( final IndexUpdateMode mode )
     {
-        return updateCountingUpdater( accessor.newUpdater( forcedIdempotentMode ? IndexUpdateMode.RECOVERY : mode ) );
+
+        IndexUpdater indexUpdater =
+                updateCountingUpdater( accessor.newUpdater( forcedIdempotentMode ? IndexUpdateMode.RECOVERY : mode ) );
+        return new IndexUpdater()
+        {
+            @Override
+            public void process( NodePropertyUpdate update ) throws IOException, IndexEntryConflictException
+            {
+                indexUpdater.process( new NodePropertyUpdate.NodePropertyUpdateDelegator( update) {
+                    @Override
+                    public Object getValueBefore()
+                    {
+                        return map.apply( super.getValueBefore() );
+                    }
+
+                    @Override
+                    public Object getValueAfter()
+                    {
+                        return map.apply( super.getValueAfter() );
+                    }
+                });
+            }
+
+            @Override
+            public void close() throws IOException, IndexEntryConflictException
+            {
+                indexUpdater.close();
+            }
+
+            @Override
+            public void remove( PrimitiveLongSet nodeIds ) throws IOException
+            {
+                indexUpdater.remove( nodeIds );
+            }
+        };
     }
 
     private IndexUpdater updateCountingUpdater( final IndexUpdater indexUpdater )

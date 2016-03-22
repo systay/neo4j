@@ -307,6 +307,12 @@
 	      </exclusion>
       </exclusions>
     </dependency>
+    <dependency>
+      <groupId>org.neo4j</groupId>
+      <artifactId>neo4j-cypher-runtime-3.1</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+
 
     <!-- neo4j-cypher test -->
 

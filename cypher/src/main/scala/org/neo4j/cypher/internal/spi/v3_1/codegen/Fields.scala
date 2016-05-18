@@ -17,17 +17,17 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.internal.compiler.v3_1.codegen.ir.expressions
+package org.neo4j.cypher.internal.spi.v3_1.codegen
 
-import org.neo4j.cypher.internal.compiler.v3_1.codegen.{CodeGenContext, MethodStructure}
-import org.neo4j.cypher.internal.frontend.v3_1.symbols._
+import org.neo4j.codegen.{FieldReference, MethodReference}
 
-case class Modulo(lhs: CodeGenExpression, rhs: CodeGenExpression) extends CodeGenExpression with BinaryOperator {
-
-  override protected def generator[E](structure: MethodStructure[E])(implicit context: CodeGenContext) = structure.modulus
-  override def nullable(implicit context: CodeGenContext) = lhs.nullable || rhs.nullable
-
-  override def codeGenType(implicit context: CodeGenContext) = CodeGenType(CTFloat, ReferenceType)
-
-  override def name: String = "modulo"
-}
+case class Fields(closer: FieldReference,
+                          ro: FieldReference,
+                          entityAccessor: FieldReference,
+                          executionMode: FieldReference,
+                          description: FieldReference,
+                          tracer: FieldReference,
+                          params: FieldReference,
+                          closeable: FieldReference,
+                          success: MethodReference,
+                          close: MethodReference)

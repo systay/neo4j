@@ -19,15 +19,16 @@
  */
 package org.neo4j.cypher.internal.compiler.v3_1.codegen.ir.expressions
 
-import org.neo4j.cypher.internal.compiler.v3_1.codegen.{CodeGenContext, MethodStructure}
-import org.neo4j.cypher.internal.frontend.v3_1.symbols._
+/**
+  * Type representation of a CodeGenExpression
+  */
+sealed trait RepresentationType
 
-case class Modulo(lhs: CodeGenExpression, rhs: CodeGenExpression) extends CodeGenExpression with BinaryOperator {
+case object IntType extends RepresentationType
 
-  override protected def generator[E](structure: MethodStructure[E])(implicit context: CodeGenContext) = structure.modulus
-  override def nullable(implicit context: CodeGenContext) = lhs.nullable || rhs.nullable
+case object BoolType extends RepresentationType
 
-  override def codeGenType(implicit context: CodeGenContext) = CodeGenType(CTFloat, ReferenceType)
+case object FloatType extends RepresentationType
 
-  override def name: String = "modulo"
-}
+case object ReferenceType extends RepresentationType
+

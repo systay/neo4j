@@ -61,8 +61,6 @@ object literalReplacement {
       acc => (acc + (l -> ast.Parameter(s"  AUTOINT${acc.size}", CTInteger)(l.position)), None)
     case l: ast.DoubleLiteral =>
       acc => (acc + (l -> ast.Parameter(s"  AUTODOUBLE${acc.size}", CTFloat)(l.position)), None)
-    case l: ast.BooleanLiteral =>
-      acc => (acc + (l -> ast.Parameter(s"  AUTOBOOL${acc.size}", CTBoolean)(l.position)), None)
   }
 
   def apply(term: ASTNode): (Rewriter, Map[String, Any]) = {

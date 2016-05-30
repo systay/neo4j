@@ -21,6 +21,7 @@ package org.neo4j.cypher.internal.compiler.v3_0.planner.logical.plans
 
 import org.neo4j.cypher.internal.compiler.v3_0.planner.{CardinalityEstimation, PlannerQuery}
 
+// Produces a single row with no columns
 case class SingleRow()(val solved: PlannerQuery with CardinalityEstimation)
   extends LogicalLeafPlan {
 
@@ -31,5 +32,19 @@ case class SingleRow()(val solved: PlannerQuery with CardinalityEstimation)
   override def dup(children: Seq[AnyRef]) = {
     assert(children.isEmpty)
     SingleRow()(solved).asInstanceOf[this.type]
+  }
+}
+
+// Produces no rows
+case class NoResult()(val solved: PlannerQuery with CardinalityEstimation)
+  extends LogicalLeafPlan {
+
+  val argumentIds: Set[IdName] = Set.empty
+
+  def availableSymbols = argumentIds
+
+  override def dup(children: Seq[AnyRef]) = {
+    assert(children.isEmpty)
+    NoResult()(solved).asInstanceOf[this.type]
   }
 }

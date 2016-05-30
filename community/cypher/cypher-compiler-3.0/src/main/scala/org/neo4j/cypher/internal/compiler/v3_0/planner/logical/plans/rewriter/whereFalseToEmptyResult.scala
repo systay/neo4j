@@ -19,26 +19,20 @@
  */
 package org.neo4j.cypher.internal.compiler.v3_0.planner.logical.plans.rewriter
 
-import org.neo4j.cypher.internal.compiler.v3_0.tracing.rewriters.RewriterStepSequencer
-import org.neo4j.cypher.internal.frontend.v3_0.Rewriter
-import org.neo4j.cypher.internal.frontend.v3_0.helpers.fixedPoint
+import org.neo4j.cypher.internal.compiler.v3_0.planner.logical.plans.{NoResult, Selection}
+import org.neo4j.cypher.internal.frontend.v3_0.ast.{False, Null}
+import org.neo4j.cypher.internal.frontend.v3_0.{Rewriter, bottomUp}
 
-/*
- * Rewriters that live here are required to adhere to the contract of
- * receiving a valid plan and producing a valid plan. It should be possible
- * to disable any and all of these rewriters, and still produce correct behavior.
- */
-case class LogicalPlanRewriter(rewriterSequencer: String => RewriterStepSequencer) extends Rewriter {
-  val instance = fixedPoint(rewriterSequencer("LogicalPlanRewriter")(
-    fuseSelections,
-    unnestApply,
-    cleanUpEager,
-    simplifyEquality,
-    unnestOptional,
-    predicateRemovalThroughJoins,
-    removeIdenticalPlans,
-    whereFalseToEmptyResult
-  ).rewriter)
+/**
+  * When we know a Selection operator will never pass something through,
+  * replace the op with a NoResult(), which produces the same result much faster
+  */
+case object whereFalseToEmptyResult extends Rewriter {
 
-  def apply(that: AnyRef) = instance(that)
+  override def apply(input: AnyRef) = instance.apply(input)
+
+  private val instance: Rewriter = bottomUp(Rewriter.lift {
+    case topSelection@Selection(Seq(False()), _) => NoResult()(topSelection.solved)
+    case topSelection@Selection(Seq(Null()), _) => NoResult()(topSelection.solved)
+  })
 }

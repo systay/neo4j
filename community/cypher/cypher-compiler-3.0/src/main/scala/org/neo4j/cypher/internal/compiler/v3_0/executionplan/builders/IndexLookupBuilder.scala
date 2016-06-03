@@ -80,7 +80,7 @@ class IndexLookupBuilder extends PlanBuilder {
       case predicate@QueryToken(AnyInCollection(expression, _, Equals(Property(Variable(id), prop),Variable(_))))
         if id == hint.variable && prop.name == hint.property => (predicate, ManyQueryExpression(expression))
 
-      case predicate@QueryToken(ConstantIn(Property(Variable(id), prop),  expression))
+      case predicate@QueryToken(CachedConstantIn(Property(Variable(id), prop),  expression))
         if id == hint.variable && prop.name == hint.property => (predicate, ManyQueryExpression(expression))
 
       case predicate@QueryToken(PropertyExists(expr@Variable(id), prop))

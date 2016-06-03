@@ -1520,7 +1520,7 @@ class CypherParserTest extends CypherFunSuite {
       "start x = NODE(1) where x.prop in ['a','b'] return x",
       Query.
         start(NodeById("x", 1)).
-        where(ConstantIn(Property(Variable("x"), PropertyKey("prop")), Collection(Literal("a"), Literal("b")))).
+        where(CachedConstantIn(Property(Variable("x"), PropertyKey("prop")), Collection(Literal("a"), Literal("b")))).
         returns(ReturnItem(Variable("x"), "x"))
     )
   }
@@ -2701,7 +2701,7 @@ class CypherParserTest extends CypherFunSuite {
     expectQuery(
       "match (n:Person)-->() using index n:Person(name) where n.name IN ['Andres'] return n",
       Query.matches(RelatedTo(SingleNode("n", Seq(UnresolvedLabel("Person"))), SingleNode("  UNNAMED19"), "  UNNAMED16", Seq(), SemanticDirection.OUTGOING, Map.empty)).
-        where(ConstantIn(Property(Variable("n"), PropertyKey("name")), Collection(Literal("Andres")))).
+        where(CachedConstantIn(Property(Variable("n"), PropertyKey("name")), Collection(Literal("Andres")))).
         using(SchemaIndex("n", "Person", "name", AnyIndex, None)).
         returns(ReturnItem(Variable("n"), "n"))
     )

@@ -24,7 +24,7 @@ import org.mockito.Mockito._
 import org.neo4j.cypher.internal.compiler.v3_0.ast.convert.commands.ExpressionConverters._
 import org.neo4j.cypher.internal.compiler.v3_0.commands._
 import org.neo4j.cypher.internal.compiler.v3_0.commands.expressions._
-import org.neo4j.cypher.internal.compiler.v3_0.commands.predicates.{ConstantIn, Equals, HasLabel}
+import org.neo4j.cypher.internal.compiler.v3_0.commands.predicates.{CachedConstantIn, Equals, HasLabel}
 import org.neo4j.cypher.internal.compiler.v3_0.commands.values.TokenType._
 import org.neo4j.cypher.internal.compiler.v3_0.commands.values.{KeyToken, TokenType}
 import org.neo4j.cypher.internal.compiler.v3_0.executionplan.PartiallySolvedQuery
@@ -435,7 +435,7 @@ class StartPointChoosingBuilderTest extends BuilderTest {
 
     val propertyLookup: Property = Property(Variable(_var), PropertyKey("collection"))
     val idFunction = IdFunction(Variable(otherVariable))
-    val contanstIn = ConstantIn(idFunction, propertyLookup)
+    val contanstIn = CachedConstantIn(idFunction, propertyLookup)
 
 
     val query = newQuery(

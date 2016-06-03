@@ -24,10 +24,10 @@ import org.neo4j.cypher.internal.compiler.v3_0.commands.expressions._
 import org.neo4j.cypher.internal.compiler.v3_0.pipes.QueryStateHelper
 import org.neo4j.cypher.internal.frontend.v3_0.test_helpers.CypherFunSuite
 
-class ConstantInTest extends CypherFunSuite {
+class CachedConstantInTest extends CypherFunSuite {
   test("tests") {
     // given
-    val predicate = ConstantIn(Variable("x"), Collection(Literal(1), Literal(2), Literal(3)))
+    val predicate = CachedConstantIn(Variable("x"), Collection(Literal(1), Literal(2), Literal(3)))
 
     implicit val state = QueryStateHelper.empty
 
@@ -48,7 +48,7 @@ class ConstantInTest extends CypherFunSuite {
 
   test("check null") {
     // given
-    val predicate = ConstantIn(Variable("x"), Collection(Literal(1), Literal(2), Literal(null)))
+    val predicate = CachedConstantIn(Variable("x"), Collection(Literal(1), Literal(2), Literal(null)))
 
     implicit val state = QueryStateHelper.empty
 
@@ -65,5 +65,29 @@ class ConstantInTest extends CypherFunSuite {
     predicate.isMatch(v1) should equal(Some(true))
     predicate.isMatch(vNull) should equal(None)
     predicate.isMatch(v14) should equal(None)
+  }
+
+  test("check lists") {
+    // given
+    val listInList = Collection(
+      Collection(Literal(1), Literal(2)),
+      Collection(Literal(3), Literal(4)))
+    val predicate = CachedConstantIn(Variable("x"), listInList)
+
+    implicit val state = QueryStateHelper.empty
+
+    val v1 = ExecutionContext.empty.newWith("x" -> Seq(1,2))
+    val vNull = ExecutionContext.empty.newWith("x" -> null)
+    val v14 = ExecutionContext.empty.newWith("x" -> 14)
+
+    // then when
+    predicate.isMatch(v1) should equal(Some(true))
+    predicate.isMatch(vNull) should equal(None)
+    predicate.isMatch(v14) should equal(Some(false))
+
+    // and twice, just to check that the cache does not mess things up
+    predicate.isMatch(v1) should equal(Some(true))
+    predicate.isMatch(vNull) should equal(None)
+    predicate.isMatch(v14) should equal(Some(false))
   }
 }

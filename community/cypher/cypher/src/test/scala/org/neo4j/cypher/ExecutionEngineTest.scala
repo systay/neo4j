@@ -574,6 +574,8 @@ order by a.COL1""")
 
     val result = executeWithAllPlannersAndCompatibilityMode("match (n) where id(n) = 0 and n.lotteryNumbers in [[42, 87], [13], [42]] return n")
 
+    println(result.executionPlanDescription())
+
     result.toList should equal(List(Map("n" -> node)))
   }
 

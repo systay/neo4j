@@ -57,7 +57,32 @@ abstract sealed class ComparablePredicate(val left: Expression, val right: Expre
   }
 }
 
+
+object Equals extends CypherSerializer {
+  def areEqual(a1: Any,b1: Any)(implicit state: QueryState): Option[Boolean] = (a1, b1) match {
+    case (null, _)                                             => None
+    case (_, null)                                             => None
+    case (IsCollection(l), IsCollection(r))                    =>
+      println(l)
+      println(r)
+
+
+      Some(l == r)
+    case (l: Node, r) if !r.isInstanceOf[Node]                 => incomparable(l, r)
+    case (l, r: Node) if !l.isInstanceOf[Node]                 => incomparable(l, r)
+    case (l: Relationship, r) if !r.isInstanceOf[Relationship] => incomparable(l, r)
+    case (l, r: Relationship) if !l.isInstanceOf[Relationship] => incomparable(l, r)
+    case (l: String, r: Character)                             => Some(l == r.toString)
+    case (l: Character, r: String)                             => Some(l.toString == r)
+    case _                                                     => Some(a1 == b1)
+  }
+
+  private def incomparable(lhs: Any, rhs: Any)(implicit state: QueryState): Nothing =
+    throw new IncomparableValuesException(serializeWithType(lhs), serializeWithType(rhs))
+}
+
 case class Equals(a: Expression, b: Expression) extends Predicate with Comparer {
+
   def other(x:Expression):Option[Expression] = {
     if      (x == a) Some(b)
     else if (x == b) Some(a)
@@ -68,22 +93,8 @@ case class Equals(a: Expression, b: Expression) extends Predicate with Comparer 
     val a1 = a(m)
     val b1 = b(m)
 
-    (a1, b1) match {
-      case (null, _)                                             => None
-      case (_, null)                                             => None
-      case (IsCollection(l), IsCollection(r))                    => Some(l == r)
-      case (l: Node, r) if !r.isInstanceOf[Node]                 => incomparable(l, r)
-      case (l, r: Node) if !l.isInstanceOf[Node]                 => incomparable(l, r)
-      case (l: Relationship, r) if !r.isInstanceOf[Relationship] => incomparable(l, r)
-      case (l, r: Relationship) if !l.isInstanceOf[Relationship] => incomparable(l, r)
-      case (l: String, r: Character)                             => Some(l == r.toString)
-      case (l: Character, r: String)                             => Some(l.toString == r)
-      case _                                                     => Some(a1 == b1)
-    }
+    Equals.areEqual(a1, b1)
   }
-
-  private def incomparable(lhs: Any, rhs: Any)(implicit state: QueryState): Nothing =
-    throw new IncomparableValuesException(serializeWithType(lhs), serializeWithType(rhs))
 
   override def toString = s"$a == $b"
 

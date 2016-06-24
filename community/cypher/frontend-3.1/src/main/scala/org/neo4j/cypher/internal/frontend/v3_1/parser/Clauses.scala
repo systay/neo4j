@@ -106,7 +106,7 @@ trait Clauses extends Parser
       )
   }
 
-  private def Where: Rule1[ast.Where] = rule("WHERE") {
+  def Where: Rule1[ast.Where] = rule("WHERE") {
     group(keyword("WHERE") ~~ Expression) ~~>> (ast.Where(_))
   }
 

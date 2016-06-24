@@ -208,6 +208,35 @@ case class Match(optional: Boolean, pattern: Pattern, hints: Seq[UsingHint], whe
   }
 }
 
+case class MatchSubQuery(optional: Boolean, subQuery: QueryPart, where: Option[Where])(val position: InputPosition) extends Clause with SemanticChecking {
+  override def name = "MATCH"
+
+  /*
+  I Dunno Wat Im Doin LOL ¯\(°_o)/¯
+   */
+  override def semanticCheck = (s: SemanticState) => {
+    val result = subQuery.semanticCheck(s)
+
+    val errors: Seq[SemanticError] = if (subQuery.containsUpdates)
+      result.errors :+ SemanticError(s"MATCH with subquery only allow read-only subqueries", position)
+    else
+      result.errors
+
+    val root = result.state.currentScope.scope
+
+    val scope = subQuery match {
+      case union: Union =>
+        root.children.last.children.last
+      case q: SingleQuery if q.clauses.last.isInstanceOf[HorizonClause] =>
+        root.children.last
+      case _ => // Should never happen. Here to get error reporting correct
+        root
+    }
+
+    SemanticCheckResult(result.state.importScope(scope), errors)
+  }
+}
+
 case class Merge(pattern: Pattern, actions: Seq[MergeAction])(val position: InputPosition) extends UpdateClause {
   override def name = "MERGE"
 

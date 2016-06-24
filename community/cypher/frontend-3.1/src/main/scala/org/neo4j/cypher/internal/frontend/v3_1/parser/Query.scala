@@ -20,6 +20,7 @@
 package org.neo4j.cypher.internal.frontend.v3_1.parser
 
 import org.neo4j.cypher.internal.frontend.v3_1.ast
+import org.neo4j.cypher.internal.frontend.v3_1.ast.QueryPart
 import org.parboiled.scala._
 
 trait Query extends Parser
@@ -32,7 +33,7 @@ trait Query extends Parser
   )
 
   def RegularQuery: Rule1[ast.Query] = rule {
-    SingleQuery ~ zeroOrMore(WS ~ Union) ~~>> (ast.Query(None, _))
+    QueryPart ~~>> (ast.Query(None, _))
   }
 
   def SingleQuery: Rule1[ast.SingleQuery] = rule {
@@ -51,6 +52,7 @@ trait Query extends Parser
       LoadCSV
     | Start
     | Match
+    | MatchSubQuery
     | Unwind
     | Merge
     | Create
@@ -68,4 +70,16 @@ trait Query extends Parser
       keyword("UNION ALL") ~>> position ~~ SingleQuery ~~> ((q: ast.QueryPart, p, sq) => ast.UnionAll(q, sq)(p))
     | keyword("UNION") ~>> position ~~ SingleQuery ~~> ((q: ast.QueryPart, p, sq) => ast.UnionDistinct(q, sq)(p))
   )
+
+  def QueryPart: Rule1[QueryPart] = rule {
+    SingleQuery ~ zeroOrMore(WS ~ Union)
+  }
+
+  // Declared here, instead of with the other Clauses, since it depends on UNION which lives here
+  def MatchSubQuery: Rule1[ast.MatchSubQuery] = rule("MATCH {") (
+    group(
+      (keyword("OPTIONAL MATCH") ~ push(true)
+     | keyword("MATCH") ~ push(false)
+      ) ~~ "{" ~~ QueryPart ~~ "}" ~~ optional(Where) ~~>> (ast.MatchSubQuery(_, _, _))
+  ))
 }

@@ -24,14 +24,14 @@ import org.neo4j.cypher.internal.frontend.v3_1._
 import org.neo4j.cypher.internal.frontend.v3_1.symbols._
 
 object ProcedureResultItem {
-  def apply(output: ProcedureOutput, variable: Variable)(position: InputPosition): ProcedureResultItem =
-    ProcedureResultItem(Some(output), variable)(position)
+  def apply(output: ProcedureOutput, variable: Variable): ProcedureResultItem =
+    ProcedureResultItem(Some(output), variable)
 
-  def apply(variable: Variable)(position: InputPosition): ProcedureResultItem =
-    ProcedureResultItem(None, variable)(position)
+  def apply(variable: Variable): ProcedureResultItem =
+    ProcedureResultItem(None, variable)
 }
 
-case class ProcedureResultItem(output: Option[ProcedureOutput], variable: Variable)(val position: InputPosition)
+case class ProcedureResultItem(output: Option[ProcedureOutput], variable: Variable)
   extends ASTNode with SemanticChecking {
 
   val outputName: String = output.map(_.name).getOrElse(variable.name)

@@ -24,7 +24,7 @@ import org.neo4j.cypher.internal.frontend.v3_1.{InputPosition, SemanticCheckable
 
 sealed trait SetItem extends ASTNode with ASTPhrase with SemanticCheckable
 
-case class SetLabelItem(variable: Variable, labels: Seq[LabelName])(val position: InputPosition) extends SetItem {
+case class SetLabelItem(variable: Variable, labels: Seq[LabelName]) extends SetItem {
   def semanticCheck =
     variable.semanticCheck(Expression.SemanticContext.Simple) chain
     variable.expectType(CTNode.covariant)
@@ -32,7 +32,7 @@ case class SetLabelItem(variable: Variable, labels: Seq[LabelName])(val position
 
 sealed trait SetProperty extends SetItem
 
-case class SetPropertyItem(property: Property, expression: Expression)(val position: InputPosition) extends SetProperty {
+case class SetPropertyItem(property: Property, expression: Expression) extends SetProperty {
   def semanticCheck =
     property.semanticCheck(Expression.SemanticContext.Simple) chain
       expression.semanticCheck(Expression.SemanticContext.Simple) chain
@@ -40,7 +40,7 @@ case class SetPropertyItem(property: Property, expression: Expression)(val posit
 }
 
 case class SetExactPropertiesFromMapItem(variable: Variable, expression: Expression)
-                                        (val position: InputPosition) extends SetProperty {
+                                         extends SetProperty {
   def semanticCheck =
     variable.semanticCheck(Expression.SemanticContext.Simple) chain
     variable.expectType(CTNode.covariant | CTRelationship.covariant) chain
@@ -49,7 +49,7 @@ case class SetExactPropertiesFromMapItem(variable: Variable, expression: Express
 }
 
 case class SetIncludingPropertiesFromMapItem(variable: Variable, expression: Expression)
-                                        (val position: InputPosition) extends SetProperty {
+                                         extends SetProperty {
   def semanticCheck =
     variable.semanticCheck(Expression.SemanticContext.Simple) chain
     variable.expectType(CTNode.covariant | CTRelationship.covariant) chain

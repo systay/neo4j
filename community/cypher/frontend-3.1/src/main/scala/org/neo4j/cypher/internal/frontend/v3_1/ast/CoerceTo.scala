@@ -21,10 +21,10 @@ package org.neo4j.cypher.internal.frontend.v3_1.ast
 
 import org.neo4j.cypher.internal.frontend.v3_1.SemanticCheck
 import org.neo4j.cypher.internal.frontend.v3_1.ast.Expression.SemanticContext
-import org.neo4j.cypher.internal.frontend.v3_1.symbols.{TypeSpec, CypherType}
+import org.neo4j.cypher.internal.frontend.v3_1.symbols.CypherType
 
 case class CoerceTo(expr: Expression, typ: CypherType) extends Expression {
-  def position = expr.position
+  override val position = expr.position
 
   override def semanticCheck(ctx: SemanticContext): SemanticCheck =
     expr.semanticCheck(ctx) chain expr.expectType(typ.covariant)

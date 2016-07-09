@@ -26,11 +26,11 @@ sealed trait Command extends Statement {
   override def returnColumns = List.empty
 }
 
-case class CreateIndex(label: LabelName, property: PropertyKeyName)(val position: InputPosition) extends Command {
+case class CreateIndex(label: LabelName, property: PropertyKeyName) extends Command {
   def semanticCheck = Seq()
 }
 
-case class DropIndex(label: LabelName, property: PropertyKeyName)(val position: InputPosition) extends Command {
+case class DropIndex(label: LabelName, property: PropertyKeyName) extends Command {
   def semanticCheck = Seq()
 }
 
@@ -63,14 +63,14 @@ trait RelationshipPropertyConstraintCommand extends PropertyConstraintCommand {
   def relType: RelTypeName
 }
 
-case class CreateUniquePropertyConstraint(variable: Variable, label: LabelName, property: Property)(val position: InputPosition) extends NodePropertyConstraintCommand
+case class CreateUniquePropertyConstraint(variable: Variable, label: LabelName, property: Property) extends NodePropertyConstraintCommand
 
-case class DropUniquePropertyConstraint(variable: Variable, label: LabelName, property: Property)(val position: InputPosition) extends NodePropertyConstraintCommand
+case class DropUniquePropertyConstraint(variable: Variable, label: LabelName, property: Property) extends NodePropertyConstraintCommand
 
-case class CreateNodePropertyExistenceConstraint(variable: Variable, label: LabelName, property: Property)(val position: InputPosition) extends NodePropertyConstraintCommand
+case class CreateNodePropertyExistenceConstraint(variable: Variable, label: LabelName, property: Property) extends NodePropertyConstraintCommand
 
-case class DropNodePropertyExistenceConstraint(variable: Variable, label: LabelName, property: Property)(val position: InputPosition) extends NodePropertyConstraintCommand
+case class DropNodePropertyExistenceConstraint(variable: Variable, label: LabelName, property: Property) extends NodePropertyConstraintCommand
 
-case class CreateRelationshipPropertyExistenceConstraint(variable: Variable, relType: RelTypeName, property: Property)(val position: InputPosition) extends RelationshipPropertyConstraintCommand
+case class CreateRelationshipPropertyExistenceConstraint(variable: Variable, relType: RelTypeName, property: Property) extends RelationshipPropertyConstraintCommand
 
-case class DropRelationshipPropertyExistenceConstraint(variable: Variable, relType: RelTypeName, property: Property)(val position: InputPosition) extends RelationshipPropertyConstraintCommand
+case class DropRelationshipPropertyExistenceConstraint(variable: Variable, relType: RelTypeName, property: Property) extends RelationshipPropertyConstraintCommand

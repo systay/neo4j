@@ -19,13 +19,14 @@
  */
 package org.neo4j.cypher.internal.frontend.v3_1.ast
 
+import org.neo4j.cypher.internal.frontend.v3_1.ast.Atom.atom
 import org.neo4j.cypher.internal.frontend.v3_1.ast.Expression.SemanticContext
 import org.neo4j.cypher.internal.frontend.v3_1.symbols._
 import org.neo4j.cypher.internal.frontend.v3_1.{InputPosition, SemanticCheckResult, SemanticState, SymbolUse}
 
-case class Variable(name: String)(val position: InputPosition) extends Expression {
+case class Variable(name: String) extends Expression {
 
-  def toSymbolUse = SymbolUse(name, position)
+  def toSymbolUse = SymbolUse(name, position())
 
   // check the variable is defined and, if not, define it so that later errors are suppressed
   def semanticCheck(ctx: SemanticContext) = s => this.ensureDefined()(s) match {
@@ -46,18 +47,18 @@ case class Variable(name: String)(val position: InputPosition) extends Expressio
   def ensureDefined() =
     (_: SemanticState).ensureVariableDefined(this)
 
-  def copyId = copy()(position)
+  def copyId = copy()
 
-  def renameId(newName: String) = copy(name = newName)(position)
+  def renameId(newName: String) = copy(name = newName)
 
-  def bumpId = copy()(position.bumped())
+  def bumpId = copy()
 
-  def asAlias = AliasedReturnItem(this.copyId, this.copyId)(this.position)
+  def asAlias = AliasedReturnItem(this.copyId, this.copyId)
 }
 
 object Variable {
   implicit val byName =
     Ordering.by { (variable: Variable) =>
-      (variable.name, variable.position)
+      (variable.name, variable.position())
     }(Ordering.Tuple2(implicitly[Ordering[String]], InputPosition.byOffset))
 }

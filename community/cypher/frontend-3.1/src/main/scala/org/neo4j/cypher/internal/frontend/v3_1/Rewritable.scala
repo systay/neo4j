@@ -23,6 +23,7 @@ import java.lang.reflect.Method
 
 import org.neo4j.cypher.internal.frontend.v3_1.Foldable._
 import org.neo4j.cypher.internal.frontend.v3_1.Rewritable._
+import org.neo4j.cypher.internal.frontend.v3_1.ast.ASTNode
 
 import scala.annotation.tailrec
 import scala.collection.mutable
@@ -30,6 +31,7 @@ import scala.collection.mutable.{HashMap => MutableHashMap}
 
 object Rewriter {
   def lift(f: PartialFunction[AnyRef, AnyRef]): Rewriter = f.orElse(PartialFunction(identity[AnyRef]))
+  def fift(f: PartialFunction[ASTNode, InputPosition => ASTNode]): Rewriter = ???
 
   val noop = Rewriter.lift(PartialFunction.empty)
 }

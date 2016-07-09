@@ -41,7 +41,7 @@ case object Length extends Function with SimpleTypedFunction {
   def checkForInvalidUsage(ctx: SemanticContext, invocation: FunctionInvocation) = (originalState: SemanticState) => {
     val newState = invocation.args.foldLeft(originalState) {
       case (state, expr) if state.expressionType(expr).actual != CTPath.invariant =>
-        state.addNotification(LengthOnNonPathNotification(expr.position))
+        state.addNotification(LengthOnNonPathNotification(expr.position()))
       case (state, expr) =>
         state
     }

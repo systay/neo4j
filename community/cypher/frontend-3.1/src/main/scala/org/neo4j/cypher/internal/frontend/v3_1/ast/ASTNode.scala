@@ -22,6 +22,8 @@ package org.neo4j.cypher.internal.frontend.v3_1.ast
 import org.neo4j.cypher.internal.frontend.v3_1.Rewritable._
 import org.neo4j.cypher.internal.frontend.v3_1.symbols._
 import org.neo4j.cypher.internal.frontend.v3_1._
+import org.neo4j.cypher.internal.frontend.v3_1.ast.Atom.atom
+
 
 trait ASTNode
   extends Product
@@ -30,7 +32,48 @@ trait ASTNode
 
   self =>
 
-  def position: InputPosition
+  /**
+    * This is the root of the AST. When returning an AST, you must make sure to
+    * mark it with `markThisAsRoot()`, so the correct root is set. Failure to do
+    * so will result in exceptions
+    */
+  val root: Atom[ASTNode] = atom[ASTNode] { this }
+
+  /**
+    * Goes through the AST and makes sure all nodes know how to find the root.
+    *
+    * This is not the prettiest solution, and there probably exists an better, more functional approach.
+    * For now, this will have to do.
+    */
+  def markThisAsRoot() = {
+    this.findByAllClass[ASTNode].foreach {
+      ast => ast.root.update(this)
+    }
+  }
+
+  /**
+    * The position in the input string of this object in the AST.
+    * Any object in the tree missing position, e.g. because of rewriting,
+    * will reach up in the tree and copy the position of the containing object
+    */
+  val position: Atom[InputPosition] = atom[InputPosition] {
+    root().pushDownPositions()
+  }
+
+  protected def pushDownPositions(): Unit = {
+
+    def doIt(astNode: ASTNode ) = {
+      position.copyTo(astNode.position)
+      astNode.pushDownPositions()
+    }
+
+    productIterator foreach {
+      case astNode: ASTNode => doIt(astNode)
+      case m: Map[_, ASTNode] => m.values.foreach(doIt)
+      case iter: Iterable[ASTNode] => iter.foreach(doIt)
+      case _ =>
+    }
+  }
 
   def dup(children: Seq[AnyRef]): this.type =
     if (children.iterator eqElements this.children)
@@ -43,7 +86,9 @@ trait ASTNode
       val lastParamIsPos = params.last.isAssignableFrom(classOf[InputPosition])
       val ctorArgs = if (hasExtraParam && lastParamIsPos) args :+ this.position else args
       val duped = constructor.invoke(this, ctorArgs: _*)
-      duped.asInstanceOf[self.type]
+      val result = duped.asInstanceOf[self.type]
+      this.position.copyTo(result.position)
+      result
     }
 }
 
@@ -69,7 +114,7 @@ trait ASTSlicingPhrase extends ASTPhrase with SemanticCheckable {
   private def containsNoVariables: SemanticCheck = {
     val deps = dependencies
     if (deps.nonEmpty) {
-      val id = deps.toSeq.sortBy(_.position).head
+      val id = deps.toSeq.sortBy(_.position()).head
       SemanticError(s"It is not allowed to refer to variables in $name", id.position)
     }
     else SemanticCheckResult.success
@@ -79,7 +124,8 @@ trait ASTSlicingPhrase extends ASTPhrase with SemanticCheckable {
     expression match {
       case _: UnsignedDecimalIntegerLiteral => SemanticCheckResult.success
       case i: SignedDecimalIntegerLiteral if i.value >= 0 => SemanticCheckResult.success
-      case lit: Literal => SemanticError(s"Invalid input '${lit.asCanonicalStringVal}' is not a valid value, must be a positive integer", lit.position)
+      case lit: Literal => SemanticError(s"Invalid input '${lit.asCanonicalStringVal}' is not a valid value, must be " +
+        s"a positive integer", lit.position())
       case _ => SemanticCheckResult.success
     }
   }

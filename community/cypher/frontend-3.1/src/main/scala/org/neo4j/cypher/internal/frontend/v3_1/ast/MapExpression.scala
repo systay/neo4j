@@ -23,7 +23,7 @@ import org.neo4j.cypher.internal.frontend.v3_1.InputPosition
 import org.neo4j.cypher.internal.frontend.v3_1.ast.Expression.SemanticContext
 import org.neo4j.cypher.internal.frontend.v3_1.symbols._
 
-case class MapExpression(items: Seq[(PropertyKeyName, Expression)])(val position: InputPosition) extends Expression with SimpleTyping {
+case class MapExpression(items: Seq[(PropertyKeyName, Expression)]) extends Expression with SimpleTyping {
   protected def possibleTypes = CTMap
 
   override def semanticCheck(ctx: SemanticContext) =

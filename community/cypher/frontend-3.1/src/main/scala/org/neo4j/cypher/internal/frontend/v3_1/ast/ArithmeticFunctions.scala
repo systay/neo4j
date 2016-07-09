@@ -25,7 +25,7 @@ import org.neo4j.cypher.internal.frontend.v3_1.symbols.{CypherType, TypeSpec, _}
 
 import scala.util.Try
 
-case class Add(lhs: Expression, rhs: Expression)(val position: InputPosition)
+case class Add(lhs: Expression, rhs: Expression)
   extends Expression with BinaryOperatorExpression {
   def semanticCheck(ctx: SemanticContext) =
     lhs.semanticCheck(ctx) chain
@@ -37,7 +37,7 @@ case class Add(lhs: Expression, rhs: Expression)(val position: InputPosition)
 
   private def checkBoundary(lhs: Expression, rhs: Expression): SemanticCheck = (lhs, rhs) match {
     case (l:IntegerLiteral, r:IntegerLiteral) if Try(Math.addExact(l.value, r.value)).isFailure =>
-      SemanticError(s"result of ${l.value} + ${r.value} cannot be represented as an integer", position)
+      SemanticError(s"result of ${l.value} + ${r.value} cannot be represented as an integer", position())
     case _ => SemanticCheckResult.success
   }
 
@@ -119,7 +119,7 @@ case class Add(lhs: Expression, rhs: Expression)(val position: InputPosition)
   override def canonicalOperatorSymbol = "+"
 }
 
-case class UnaryAdd(rhs: Expression)(val position: InputPosition)
+case class UnaryAdd(rhs: Expression)
   extends Expression with LeftUnaryOperatorExpression with PrefixFunctionTyping {
   val signatures = Vector(
     Signature(argumentTypes = Vector(CTInteger), outputType = CTInteger),
@@ -129,7 +129,7 @@ case class UnaryAdd(rhs: Expression)(val position: InputPosition)
   override def canonicalOperatorSymbol = "+"
 }
 
-case class Subtract(lhs: Expression, rhs: Expression)(val position: InputPosition)
+case class Subtract(lhs: Expression, rhs: Expression)
   extends Expression with BinaryOperatorExpression with InfixFunctionTyping {
   val signatures = Vector(
     Signature(argumentTypes = Vector(CTInteger, CTInteger), outputType = CTInteger),
@@ -149,7 +149,7 @@ case class Subtract(lhs: Expression, rhs: Expression)(val position: InputPositio
   override def canonicalOperatorSymbol = "-"
 }
 
-case class UnarySubtract(rhs: Expression)(val position: InputPosition)
+case class UnarySubtract(rhs: Expression)
   extends Expression with LeftUnaryOperatorExpression with PrefixFunctionTyping {
   val signatures = Vector(
     Signature(argumentTypes = Vector(CTInteger), outputType = CTInteger),
@@ -159,7 +159,7 @@ case class UnarySubtract(rhs: Expression)(val position: InputPosition)
   override def canonicalOperatorSymbol = "-"
 }
 
-case class Multiply(lhs: Expression, rhs: Expression)(val position: InputPosition)
+case class Multiply(lhs: Expression, rhs: Expression)
   extends Expression with BinaryOperatorExpression with InfixFunctionTyping {
   // 1 * 1 => 1
   // 1 * 1.1 => 1.1
@@ -176,14 +176,14 @@ case class Multiply(lhs: Expression, rhs: Expression)(val position: InputPositio
 
   private def checkBoundary(lhs: Expression, rhs: Expression): SemanticCheck = (lhs, rhs) match {
     case (l:IntegerLiteral, r:IntegerLiteral) if Try(Math.multiplyExact(l.value, r.value)).isFailure =>
-      SemanticError(s"result of ${l.value} * ${r.value} cannot be represented as an integer", position)
+      SemanticError(s"result of ${l.value} * ${r.value} cannot be represented as an integer", position())
     case _ => SemanticCheckResult.success
   }
 
   override def canonicalOperatorSymbol = "*"
 }
 
-case class Divide(lhs: Expression, rhs: Expression)(val position: InputPosition)
+case class Divide(lhs: Expression, rhs: Expression)
   extends Expression with BinaryOperatorExpression with InfixFunctionTyping {
   // 1 / 1 => 1
   // 1 / 1.1 => 0.909
@@ -198,7 +198,7 @@ case class Divide(lhs: Expression, rhs: Expression)(val position: InputPosition)
   override def canonicalOperatorSymbol = "/"
 }
 
-case class Modulo(lhs: Expression, rhs: Expression)(val position: InputPosition)
+case class Modulo(lhs: Expression, rhs: Expression)
   extends Expression with BinaryOperatorExpression with InfixFunctionTyping {
   // 1 % 1 => 0
   // 1 % 1.1 => 1.0
@@ -213,7 +213,7 @@ case class Modulo(lhs: Expression, rhs: Expression)(val position: InputPosition)
   override def canonicalOperatorSymbol = "%"
 }
 
-case class Pow(lhs: Expression, rhs: Expression)(val position: InputPosition)
+case class Pow(lhs: Expression, rhs: Expression)
   extends Expression with BinaryOperatorExpression with InfixFunctionTyping {
   // 1 ^ 1 => 1.1
   // 1 ^ 1.1 => 1.0

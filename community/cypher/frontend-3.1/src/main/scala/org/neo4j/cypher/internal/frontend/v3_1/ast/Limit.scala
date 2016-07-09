@@ -21,6 +21,6 @@ package org.neo4j.cypher.internal.frontend.v3_1.ast
 
 import org.neo4j.cypher.internal.frontend.v3_1.InputPosition
 
-case class Limit(expression: Expression)(val position: InputPosition) extends ASTNode with ASTSlicingPhrase {
+case class Limit(expression: Expression) extends ASTNode with ASTSlicingPhrase {
   override def name = "LIMIT" // ASTSlicingPhrase name
 }

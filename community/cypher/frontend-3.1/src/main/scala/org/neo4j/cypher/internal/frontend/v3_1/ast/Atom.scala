@@ -19,15 +19,54 @@
  */
 package org.neo4j.cypher.internal.frontend.v3_1.ast
 
-import org.neo4j.cypher.internal.frontend.v3_1._
+trait Atom[A] {
+  def apply(): A = {
+    isForced = true
+    if (isSet) {
+      value
+    } else {
+      populate()
 
-case class PeriodicCommitHint(size: Option[IntegerLiteral]) extends ASTNode with ASTPhrase with SemanticCheckable {
-  def name = s"USING PERIODIC COMMIT $size"
+      if (!isSet) {
+        sys.error("Value not set")
+      }
 
-  override def semanticCheck: SemanticCheck = size match {
-    case Some(integer) if integer.value <= 0 =>
-      SemanticError(s"Commit size error - expected positive value larger than zero, got ${integer.value}", integer.position)
-    case _ =>
-      SemanticCheckResult.success
+      value
+    }
   }
+
+  def update(a: A): Unit = {
+    if (!isSet || !isForced) {
+      isSet = true
+      value = a
+    }
+  }
+
+  private var isForced = false
+  private var isSet = false
+  private var value: A = _
+
+  protected def populate(): Unit = {
+    sys.error("Don't know how to self populate!")
+  }
+
+  def copyTo(other: Atom[A]): Unit = if (isSet) {
+    other.update(value)
+  }
+}
+
+object Atom {
+  def atom[A](f: => Unit): Atom[A] = new Atom[A] {
+    override protected def populate(): Unit = {
+      f
+    }
+  }
+
+  def atom[A](in: A): Atom[A] = new Atom[A] {
+    override protected def populate(): Unit = {
+      update(in)
+    }
+  }
+
+  def atom[A]: Atom[A] = new Atom[A] {}
 }

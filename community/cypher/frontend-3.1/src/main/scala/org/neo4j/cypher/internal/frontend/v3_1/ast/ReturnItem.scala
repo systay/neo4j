@@ -21,7 +21,7 @@ package org.neo4j.cypher.internal.frontend.v3_1.ast
 
 import org.neo4j.cypher.internal.frontend.v3_1._
 
-case class ReturnItems(includeExisting: Boolean, items: Seq[ReturnItem])(val position: InputPosition) extends ASTNode with ASTPhrase with SemanticCheckable with SemanticChecking {
+case class ReturnItems(includeExisting: Boolean, items: Seq[ReturnItem]) extends ASTNode with ASTPhrase with SemanticCheckable with SemanticChecking {
   def semanticCheck =
     items.semanticCheck chain
     ensureProjectedToUniqueIds
@@ -32,7 +32,7 @@ case class ReturnItems(includeExisting: Boolean, items: Seq[ReturnItem])(val pos
     case item => item.alias.collect { case ident if ident == item.expression => ident }
   }.flatten.toSet
 
-  def mapItems(f: Seq[ReturnItem] => Seq[ReturnItem]) = copy(items = f(items))(position)
+  def mapItems(f: Seq[ReturnItem] => Seq[ReturnItem]) = copy(items = f(items))
 
   def declareVariables(previousScope: Scope) =
     when (includeExisting) {
@@ -66,7 +66,7 @@ sealed trait ReturnItem extends ASTNode with ASTPhrase with SemanticCheckable {
   def semanticCheck = expression.semanticCheck(Expression.SemanticContext.Results)
 }
 
-case class UnaliasedReturnItem(expression: Expression, inputText: String)(val position: InputPosition) extends ReturnItem {
+case class UnaliasedReturnItem(expression: Expression, inputText: String) extends ReturnItem {
   val alias = expression match {
     case i: Variable => Some(i.bumpId)
     case x: MapProjection => Some(x.name.bumpId)
@@ -79,7 +79,7 @@ case class UnaliasedReturnItem(expression: Expression, inputText: String)(val po
 }
 
 //TODO variable should not be a Variable. A Variable is an expression, and the return item alias isn't
-case class AliasedReturnItem(expression: Expression, variable: Variable)(val position: InputPosition) extends ReturnItem {
+case class AliasedReturnItem(expression: Expression, variable: Variable) extends ReturnItem {
   val alias = Some(variable)
   val name = variable.name
 

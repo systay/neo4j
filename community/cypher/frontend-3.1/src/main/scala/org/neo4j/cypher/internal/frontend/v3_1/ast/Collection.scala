@@ -21,12 +21,16 @@ package org.neo4j.cypher.internal.frontend.v3_1.ast
 
 import org.neo4j.cypher.internal.frontend.v3_1.ast.Expression.SemanticContext
 import org.neo4j.cypher.internal.frontend.v3_1.symbols._
-import org.neo4j.cypher.internal.frontend.v3_1.{SemanticCheckResult, InputPosition, SemanticError, TypeGenerator}
+import org.neo4j.cypher.internal.frontend.v3_1.{SemanticCheckResult, SemanticError, TypeGenerator}
 
-case class Collection(expressions: Seq[Expression])(val position: InputPosition) extends Expression {
+case class Collection(expressions: Seq[Expression]) extends Expression {
   def semanticCheck(ctx: SemanticContext) = expressions.semanticCheck(ctx) chain specifyType(possibleTypes)
 
-  def map(f: Expression => Expression) = copy(expressions = expressions.map(f))(position)
+  def map(f: Expression => Expression) = copy(expressions = expressions.map(e => {
+    val f1 = f(e)
+    f1.position.update(this.position())
+    f1
+  }))
 
   private def possibleTypes: TypeGenerator = state => expressions match {
     case Seq() => CTList(CTAny).covariant
@@ -34,7 +38,7 @@ case class Collection(expressions: Seq[Expression])(val position: InputPosition)
   }
 }
 
-case class CollectionSlice(list: Expression, from: Option[Expression], to: Option[Expression])(val position: InputPosition)
+case class CollectionSlice(list: Expression, from: Option[Expression], to: Option[Expression])
   extends Expression {
 
   override def semanticCheck(ctx: SemanticContext) =
@@ -50,7 +54,7 @@ case class CollectionSlice(list: Expression, from: Option[Expression], to: Optio
     specifyType(list.types)
 }
 
-case class ContainerIndex(expr: Expression, idx: Expression)(val position: InputPosition)
+case class ContainerIndex(expr: Expression, idx: Expression)
   extends Expression {
 
   override def semanticCheck(ctx: SemanticContext) =

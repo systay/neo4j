@@ -29,17 +29,17 @@ trait ScopeExpression extends Expression {
   def variables: Set[Variable]
 }
 
-case class FilterScope(variable: Variable, innerPredicate: Option[Expression])(val position: InputPosition) extends ScopeExpression {
+case class FilterScope(variable: Variable, innerPredicate: Option[Expression]) extends ScopeExpression {
   override def semanticCheck(ctx: SemanticContext) = SemanticCheckResult.success
   val variables = Set(variable)
 }
 
-case class ExtractScope(variable: Variable, innerPredicate: Option[Expression], extractExpression: Option[Expression])(val position: InputPosition) extends ScopeExpression {
+case class ExtractScope(variable: Variable, innerPredicate: Option[Expression], extractExpression: Option[Expression]) extends ScopeExpression {
   override def semanticCheck(ctx: SemanticContext) = SemanticCheckResult.success
   val variables = Set(variable)
 }
 
-case class ReduceScope(accumulator: Variable, variable: Variable, expression: Expression)(val position: InputPosition) extends ScopeExpression {
+case class ReduceScope(accumulator: Variable, variable: Variable, expression: Expression) extends ScopeExpression {
   override def semanticCheck(ctx: SemanticContext) = SemanticCheckResult.success
   val variables = Set(accumulator, variable)
 }

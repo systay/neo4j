@@ -21,7 +21,7 @@ package org.neo4j.cypher.internal.frontend.v3_1.ast
 
 import org.neo4j.cypher.internal.frontend.v3_1.{InputPosition, SemanticChecking, SemanticError, _}
 
-case class Query(periodicCommitHint: Option[PeriodicCommitHint], part: QueryPart)(val position: InputPosition)
+case class Query(periodicCommitHint: Option[PeriodicCommitHint], part: QueryPart)
   extends Statement with SemanticChecking {
 
   override def returnColumns = part.returnColumns
@@ -39,7 +39,7 @@ sealed trait QueryPart extends ASTNode with ASTPhrase with SemanticCheckable {
   def returnColumns: List[String]
 }
 
-case class SingleQuery(clauses: Seq[Clause])(val position: InputPosition) extends QueryPart {
+case class SingleQuery(clauses: Seq[Clause]) extends QueryPart {
   assert(clauses.nonEmpty)
 
   override def containsUpdates =
@@ -53,18 +53,19 @@ case class SingleQuery(clauses: Seq[Clause])(val position: InputPosition) extend
 
   override def semanticCheck =
     checkOrder chain
-    checkClauses chain
-    checkIndexHints
+    checkClauses
+//  chain
+//    checkIndexHints
 
-  private def checkIndexHints: SemanticCheck = s => {
-    val hints = clauses.collect { case m: Match => m.hints }.flatten
-    val hasStartClause = clauses.exists(_.isInstanceOf[Start])
-    if (hints.nonEmpty && hasStartClause) {
-      SemanticCheckResult.error(s, SemanticError("Cannot use planner hints with start clause", hints.head.position))
-    } else {
-      SemanticCheckResult.success(s)
-    }
-  }
+//  private def checkIndexHints: SemanticCheck = s => {
+//    val hints = clauses.collect { case m: Match => m.hints }.flatten
+//    val hasStartClause = clauses.exists(_.isInstanceOf[Start])
+//    if (hints.nonEmpty && hasStartClause) {
+//      SemanticCheckResult.error(s, SemanticError("Cannot use planner hints with start clause", hints.head.position))
+//    } else {
+//      SemanticCheckResult.success(s)
+//    }
+//  }
 
   private def checkOrder: SemanticCheck = s => {
     val (lastPair, errors) = clauses.sliding(2).foldLeft(Seq.empty[Clause], Vector.empty[SemanticError]) {
@@ -74,8 +75,8 @@ case class SingleQuery(clauses: Seq[Clause])(val position: InputPosition) extend
             None
           case Seq(clause, start: Start) =>
             Some(SemanticError(s"WITH is required between ${clause.name} and ${start.name}", clause.position, start.position))
-          case Seq(match1: Match, match2: Match) if match1.optional && !match2.optional =>
-            Some(SemanticError(s"${match2.name} cannot follow OPTIONAL ${match1.name} (perhaps use a WITH clause between them)", match2.position, match1.position))
+//          case Seq(match1: Match, match2: Match) if match1.optional && !match2.optional =>
+//            Some(SemanticError(s"${match2.name} cannot follow OPTIONAL ${match1.name} (perhaps use a WITH clause between them)", match2.position, match1.position))
           case Seq(clause: Return, _) =>
             Some(SemanticError(s"${clause.name} can only be used at the end of the query", clause.position))
           case Seq(_: UpdateClause, _: UpdateClause) =>
@@ -168,5 +169,5 @@ sealed trait Union extends QueryPart with SemanticChecking {
   }
 }
 
-final case class UnionAll(part: QueryPart, query: SingleQuery)(val position: InputPosition) extends Union
-final case class UnionDistinct(part: QueryPart, query: SingleQuery)(val position: InputPosition) extends Union
+final case class UnionAll(part: QueryPart, query: SingleQuery) extends Union
+final case class UnionDistinct(part: QueryPart, query: SingleQuery) extends Union

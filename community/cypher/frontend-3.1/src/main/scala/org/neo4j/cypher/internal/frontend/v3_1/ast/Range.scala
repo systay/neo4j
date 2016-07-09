@@ -21,4 +21,4 @@ package org.neo4j.cypher.internal.frontend.v3_1.ast
 
 import org.neo4j.cypher.internal.frontend.v3_1.InputPosition
 
-case class Range(lower: Option[UnsignedIntegerLiteral], upper: Option[UnsignedIntegerLiteral])(val position: InputPosition) extends ASTNode with ASTParticle
+case class Range(lower: Option[UnsignedIntegerLiteral], upper: Option[UnsignedIntegerLiteral]) extends ASTNode with ASTParticle

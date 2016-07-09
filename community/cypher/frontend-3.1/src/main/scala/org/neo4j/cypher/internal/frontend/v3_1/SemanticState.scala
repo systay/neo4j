@@ -32,7 +32,7 @@ import scala.language.postfixOps
 case class SymbolUse(name: String, position: InputPosition) {
   override def toString = s"SymbolUse($nameWithPosition)"
 
-  def asVariable = Variable(name)(position)
+  def asVariable = Variable(name)
   def nameWithPosition = s"$name@${position.toOffsetString}"
 }
 
@@ -206,9 +206,9 @@ case class SemanticState(currentScope: ScopeLocation,
   def declareVariable(variable: ast.Variable, possibleTypes: TypeSpec, positions: Set[InputPosition] = Set.empty): Either[SemanticError, SemanticState] =
     currentScope.localSymbol(variable.name) match {
       case None =>
-        Right(updateVariable(variable, possibleTypes, positions + variable.position))
+        Right(updateVariable(variable, possibleTypes, positions + variable.position()))
       case Some(symbol) =>
-        Left(SemanticError(s"Variable `${variable.name}` already declared", variable.position, symbol.positions.toSeq: _*))
+        Left(SemanticError(s"Variable `${variable.name}` already declared", variable.position(), symbol.positions.toSeq: _*))
     }
 
   def addNotification(notification: InternalNotification) = copy(notifications = notifications + notification)
@@ -216,17 +216,17 @@ case class SemanticState(currentScope: ScopeLocation,
   def implicitVariable(variable: ast.Variable, possibleTypes: TypeSpec): Either[SemanticError, SemanticState] =
     this.symbol(variable.name) match {
       case None         =>
-        Right(updateVariable(variable, possibleTypes, Set(variable.position)))
+        Right(updateVariable(variable, possibleTypes, Set(variable.position())))
       case Some(symbol) =>
         val inferredTypes = symbol.types intersect possibleTypes
         if (inferredTypes.nonEmpty) {
-          Right(updateVariable(variable, inferredTypes, symbol.positions + variable.position))
+          Right(updateVariable(variable, inferredTypes, symbol.positions + variable.position()))
         } else {
           val existingTypes = symbol.types.mkString(", ", " or ")
           val expectedTypes = possibleTypes.mkString(", ", " or ")
           Left(SemanticError(
             s"Type mismatch: ${variable.name} already defined with conflicting type $existingTypes (expected $expectedTypes)",
-            variable.position, symbol.positions.toSeq: _*))
+            variable.position(), symbol.positions.toSeq: _*))
         }
     }
 
@@ -235,7 +235,7 @@ case class SemanticState(currentScope: ScopeLocation,
       case None         =>
         Left(SemanticError(s"Variable `${variable.name}` not defined", variable.position))
       case Some(symbol) =>
-        Right(updateVariable(variable, symbol.types, symbol.positions + variable.position))
+        Right(updateVariable(variable, symbol.types, symbol.positions + variable.position()))
     }
 
   def specifyType(expression: ast.Expression, possibleTypes: TypeSpec): Either[SemanticError, SemanticState] =

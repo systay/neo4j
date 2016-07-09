@@ -19,7 +19,7 @@
  */
 package org.neo4j.cypher.internal.frontend.v3_1.parser
 
-import org.neo4j.cypher.internal.frontend.v3_1.ast
+import org.neo4j.cypher.internal.frontend.v3_1.{InputPosition, ast}
 import org.neo4j.cypher.internal.frontend.v3_1.symbols._
 import org.parboiled.scala._
 
@@ -49,9 +49,9 @@ trait Literals extends Parser
   def RelTypeName: Rule1[ast.RelTypeName] =
     rule("a rel type name") { SymbolicNameString ~~>> (ast.RelTypeName(_) ) }.memoMismatches
 
-  def Operator: Rule1[ast.Variable] = rule {
-    OpChar ~ zeroOrMore(OpCharTail) ~>>> (ast.Variable(_: String)) ~ !OpCharTail
-  }
+//  def Operator: Rule1[ast.Variable] = rule {
+//    OpChar ~ zeroOrMore(OpCharTail) ~>>> (ast.Variable(_: String)) ~ !OpCharTail
+//  }
 
   def MapLiteral: Rule1[ast.MapExpression] = rule {
     group(
@@ -69,7 +69,7 @@ trait Literals extends Parser
     Variable ~~>> (ast.VariableSelector(_)))
 
   def AllPropertiesSelector: Rule1[ast.MapProjectionElement] = rule("all properties selector")(
-    ch('.') ~~ ch('*') ~ push(ast.AllPropertiesSelector()(_)))
+    ch('.') ~~ ch('*') ~ push(ast.AllPropertiesSelector()))
 
   def MapProjection: Rule1[ast.MapProjection] = rule {
     group(
@@ -87,18 +87,18 @@ trait Literals extends Parser
   ).memoMismatches
 
   def DoubleLiteral: Rule1[ast.DecimalDoubleLiteral] = rule("a floating point number") (
-      ExponentDecimalReal ~>>> (ast.DecimalDoubleLiteral(_))
-    | RegularDecimalReal ~>>> (ast.DecimalDoubleLiteral(_))
+      ExponentDecimalReal ~> (ast.DecimalDoubleLiteral(_))
+    | RegularDecimalReal ~> (ast.DecimalDoubleLiteral(_))
   )
 
   def SignedIntegerLiteral: Rule1[ast.SignedIntegerLiteral] = rule("an integer") (
-      HexInteger ~>>> (ast.SignedHexIntegerLiteral(_))
-    | OctalInteger ~>>> (ast.SignedOctalIntegerLiteral(_))
-    | DecimalInteger ~>>> (ast.SignedDecimalIntegerLiteral(_))
+      HexInteger ~> (ast.SignedHexIntegerLiteral(_))
+    | OctalInteger ~> (ast.SignedOctalIntegerLiteral(_))
+    | DecimalInteger ~> (ast.SignedDecimalIntegerLiteral(_))
   )
 
   def UnsignedIntegerLiteral: Rule1[ast.UnsignedIntegerLiteral] = rule("an unsigned integer") {
-    UnsignedDecimalInteger ~>>> (ast.UnsignedDecimalIntegerLiteral(_))
+    UnsignedDecimalInteger ~> (ast.UnsignedDecimalIntegerLiteral(_))
   }
 
   def RangeLiteral: Rule1[ast.Range] = rule (

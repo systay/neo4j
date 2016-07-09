@@ -19,4 +19,11 @@
  */
 package org.neo4j.cypher.internal.frontend.v3_1
 
+import org.neo4j.cypher.internal.frontend.v3_1.ast.Atom
+
 case class SemanticError(msg: String, position: InputPosition, references: InputPosition*)
+
+object SemanticError {
+  def apply(msg: String, position: Atom[InputPosition], references: Atom[InputPosition]*) =
+    new SemanticError(msg, position(), references.map(_.apply()): _*)
+}

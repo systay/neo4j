@@ -23,7 +23,7 @@ import org.neo4j.cypher.internal.frontend.v3_1.ast.Expression.{SemanticContext, 
 import org.neo4j.cypher.internal.frontend.v3_1.symbols._
 import org.neo4j.cypher.internal.frontend.v3_1.{InputPosition, _}
 
-case class MapProjection(name: Variable, items: Seq[MapProjectionElement])(val position: InputPosition)
+case class MapProjection(name: Variable, items: Seq[MapProjectionElement])
   extends Expression with SimpleTyping {
   protected def possibleTypes = CTMap
 
@@ -36,18 +36,18 @@ case class MapProjection(name: Variable, items: Seq[MapProjectionElement])(val p
 
 sealed trait MapProjectionElement extends SemanticCheckableWithContext with ASTNode
 
-case class LiteralEntry(key: PropertyKeyName, exp: Expression)(val position: InputPosition) extends MapProjectionElement {
+case class LiteralEntry(key: PropertyKeyName, exp: Expression) extends MapProjectionElement {
   override def semanticCheck(ctx: SemanticContext) = exp.semanticCheck(ctx)
 }
 
-case class VariableSelector(id: Variable)(val position: InputPosition) extends MapProjectionElement {
+case class VariableSelector(id: Variable) extends MapProjectionElement {
   override def semanticCheck(ctx: SemanticContext) = id.semanticCheck(ctx)
 }
 
-case class PropertySelector(id: Variable)(val position: InputPosition) extends MapProjectionElement {
+case class PropertySelector(id: Variable) extends MapProjectionElement {
   override def semanticCheck(ctx: SemanticContext) = SemanticCheckResult.success
 }
 
-case class AllPropertiesSelector()(val position: InputPosition) extends MapProjectionElement {
+case class AllPropertiesSelector() extends MapProjectionElement {
   override def semanticCheck(ctx: SemanticContext) = SemanticCheckResult.success
 }

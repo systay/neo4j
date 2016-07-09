@@ -50,10 +50,10 @@ trait Query extends Parser
   def Clause: Rule1[ast.Clause] = (
       LoadCSV
     | Start
-    | Match
+//    | Match
     | Unwind
-    | Merge
-    | Create
+//    | Merge
+//    | Create
     | SetClause
     | Delete
     | Remove
@@ -65,7 +65,7 @@ trait Query extends Parser
   )
 
   def Union: ReductionRule1[ast.QueryPart, ast.QueryPart] = rule("UNION") (
-      keyword("UNION ALL") ~>> position ~~ SingleQuery ~~> ((q: ast.QueryPart, p, sq) => ast.UnionAll(q, sq)(p))
-    | keyword("UNION") ~>> position ~~ SingleQuery ~~> ((q: ast.QueryPart, p, sq) => ast.UnionDistinct(q, sq)(p))
+      keyword("UNION ALL") ~>> position ~~ SingleQuery ~~> ((q: ast.QueryPart, p, sq) => ast.UnionAll(q, sq))
+    | keyword("UNION") ~>> position ~~ SingleQuery ~~> ((q: ast.QueryPart, p, sq) => ast.UnionDistinct(q, sq))
   )
 }

@@ -25,15 +25,15 @@ import org.neo4j.cypher.internal.frontend.v3_1.helpers.Eagerly
 object ASTAnnotationMap {
   def empty[K <: ASTNode, V]: ASTAnnotationMap[K, V] = new ASTAnnotationMap(Map.empty[(K, InputPosition), V])
   def apply[K <: ASTNode, V](elems: (K, V)*): ASTAnnotationMap[K, V] =
-    new ASTAnnotationMap[K, V](Map(elems.map { case (astnode, value) => ((astnode, astnode.position), value)}: _*))
+    new ASTAnnotationMap[K, V](Map(elems.map { case (astnode, value) => ((astnode, astnode.position()), value)}: _*))
 }
 
 class ASTAnnotationMap[K <: ASTNode, V] private (store: Map[(K, InputPosition), V]) extends Map[K, V] {
   override def +[B1 >: V](kv: (K, B1)): ASTAnnotationMap[K, B1] =
-    new ASTAnnotationMap(store + (((kv._1, kv._1.position), kv._2)))
+    new ASTAnnotationMap(store + (((kv._1, kv._1.position()), kv._2)))
 
   override def get(key: K): Option[V] =
-    store.get((key, key.position))
+    store.get((key, key.position()))
 
   override def updated[V1 >: V](key: K, value: V1): ASTAnnotationMap[K, V1] =
     this + ((key, value))
@@ -42,14 +42,14 @@ class ASTAnnotationMap[K <: ASTNode, V] private (store: Map[(K, InputPosition), 
     store.iterator.map { case ((astNode, _), value) => (astNode, value) }
 
   override def -(key: K): Map[K, V] =
-    new ASTAnnotationMap(store - ((key, key.position)))
+    new ASTAnnotationMap(store - ((key, key.position())))
 
   override def mapValues[C](f: (V) => C): ASTAnnotationMap[K, C] =
     new ASTAnnotationMap(Eagerly.immutableMapValues(store, f))
 
   def replaceKeys(replacements: (K, K)*) = {
     val expandedReplacements = replacements.map {
-      case (oldKey, newKey) => (oldKey -> oldKey.position) -> (newKey -> newKey.position)
+      case (oldKey, newKey) => (oldKey -> oldKey.position()) -> (newKey -> newKey.position())
     }
     val newStore = Eagerly.immutableReplaceKeys(store)(expandedReplacements: _*)
     new ASTAnnotationMap(newStore)

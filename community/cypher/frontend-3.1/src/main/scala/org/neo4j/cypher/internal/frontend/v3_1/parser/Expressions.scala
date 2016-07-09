@@ -19,6 +19,7 @@
  */
 package org.neo4j.cypher.internal.frontend.v3_1.parser
 
+import org.neo4j.cypher.internal.frontend.v3_1.ast.Atom
 import org.neo4j.cypher.internal.frontend.v3_1.{InputPosition, ast}
 import org.parboiled.scala._
 
@@ -26,7 +27,7 @@ import scala.collection.mutable.ListBuffer
 
 trait Expressions extends Parser
   with Literals
-  with Patterns
+//  with Patterns
   with Base {
 
   // Precedence loosely based on http://en.wikipedia.org/wiki/Operators_in_C_and_C%2B%2B#Operator_precedence
@@ -57,36 +58,40 @@ trait Expressions extends Parser
   )
 
   private def Expression8: Rule1[ast.Expression] = rule("comparison expression") {
-    val produceComparisons: (ast.Expression, List[PartialComparison]) => InputPosition => ast.Expression = comparisons
+    val produceComparisons: (ast.Expression, List[PartialComparison]) => ast.Expression = comparisons
     Expression7 ~ zeroOrMore(WS ~ PartialComparisonExpression) ~~>> produceComparisons
   }
 
-  private case class PartialComparison(op: (ast.Expression, ast.Expression) => (InputPosition) => ast.Expression,
-                                       expr: ast.Expression, pos: InputPosition) {
-    def apply(lhs: ast.Expression) = op(lhs, expr)(pos)
+  private case class PartialComparison(op: (ast.Expression, ast.Expression) => ast.Expression, expr: ast.Expression, pos: InputPosition) {
+    def apply(lhs: ast.Expression) = {
+      val expression = op(lhs, expr)
+      expression.position.update(pos)
+      expression
+    }
   }
 
   private def PartialComparisonExpression: Rule1[PartialComparison] = (
-      group(operator("=") ~~ Expression7) ~~>> { expr: ast.Expression => pos: InputPosition => PartialComparison(eq, expr, pos) }
-    | group(operator("<>") ~~ Expression7) ~~>> { expr: ast.Expression => pos: InputPosition => PartialComparison(ne, expr, pos) }
-    | group(operator("!=") ~~ Expression7) ~~>> { expr: ast.Expression => pos: InputPosition => PartialComparison(bne, expr, pos) }
-    | group(operator("<") ~~ Expression7) ~~>> { expr: ast.Expression => pos: InputPosition => PartialComparison(lt, expr, pos) }
-    | group(operator(">") ~~ Expression7) ~~>> { expr: ast.Expression => pos: InputPosition => PartialComparison(gt, expr, pos) }
-    | group(operator("<=") ~~ Expression7) ~~>> { expr: ast.Expression => pos: InputPosition => PartialComparison(lte, expr, pos) }
-    | group(operator(">=") ~~ Expression7) ~~>> { expr: ast.Expression => pos: InputPosition => PartialComparison(gte, expr, pos) } )
+    group(operator("=") ~>> position ~~ Expression7) ~~> ((pos, expr: ast.Expression) => PartialComparison(eq, expr, pos))
+      | group(operator("<>") ~>> position ~~ Expression7) ~~> ((pos, expr: ast.Expression) => PartialComparison(ne, expr, pos))
+      | group(operator("!=") ~>> position ~~ Expression7) ~~> ((pos, expr: ast.Expression) => PartialComparison(bne, expr, pos))
+      | group(operator("<") ~>> position ~~ Expression7) ~~> ((pos, expr: ast.Expression) => PartialComparison(lt, expr, pos))
+      | group(operator(">") ~>> position ~~ Expression7) ~~> ((pos, expr: ast.Expression) => PartialComparison(gt, expr, pos))
+      | group(operator("<=") ~>> position ~~ Expression7) ~~> ((pos, expr: ast.Expression) => PartialComparison(lte, expr, pos))
+      | group(operator(">=") ~>> position ~~ Expression7) ~~> ((pos, expr: ast.Expression) => PartialComparison(gte, expr, pos))
+    )
 
-  private def eq(lhs:ast.Expression, rhs:ast.Expression): InputPosition => ast.Expression = ast.Equals(lhs, rhs)
-  private def ne(lhs:ast.Expression, rhs:ast.Expression): InputPosition => ast.Expression = ast.NotEquals(lhs, rhs)
-  private def bne(lhs:ast.Expression, rhs:ast.Expression): InputPosition => ast.Expression = ast.InvalidNotEquals(lhs, rhs)
-  private def lt(lhs:ast.Expression, rhs:ast.Expression): InputPosition => ast.Expression = ast.LessThan(lhs, rhs)
-  private def gt(lhs:ast.Expression, rhs:ast.Expression): InputPosition => ast.Expression = ast.GreaterThan(lhs, rhs)
-  private def lte(lhs:ast.Expression, rhs:ast.Expression): InputPosition => ast.Expression = ast.LessThanOrEqual(lhs, rhs)
-  private def gte(lhs:ast.Expression, rhs:ast.Expression): InputPosition => ast.Expression = ast.GreaterThanOrEqual(lhs, rhs)
+  private def eq(lhs:ast.Expression, rhs:ast.Expression): ast.Expression = ast.Equals(lhs, rhs)
+  private def ne(lhs:ast.Expression, rhs:ast.Expression): ast.Expression = ast.NotEquals(lhs, rhs)
+  private def bne(lhs:ast.Expression, rhs:ast.Expression): ast.Expression = ast.InvalidNotEquals(lhs, rhs)
+  private def lt(lhs:ast.Expression, rhs:ast.Expression): ast.Expression = ast.LessThan(lhs, rhs)
+  private def gt(lhs:ast.Expression, rhs:ast.Expression): ast.Expression = ast.GreaterThan(lhs, rhs)
+  private def lte(lhs:ast.Expression, rhs:ast.Expression): ast.Expression = ast.LessThanOrEqual(lhs, rhs)
+  private def gte(lhs:ast.Expression, rhs:ast.Expression): ast.Expression = ast.GreaterThanOrEqual(lhs, rhs)
 
-  private def comparisons(first: ast.Expression, rest: List[PartialComparison]): InputPosition => ast.Expression = {
+  private def comparisons(first: ast.Expression, rest: List[PartialComparison]): ast.Expression = {
     rest match {
-      case Nil => _ => first
-      case second :: Nil => _ => second(first)
+      case Nil => first
+      case second :: Nil => second(first)
       case more =>
         var lhs = first
         val result = ListBuffer.empty[ast.Expression]
@@ -150,15 +155,15 @@ trait Expressions extends Parser
       NumberLiteral
     | StringLiteral
     | Parameter
-    | keyword("TRUE") ~ push(ast.True()(_))
-    | keyword("FALSE") ~ push(ast.False()(_))
-    | keyword("NULL") ~ push(ast.Null()(_))
+    | keyword("TRUE") ~ push(ast.True())
+    | keyword("FALSE") ~ push(ast.False())
+    | keyword("NULL") ~ push(ast.Null())
     | CaseExpression
-    | group(keyword("COUNT") ~~ "(" ~~ "*" ~~ ")") ~ push(ast.CountStar()(_))
+    | group(keyword("COUNT") ~~ "(" ~~ "*" ~~ ")") ~ push(ast.CountStar())
     | MapLiteral
     | MapProjection
     | ListComprehension
-    | PatternComprehension
+//    | PatternComprehension
     | group("[" ~~ zeroOrMore(Expression, separator = CommaSep) ~~ "]") ~~>> (ast.Collection(_))
     | group(keyword("FILTER") ~~ "(" ~~ FilterExpression ~~ ")") ~~>> (ast.FilterExpression(_, _, _))
     | group(keyword("EXTRACT") ~~ "(" ~~ FilterExpression ~ optional(WS ~ "|" ~~ Expression) ~~ ")") ~~>> (ast.ExtractExpression(_, _, _, _))
@@ -167,8 +172,8 @@ trait Expressions extends Parser
     | group(keyword("ANY") ~~ "(" ~~ FilterExpression ~~ ")") ~~>> (ast.AnyIterablePredicate(_, _, _))
     | group(keyword("NONE") ~~ "(" ~~ FilterExpression ~~ ")") ~~>> (ast.NoneIterablePredicate(_, _, _))
     | group(keyword("SINGLE") ~~ "(" ~~ FilterExpression ~~ ")") ~~>> (ast.SingleIterablePredicate(_, _, _))
-    | ShortestPathPattern ~~> ast.ShortestPathExpression
-    | RelationshipsPattern ~~> ast.PatternExpression
+//    | ShortestPathPattern ~~> ast.ShortestPathExpression
+//    | RelationshipsPattern ~~> ast.PatternExpression
     | parenthesizedExpression
     | FunctionInvocation
     | Variable
@@ -204,9 +209,9 @@ trait Expressions extends Parser
     group("[" ~~ FilterExpression ~ optional(WS ~ "|" ~~ Expression) ~~ "]") ~~>> (ast.ListComprehension(_, _, _, _))
   }
 
-  def PatternComprehension: Rule1[ast.PatternComprehension] = rule("[") {
-    group("[" ~~ RelationshipsPattern ~ optional(WS ~ "WHERE" ~~ Expression) ~~ "|" ~~ Expression ~~ "]") ~~>> (ast.PatternComprehension(_, _, _))
-  }
+//  def PatternComprehension: Rule1[ast.PatternComprehension] = rule("[") {
+//    group("[" ~~ RelationshipsPattern ~ optional(WS ~ "WHERE" ~~ Expression) ~~ "|" ~~ Expression ~~ "]") ~~>> (ast.PatternComprehension(_, _, _))
+//  }
 
   def CaseExpression: Rule1[ast.CaseExpression] = rule("CASE") {
     (group((

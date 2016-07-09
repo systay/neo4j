@@ -19,15 +19,21 @@
  */
 package org.neo4j.cypher.internal.frontend.v3_1.ast
 
-import org.neo4j.cypher.internal.frontend.v3_1._
+import org.neo4j.cypher.internal.frontend.v3_1.DummyPosition
+import org.neo4j.cypher.internal.frontend.v3_1.test_helpers.CypherFunSuite
 
-case class PeriodicCommitHint(size: Option[IntegerLiteral]) extends ASTNode with ASTPhrase with SemanticCheckable {
-  def name = s"USING PERIODIC COMMIT $size"
+class RootTest extends CypherFunSuite {
+  val pos0 = DummyPosition(0)
+  val pos1 = DummyPosition(1)
 
-  override def semanticCheck: SemanticCheck = size match {
-    case Some(integer) if integer.value <= 0 =>
-      SemanticError(s"Commit size error - expected positive value larger than zero, got ${integer.value}", integer.position)
-    case _ =>
-      SemanticCheckResult.success
+  test("setting the root should cascade down to all children") {
+    val v1 = Variable("a")
+    val v2 = Variable("b")
+    val eq = Equals(v1, v2)
+    eq.markThisAsRoot()
+
+    eq.root() should equal(eq)
+    v1.root() should equal(eq)
+    v2.root() should equal(eq)
   }
 }

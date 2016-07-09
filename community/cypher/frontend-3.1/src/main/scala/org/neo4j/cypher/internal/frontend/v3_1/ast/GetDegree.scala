@@ -23,7 +23,7 @@ import org.neo4j.cypher.internal.frontend.v3_1.ast.Expression.SemanticContext
 import org.neo4j.cypher.internal.frontend.v3_1.symbols._
 import org.neo4j.cypher.internal.frontend.v3_1.{SemanticDirection, InputPosition}
 
-case class GetDegree(node: Expression, relType: Option[RelTypeName], dir: SemanticDirection)(val position: InputPosition)
+case class GetDegree(node: Expression, relType: Option[RelTypeName], dir: SemanticDirection)
   extends Expression with SimpleTyping {
   protected def possibleTypes = CTAny.covariant
 

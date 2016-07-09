@@ -24,14 +24,12 @@ import org.neo4j.cypher.internal.frontend.v3_1.{InputPosition, SemanticCheckable
 
 sealed trait RemoveItem extends ASTNode with ASTPhrase with SemanticCheckable
 
-case class RemoveLabelItem(variable: Variable, labels: Seq[LabelName])(val position: InputPosition) extends RemoveItem {
+case class RemoveLabelItem(variable: Variable, labels: Seq[LabelName]) extends RemoveItem {
   def semanticCheck =
     variable.semanticCheck(Expression.SemanticContext.Simple) chain
     variable.expectType(CTNode.covariant)
 }
 
 case class RemovePropertyItem(property: Property) extends RemoveItem {
-  def position = property.position
-
   def semanticCheck = property.semanticCheck(Expression.SemanticContext.Simple)
 }

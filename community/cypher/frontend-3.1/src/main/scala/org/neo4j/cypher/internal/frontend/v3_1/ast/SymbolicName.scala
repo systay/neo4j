@@ -23,12 +23,12 @@ import org.neo4j.cypher.internal.frontend.v3_1._
 
 trait SymbolicName extends ASTNode with ASTParticle {
   def name: String
-  def position: InputPosition
+  def position: Atom[InputPosition]
 }
 
-case class ProcedureNamespace(parts: List[String] = List.empty)(val position: InputPosition) extends ASTNode
+case class ProcedureNamespace(parts: List[String] = List.empty) extends ASTNode
 
-case class ProcedureName(name: String)(val position: InputPosition) extends ASTNode with SymbolicName {
+case class ProcedureName(name: String) extends ASTNode with SymbolicName {
   override def equals(x: Any): Boolean = x match {
     case ProcedureName(other) => other.toLowerCase == name.toLowerCase
     case _ => false
@@ -36,20 +36,20 @@ case class ProcedureName(name: String)(val position: InputPosition) extends ASTN
   override def hashCode = name.toLowerCase.hashCode
 }
 
-case class ProcedureOutput(name: String)(val position: InputPosition) extends ASTNode with SymbolicName
+case class ProcedureOutput(name: String) extends ASTNode with SymbolicName
 
 trait SymbolicNameWithId[+ID <: NameId] extends SymbolicName {
   def id(implicit semanticTable: SemanticTable): Option[ID]
 }
 
-case class LabelName(name: String)(val position: InputPosition) extends SymbolicNameWithId[LabelId] {
+case class LabelName(name: String) extends SymbolicNameWithId[LabelId] {
   def id(implicit semanticTable: SemanticTable): Option[LabelId] = semanticTable.resolvedLabelIds.get(name)
 }
 
-case class PropertyKeyName(name: String)(val position: InputPosition) extends SymbolicNameWithId[PropertyKeyId] {
+case class PropertyKeyName(name: String) extends SymbolicNameWithId[PropertyKeyId] {
   def id(implicit semanticTable: SemanticTable): Option[PropertyKeyId] = semanticTable.resolvedPropertyKeyNames.get(name)
 }
 
-case class RelTypeName(name: String)(val position: InputPosition) extends SymbolicNameWithId[RelTypeId] {
+case class RelTypeName(name: String) extends SymbolicNameWithId[RelTypeId] {
   def id(implicit semanticTable: SemanticTable): Option[RelTypeId] = semanticTable.resolvedRelTypeNames.get(name)
 }

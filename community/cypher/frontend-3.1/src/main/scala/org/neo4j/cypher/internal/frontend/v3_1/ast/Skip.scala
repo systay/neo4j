@@ -21,7 +21,7 @@ package org.neo4j.cypher.internal.frontend.v3_1.ast
 
 import org.neo4j.cypher.internal.frontend.v3_1.InputPosition
 
-case class Skip(expression: Expression)(val position: InputPosition) extends ASTNode with ASTSlicingPhrase {
+case class Skip(expression: Expression) extends ASTNode with ASTSlicingPhrase {
   override def name = "SKIP" // ASTSlicingPhrase name
 }
 

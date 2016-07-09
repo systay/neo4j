@@ -20,6 +20,7 @@
 package org.neo4j.cypher.internal.frontend.v3_1.ast
 
 import org.neo4j.cypher.internal.frontend.v3_1._
+import org.neo4j.cypher.internal.frontend.v3_1.ast.Atom.atom
 import org.neo4j.cypher.internal.frontend.v3_1.symbols.{CypherType, TypeSpec}
 
 object Function {
@@ -127,13 +128,13 @@ abstract class Function extends SemanticChecking {
     else
       None
 
-  def asFunctionName(implicit position: InputPosition) = FunctionName(name)(position)
+  def asFunctionName(implicit position: InputPosition) = FunctionName(name)
 
   def asInvocation(argument: ast.Expression, distinct: Boolean = false)(implicit position: InputPosition): FunctionInvocation =
-    FunctionInvocation(asFunctionName, distinct = distinct, IndexedSeq(argument))(position)
+    FunctionInvocation(asFunctionName, distinct = distinct, IndexedSeq(argument))
 
   def asInvocation(lhs: ast.Expression, rhs: ast.Expression)(implicit position: InputPosition): FunctionInvocation =
-    FunctionInvocation(asFunctionName, distinct = false, IndexedSeq(lhs, rhs))(position)
+    FunctionInvocation(asFunctionName, distinct = false, IndexedSeq(lhs, rhs))
 }
 
 

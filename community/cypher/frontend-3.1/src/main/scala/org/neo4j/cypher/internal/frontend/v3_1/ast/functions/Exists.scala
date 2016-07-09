@@ -31,7 +31,7 @@ case object Exists extends Function {
       invocation.arguments.head.expectType(CTAny.covariant) chain
         (invocation.arguments.head match {
           case _: ast.Property => None
-          case _: ast.PatternExpression => None
+//          case _: ast.PatternExpression => None
           case _: ContainerIndex => None
           case e =>
             Some(SemanticError(s"Argument to ${invocation.name}(...) is not a property or pattern", e.position, invocation.position))

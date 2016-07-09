@@ -24,7 +24,7 @@ import org.parboiled.scala._
 
 trait Clauses extends Parser
   with StartPoints
-  with Patterns
+//  with Patterns
   with Expressions
   with Base
   with ProcedureCalls {
@@ -46,23 +46,23 @@ trait Clauses extends Parser
     ) ~~>> (ast.Start(_, _))
   }
 
-  def Match: Rule1[ast.Match] = rule("MATCH") {
-    group((
-      keyword("OPTIONAL MATCH") ~ push(true)
-        | keyword("MATCH") ~ push(false)
-      ) ~~ Pattern ~~ zeroOrMore(Hint, separator = WS) ~~ optional(Where)) ~~>> (ast.Match(_, _, _, _))
-  }
+//  def Match: Rule1[ast.Match] = rule("MATCH") {
+//    group((
+//      keyword("OPTIONAL MATCH") ~ push(true)
+//        | keyword("MATCH") ~ push(false)
+//      ) ~~ Pattern ~~ zeroOrMore(Hint, separator = WS) ~~ optional(Where)) ~~>> (ast.Match(_, _, _, _))
+//  }
 
-  def Merge: Rule1[ast.Merge] = rule("MERGE") {
-    group(
-      group(keyword("MERGE") ~~ PatternPart) ~~>> (p => ast.Pattern(Seq(p))) ~~ zeroOrMore(MergeAction, separator = WS)
-    ) ~~>> (ast.Merge(_, _))
-  }
+//  def Merge: Rule1[ast.Merge] = rule("MERGE") {
+//    group(
+//      group(keyword("MERGE") ~~ PatternPart) ~~>> (p => ast.Pattern(Seq(p))) ~~ zeroOrMore(MergeAction, separator = WS)
+//    ) ~~>> (ast.Merge(_, _))
+//  }
 
-  def Create: Rule1[ast.Clause] = rule("CREATE")(
-    group(keyword("CREATE UNIQUE") ~~ Pattern) ~~>> (ast.CreateUnique(_))
-      | group(keyword("CREATE") ~~ Pattern) ~~>> (ast.Create(_))
-  )
+//  def Create: Rule1[ast.Clause] = rule("CREATE")(
+//    group(keyword("CREATE UNIQUE") ~~ Pattern) ~~>> (ast.CreateUnique(_))
+//      | group(keyword("CREATE") ~~ Pattern) ~~>> (ast.Create(_))
+//  )
 
   def SetClause: Rule1[ast.SetClause] = rule("SET") {
     group(keyword("SET") ~~ oneOrMore(SetItem, separator = CommaSep)) ~~>> (ast.SetClause(_))
@@ -100,7 +100,7 @@ trait Clauses extends Parser
   def Pragma: Rule1[ast.Clause] = rule("") {
     keyword("_PRAGMA") ~~ (
       group(
-        keyword("WITH NONE") ~ push(ast.ReturnItems(includeExisting = false, Seq())(_)) ~~ optional(Skip) ~~ optional(
+        keyword("WITH NONE") ~ push(ast.ReturnItems(includeExisting = false, Seq())) ~~ optional(Skip) ~~ optional(
           Limit) ~~ optional(Where)) ~~>> (ast.With(distinct = false, _, None, _, _, _))
         | group(keyword("WITHOUT") ~~ oneOrMore(Variable, separator = CommaSep)) ~~>> (ast.PragmaWithout(_))
       )
@@ -134,7 +134,7 @@ trait Clauses extends Parser
 
   private def RemoveItem: Rule1[ast.RemoveItem] = rule(
     group(Variable ~~ NodeLabels) ~~>> (ast.RemoveLabelItem(_, _))
-      | PropertyExpression ~~> ast.RemovePropertyItem
+      | PropertyExpression ~~>> ast.RemovePropertyItem
   )
 
   private def ReturnBody = {

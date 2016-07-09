@@ -52,12 +52,12 @@ sealed trait LegacyIndexHint extends Hint {
   def variables = NonEmptyList(variable)
 }
 
-case class UsingIndexHint(variable: Variable, label: LabelName, property: PropertyKeyName)(val position: InputPosition) extends UsingHint with NodeHint {
+case class UsingIndexHint(variable: Variable, label: LabelName, property: PropertyKeyName) extends UsingHint with NodeHint {
   def variables = NonEmptyList(variable)
   def semanticCheck = variable.ensureDefined chain variable.expectType(CTNode.covariant)
 }
 
-case class UsingScanHint(variable: Variable, label: LabelName)(val position: InputPosition) extends UsingHint with NodeHint {
+case class UsingScanHint(variable: Variable, label: LabelName) extends UsingHint with NodeHint {
   def variables = NonEmptyList(variable)
   def semanticCheck = variable.ensureDefined chain variable.expectType(CTNode.covariant)
 }
@@ -65,11 +65,11 @@ case class UsingScanHint(variable: Variable, label: LabelName)(val position: Inp
 object UsingJoinHint {
   import NonEmptyList._
 
-  def apply(elts: Seq[Variable])(pos: InputPosition): UsingJoinHint =
-    UsingJoinHint(elts.toNonEmptyListOption.getOrElse(throw new InternalException("Expected non-empty sequence of variables")))(pos)
+  def apply(elts: Seq[Variable]): UsingJoinHint =
+    UsingJoinHint(elts.toNonEmptyListOption.getOrElse(throw new InternalException("Expected non-empty sequence of variables")))
 }
 
-case class UsingJoinHint(variables: NonEmptyList[Variable])(val position: InputPosition) extends UsingHint with NodeHint {
+case class UsingJoinHint(variables: NonEmptyList[Variable]) extends UsingHint with NodeHint {
   def semanticCheck =
     variables.map { variable => variable.ensureDefined chain variable.expectType(CTNode.covariant) }.reduceLeft(_ chain _)
 }
@@ -85,26 +85,26 @@ sealed trait NodeStartItem extends StartItem {
   def semanticCheck = variable.declare(CTNode)
 }
 
-case class NodeByIdentifiedIndex(variable: Variable, index: String, key: String, value: Expression)(val position: InputPosition)
+case class NodeByIdentifiedIndex(variable: Variable, index: String, key: String, value: Expression)
   extends NodeStartItem with LegacyIndexHint with NodeHint
 
-case class NodeByIndexQuery(variable: Variable, index: String, query: Expression)(val position: InputPosition)
+case class NodeByIndexQuery(variable: Variable, index: String, query: Expression)
   extends NodeStartItem with LegacyIndexHint with NodeHint
 
-case class NodeByParameter(variable: Variable, parameter: Parameter)(val position: InputPosition) extends NodeStartItem
-case class AllNodes(variable: Variable)(val position: InputPosition) extends NodeStartItem
+case class NodeByParameter(variable: Variable, parameter: Parameter) extends NodeStartItem
+case class AllNodes(variable: Variable) extends NodeStartItem
 
 sealed trait RelationshipStartItem extends StartItem {
   def semanticCheck = variable.declare(CTRelationship)
 }
 
-case class RelationshipByIds(variable: Variable, ids: Seq[UnsignedIntegerLiteral])(val position: InputPosition) extends RelationshipStartItem
-case class RelationshipByParameter(variable: Variable, parameter: Parameter)(val position: InputPosition) extends RelationshipStartItem
-case class AllRelationships(variable: Variable)(val position: InputPosition) extends RelationshipStartItem
-case class RelationshipByIdentifiedIndex(variable: Variable, index: String, key: String, value: Expression)(val position: InputPosition) extends RelationshipStartItem with LegacyIndexHint with RelationshipHint
-case class RelationshipByIndexQuery(variable: Variable, index: String, query: Expression)(val position: InputPosition) extends RelationshipStartItem with LegacyIndexHint with RelationshipHint
+case class RelationshipByIds(variable: Variable, ids: Seq[UnsignedIntegerLiteral]) extends RelationshipStartItem
+case class RelationshipByParameter(variable: Variable, parameter: Parameter) extends RelationshipStartItem
+case class AllRelationships(variable: Variable) extends RelationshipStartItem
+case class RelationshipByIdentifiedIndex(variable: Variable, index: String, key: String, value: Expression) extends RelationshipStartItem with LegacyIndexHint with RelationshipHint
+case class RelationshipByIndexQuery(variable: Variable, index: String, query: Expression) extends RelationshipStartItem with LegacyIndexHint with RelationshipHint
 
 // no longer supported non-hint legacy start items
 
-case class NodeByIds(variable: Variable, ids: Seq[UnsignedIntegerLiteral])(val position: InputPosition) extends NodeStartItem
+case class NodeByIds(variable: Variable, ids: Seq[UnsignedIntegerLiteral]) extends NodeStartItem
 

@@ -23,16 +23,26 @@ import org.neo4j.cypher.internal.frontend.v3_1.ast.Expression.SemanticContext
 import org.neo4j.cypher.internal.frontend.v3_1.{InputPosition, SemanticError, _}
 
 object FunctionInvocation {
-  def apply(name: FunctionName, argument: Expression)(position: InputPosition): FunctionInvocation =
-    FunctionInvocation(name, distinct = false, IndexedSeq(argument))(position)
-  def apply(left: Expression, name: FunctionName, right: Expression): FunctionInvocation =
-    FunctionInvocation(name, distinct = false, IndexedSeq(left, right))(name.position)
-  def apply(expression: Expression, name: FunctionName): FunctionInvocation =
-    FunctionInvocation(name, distinct = false, IndexedSeq(expression))(name.position)
+  def apply(name: FunctionName, argument: Expression)(position: InputPosition): FunctionInvocation = {
+    val f1 = FunctionInvocation(name, distinct = false, IndexedSeq(argument))
+    f1.position.update(position)
+    f1
+  }
+  def apply(left: Expression, name: FunctionName, right: Expression): FunctionInvocation = {
+    val f1 = FunctionInvocation(name, distinct = false, IndexedSeq(left, right))
+    f1.position.update(name.position())
+    f1
+  }
+
+  def apply(expression: Expression, name: FunctionName): FunctionInvocation ={
+    val f1 = FunctionInvocation(name, distinct = false, IndexedSeq(expression))
+    f1.position.update(name.position())
+    f1
+  }
 }
 
 case class FunctionInvocation(functionName: FunctionName, distinct: Boolean, args: IndexedSeq[Expression])
-                             (val position: InputPosition) extends Expression {
+                              extends Expression {
   val name = functionName.name
   val function: Option[Function] = Function.lookup.get(name.toLowerCase)
 
@@ -42,7 +52,7 @@ case class FunctionInvocation(functionName: FunctionName, distinct: Boolean, arg
   }
 }
 
-case class FunctionName(name: String)(val position: InputPosition) extends SymbolicName {
+case class FunctionName(name: String) extends SymbolicName {
   override def equals(x: Any): Boolean = x match {
     case FunctionName(other) => other.toLowerCase == name.toLowerCase
     case _ => false

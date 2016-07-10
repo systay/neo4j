@@ -19,6 +19,16 @@
  */
 package org.neo4j.cypher.internal.frontend.v3_1.ast
 
+/**
+  * Inspired by Daniel Spiewaks presentation "From CFG to EXE"
+  * https://www.youtube.com/watch?v=uVEBikEMuRQ
+  *
+  * This is a way of having a field that behaves as if it was immutable - once a value has been read, it is guaranteed
+  * to never change. It's possible to set the value multiple times, but as soon as it has been read, it is fixed.
+  *
+  * Atoms can also know how to get populated, so when a Atom-value is read, if no value has been set from the outside,
+  * it can go out and produce a value through it's "populate" method.
+  */
 trait Atom[A] {
   def apply(): A = {
     isForced = true
@@ -53,18 +63,16 @@ trait Atom[A] {
   def copyTo(other: Atom[A]): Unit = if (isSet) {
     other.update(value)
   }
+
+  def copyToIfNotSet(other: Atom[A]): Unit = if(isSet && !other.isSet) {
+    other.update(value)
+  }
 }
 
 object Atom {
   def atom[A](f: => Unit): Atom[A] = new Atom[A] {
     override protected def populate(): Unit = {
       f
-    }
-  }
-
-  def atom[A](in: A): Atom[A] = new Atom[A] {
-    override protected def populate(): Unit = {
-      update(in)
     }
   }
 

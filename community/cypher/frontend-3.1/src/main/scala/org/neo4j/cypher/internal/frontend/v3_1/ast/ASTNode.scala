@@ -20,24 +20,22 @@
 package org.neo4j.cypher.internal.frontend.v3_1.ast
 
 import org.neo4j.cypher.internal.frontend.v3_1.Rewritable._
-import org.neo4j.cypher.internal.frontend.v3_1.symbols._
 import org.neo4j.cypher.internal.frontend.v3_1._
 import org.neo4j.cypher.internal.frontend.v3_1.ast.Atom.atom
+import org.neo4j.cypher.internal.frontend.v3_1.symbols._
 
 
-trait ASTNode
-  extends Product
-  with Foldable
-  with Rewritable {
-
-  self =>
+trait Rootable[A] extends Foldable {
+  self: A =>
 
   /**
     * This is the root of the AST. When returning an AST, you must make sure to
     * mark it with `markThisAsRoot()`, so the correct root is set. Failure to do
     * so will result in exceptions
     */
-  val root: Atom[ASTNode] = atom[ASTNode] { this }
+  val root: Atom[A] = atom[A] {
+    this.root.update(self)
+  }
 
   /**
     * Goes through the AST and makes sure all nodes know how to find the root.
@@ -46,10 +44,19 @@ trait ASTNode
     * For now, this will have to do.
     */
   def markThisAsRoot() = {
-    this.findByAllClass[ASTNode].foreach {
-      ast => ast.root.update(this)
+    this.findByAllClass[Rootable[A]].foreach {
+      ast => ast.root.update(self)
     }
   }
+}
+
+trait ASTNode
+  extends Product
+  with Foldable
+  with Rewritable
+  with Rootable[ASTNode] {
+
+  self =>
 
   /**
     * The position in the input string of this object in the AST.
@@ -60,19 +67,25 @@ trait ASTNode
     root().pushDownPositions()
   }
 
+  /**
+    * Recursively sets positions on any children that do not already have a position,
+    * and then asks the children to push down it's position to it\s
+    */
   protected def pushDownPositions(): Unit = {
 
-    def doIt(astNode: ASTNode ) = {
-      position.copyTo(astNode.position)
+    def doIt(astNode: ASTNode) = {
+      position.copyToIfNotSet(astNode.position)
       astNode.pushDownPositions()
     }
 
-    productIterator foreach {
+    def doIter(iter: Iterator[Any]): Unit = iter foreach {
       case astNode: ASTNode => doIt(astNode)
-      case m: Map[_, ASTNode] => m.values.foreach(doIt)
-      case iter: Iterable[ASTNode] => iter.foreach(doIt)
+      case m: Map[_, _] => doIter(m.values.iterator)
+      case iter: Iterable[_] => doIter(iter.iterator)
       case _ =>
     }
+
+    doIter(productIterator)
   }
 
   def dup(children: Seq[AnyRef]): this.type =
@@ -124,8 +137,9 @@ trait ASTSlicingPhrase extends ASTPhrase with SemanticCheckable {
     expression match {
       case _: UnsignedDecimalIntegerLiteral => SemanticCheckResult.success
       case i: SignedDecimalIntegerLiteral if i.value >= 0 => SemanticCheckResult.success
-      case lit: Literal => SemanticError(s"Invalid input '${lit.asCanonicalStringVal}' is not a valid value, must be " +
-        s"a positive integer", lit.position())
+      case lit: Literal =>
+        val message = s"Invalid input '${lit.asCanonicalStringVal}' is not a valid value, must be a positive integer"
+        SemanticError(message, lit.position())
       case _ => SemanticCheckResult.success
     }
   }

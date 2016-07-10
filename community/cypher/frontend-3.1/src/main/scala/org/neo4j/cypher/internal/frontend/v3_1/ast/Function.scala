@@ -20,7 +20,6 @@
 package org.neo4j.cypher.internal.frontend.v3_1.ast
 
 import org.neo4j.cypher.internal.frontend.v3_1._
-import org.neo4j.cypher.internal.frontend.v3_1.ast.Atom.atom
 import org.neo4j.cypher.internal.frontend.v3_1.symbols.{CypherType, TypeSpec}
 
 object Function {

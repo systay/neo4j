@@ -26,6 +26,7 @@ class InputPositionTest extends CypherFunSuite {
   val pos0 = DummyPosition(0)
   val pos1 = DummyPosition(1)
   val pos2 = DummyPosition(2)
+  val pos3 = DummyPosition(3)
 
   test("when position is set, it can be retrieved") {
     val variable = Variable("a")
@@ -48,10 +49,11 @@ class InputPositionTest extends CypherFunSuite {
   }
 
   test("an intermediate object without position should not overwrite it's children") {
+    // Given an Add-object without position
     // v1 + 2 = v2
     val v1 = Variable("a")
     val v2 = Variable("b")
-    val literal = SignedDecimalIntegerLiteral("2")
+    val literal = SignedDecimalIntegerLiteral("2") // This object will not have a position set
     val add = Add(v1, literal)
     val eq = Equals(add, v2)
 
@@ -59,11 +61,13 @@ class InputPositionTest extends CypherFunSuite {
     eq.position.update(pos0)
     v1.position.update(pos1)
     v2.position.update(pos2)
+    literal.position.update(pos3)
 
+    // The Add-object should now have the same position as the surrounding object (Equals in this case)
     eq.position() should equal(pos0)
     v1.position() should equal(pos1)
     v2.position() should equal(pos2)
     add.position() should equal(pos0)
-    literal.position() should equal(pos0)
+    literal.position() should equal(pos3)
   }
 }

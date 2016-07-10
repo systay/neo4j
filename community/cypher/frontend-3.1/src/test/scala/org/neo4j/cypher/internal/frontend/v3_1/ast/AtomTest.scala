@@ -19,33 +19,38 @@
  */
 package org.neo4j.cypher.internal.frontend.v3_1.ast
 
-import org.neo4j.cypher.internal.frontend.v3_1.{DummyPosition, InputPosition}
 import org.neo4j.cypher.internal.frontend.v3_1.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.frontend.v3_1.{DummyPosition, InputPosition}
 
 class AtomTest extends CypherFunSuite {
+  val pos0 = DummyPosition(0)
+  val pos1 = DummyPosition(1)
+  val pos2 = DummyPosition(2)
+
   test("update overwrites values as long as they have not been seen") {
     val v = Atom.atom[InputPosition]
-    v.update(DummyPosition(0))
-    v.update(DummyPosition(1))
-    v.update(DummyPosition(2))
-    v() should equal(DummyPosition(2))
+    v.update(pos0)
+    v.update(pos1)
+    v.update(pos2)
+    v() should equal(pos2)
   }
 
   test("stops updating atoms after their value has been seen") {
     val v = Atom.atom[InputPosition]
-    v.update(DummyPosition(0))
+    v.update(pos0)
     v()
-    v.update(DummyPosition(1))
-    v.update(DummyPosition(2))
-    v() should equal(DummyPosition(0))
+    v.update(pos1)
+    v.update(pos2)
+    v() should equal(pos0)
   }
 
-  test("stops updating atoms after their value has been seen") {
-    val v = Atom.atom[InputPosition]
-    v.update(DummyPosition(0))
-    v()
-    v.update(DummyPosition(1))
-    v.update(DummyPosition(2))
-    v() should equal(DummyPosition(0))
+  test("does not set values if a value already exists") {
+    val v1 = Atom.atom[InputPosition]
+    val v2 = Atom.atom[InputPosition]
+    v1.update(pos0)
+    v2.update(pos1)
+    v1.copyToIfNotSet(v2)
+
+    v2() should equal(pos1)
   }
 }

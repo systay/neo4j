@@ -19,8 +19,47 @@
  */
 package org.neo4j.cypher.internal.frontend.v3_1.ast
 
-import org.neo4j.cypher.internal.frontend.v3_1.InputPosition
+import org.neo4j.cypher.internal.frontend.v3_1.{SemanticCheckResult, SemanticError, _}
+import org.neo4j.cypher.internal.frontend.v3_1.symbols._
+
+// Skip/Limit
+sealed trait ASTSlicingPhrase extends SemanticCheckable {
+  self: ASTNode =>
+  def name: String
+  def dependencies = expression.dependencies
+  def expression: Expression
+
+  def semanticCheck =
+    containsNoVariables chain
+      literalShouldBeUnsignedInteger chain
+      expression.semanticCheck(Expression.SemanticContext.Simple) chain
+      expression.expectType(CTInteger.covariant)
+
+  private def containsNoVariables: SemanticCheck = {
+    val deps = dependencies
+    if (deps.nonEmpty) {
+      val id = deps.toSeq.sortBy(_.position()).head
+      SemanticError(s"It is not allowed to refer to variables in $name", id.position)
+    }
+    else SemanticCheckResult.success
+  }
+
+  private def literalShouldBeUnsignedInteger: SemanticCheck = {
+    expression match {
+      case _: UnsignedDecimalIntegerLiteral => SemanticCheckResult.success
+      case i: SignedDecimalIntegerLiteral if i.value >= 0 => SemanticCheckResult.success
+      case lit: Literal =>
+        val message = s"Invalid input '${lit.asCanonicalStringVal}' is not a valid value, must be a positive integer"
+        SemanticError(message, lit.position())
+      case _ => SemanticCheckResult.success
+    }
+  }
+}
 
 case class Limit(expression: Expression) extends ASTNode with ASTSlicingPhrase {
   override def name = "LIMIT" // ASTSlicingPhrase name
+}
+
+case class Skip(expression: Expression) extends ASTNode with ASTSlicingPhrase {
+  override def name = "SKIP" // ASTSlicingPhrase name
 }

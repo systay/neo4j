@@ -24,7 +24,7 @@ import org.parboiled.scala._
 
 trait Clauses extends Parser
   with StartPoints
-//  with Patterns
+  with Patterns
   with Expressions
   with Base
   with ProcedureCalls {
@@ -46,12 +46,12 @@ trait Clauses extends Parser
     ) ~~>> (ast.Start(_, _))
   }
 
-//  def Match: Rule1[ast.Match] = rule("MATCH") {
-//    group((
-//      keyword("OPTIONAL MATCH") ~ push(true)
-//        | keyword("MATCH") ~ push(false)
-//      ) ~~ Pattern ~~ zeroOrMore(Hint, separator = WS) ~~ optional(Where)) ~~>> (ast.Match(_, _, _, _))
-//  }
+  def Match: Rule1[ast.Match] = rule("MATCH") {
+    group((
+      keyword("OPTIONAL MATCH") ~ push(true)
+        | keyword("MATCH") ~ push(false)
+      ) ~~ Pattern ~~ zeroOrMore(Hint, separator = WS) ~~ optional(Where)) ~~>> (ast.Match(_, _, _, _))
+  }
 
 //  def Merge: Rule1[ast.Merge] = rule("MERGE") {
 //    group(

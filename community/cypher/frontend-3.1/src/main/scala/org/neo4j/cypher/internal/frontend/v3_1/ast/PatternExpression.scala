@@ -17,16 +17,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-//package org.neo4j.cypher.internal.frontend.v3_1.ast
-//
-//import org.neo4j.cypher.internal.frontend.v3_1.ast.Expression.SemanticContext
-//import org.neo4j.cypher.internal.frontend.v3_1.symbols._
-//
-//case class PatternExpression(pattern: RelationshipsPattern) extends Expression with SimpleTyping {
-//  def position = pattern.position
-//  protected def possibleTypes = CTList(CTPath)
-//
-//  override def semanticCheck(ctx: SemanticContext) =
-//    pattern.semanticCheck(Pattern.SemanticContext.Expression) chain
-//    super.semanticCheck(ctx)
-//}
+package org.neo4j.cypher.internal.frontend.v3_1.ast
+
+import org.neo4j.cypher.internal.frontend.v3_1.ast.Expression.SemanticContext
+import org.neo4j.cypher.internal.frontend.v3_1.symbols._
+
+case class PatternExpression(pattern: RelationshipsPattern) extends Expression with SimpleTyping {
+  override val position = pattern.position
+  protected def possibleTypes = CTList(CTPath)
+
+  override def semanticCheck(ctx: SemanticContext) =
+    pattern.semanticCheck(Pattern.SemanticContext.Expression) chain
+    super.semanticCheck(ctx)
+}

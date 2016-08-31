@@ -50,8 +50,6 @@ public class Neo4jTransactionalContextTest
         GraphDatabaseQueryService graph = mock( GraphDatabaseQueryService.class );
         InternalTransaction initialTransaction = mock( InternalTransaction.class );
         KernelTransaction initialKTX = mock( KernelTransaction.class );
-        KernelTransaction.Type transactionType = null;
-        AccessMode transactionMode = null;
         Statement initialStatement = mock( Statement.class );
         QueryRegistryOperations initialQueryRegistry = mock( QueryRegistryOperations.class );
         ExecutingQuery executingQuery = mock( ExecutingQuery.class );
@@ -67,13 +65,13 @@ public class Neo4jTransactionalContextTest
         when( executingQuery.queryText() ).thenReturn( "X" );
         when( executingQuery.queryParameters() ).thenReturn( Collections.emptyMap() );
         when( initialStatement.queryRegistration() ).thenReturn( initialQueryRegistry );
-        when( graph.beginTransaction( transactionType, transactionMode ) ).thenReturn( secondTransaction );
+        when( graph.beginTransaction( null, null ) ).thenReturn( secondTransaction );
         when( txBridge.getKernelTransactionBoundToThisThread( true ) ).thenReturn( initialKTX, secondKTX );
         when( txBridge.get() ).thenReturn( secondStatement );
         when( secondStatement.queryRegistration() ).thenReturn( secondQueryRegistry );
 
         Neo4jTransactionalContext context = new Neo4jTransactionalContext(
-                graph, initialTransaction, transactionType, transactionMode, initialStatement, executingQuery,
+                graph, initialTransaction, initialStatement, executingQuery,
                 locker, txBridge, dbmsOperationsFactory
         );
 
@@ -139,8 +137,7 @@ public class Neo4jTransactionalContextTest
         when( secondStatement.queryRegistration() ).thenReturn( secondQueryRegistry );
 
         Neo4jTransactionalContext context = new Neo4jTransactionalContext(
-                graph, initialTransaction, transactionType, transactionMode, initialStatement, executingQuery,
-                locker, txBridge, dbmsOperationsFactory
+            graph, initialTransaction, initialStatement, executingQuery, locker, txBridge, dbmsOperationsFactory
         );
 
         // When

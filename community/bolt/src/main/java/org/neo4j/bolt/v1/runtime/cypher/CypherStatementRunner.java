@@ -27,13 +27,13 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.kernel.GraphDatabaseQueryService;
 import org.neo4j.kernel.api.exceptions.KernelException;
 import org.neo4j.kernel.api.security.AuthSubject;
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
-import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.coreapi.PropertyContainerLocker;
-import org.neo4j.kernel.impl.query.Neo4jTransactionalContext;
+import org.neo4j.kernel.impl.query.Neo4jTransactionalContextFactory;
 import org.neo4j.kernel.impl.query.QueryExecutionEngine;
 import org.neo4j.kernel.impl.query.QuerySession;
+import org.neo4j.kernel.impl.query.QuerySourceDescriptor;
 import org.neo4j.kernel.impl.query.TransactionalContext;
+import org.neo4j.kernel.impl.query.TransactionalContextFactory;
 
 import static java.lang.String.format;
 import static org.neo4j.kernel.api.KernelTransaction.Type.implicit;
@@ -43,26 +43,26 @@ public class CypherStatementRunner implements StatementRunner
     private static final PropertyContainerLocker locker = new PropertyContainerLocker();
 
     private final QueryExecutionEngine queryExecutionEngine;
-    private final ThreadToStatementContextBridge txBridge;
-    private GraphDatabaseQueryService queryService;
+    private final TransactionalContextFactory contextFactory;
 
-    public CypherStatementRunner( QueryExecutionEngine queryExecutionEngine, ThreadToStatementContextBridge txBridge,
-            GraphDatabaseQueryService queryService )
+    public CypherStatementRunner( QueryExecutionEngine queryExecutionEngine, GraphDatabaseQueryService queryService )
     {
         this.queryExecutionEngine = queryExecutionEngine;
-        this.txBridge = txBridge;
-        this.queryService = queryService;
+        this.contextFactory = new Neo4jTransactionalContextFactory( queryService, locker );
     }
 
     @Override
-    public Result run( final String querySource, final AuthSubject authSubject, final String statement, final Map<String, Object> params )
-            throws KernelException
+    public Result run(
+            final String querySource,
+            final AuthSubject authSubject,
+            final String queryText,
+            final Map<String, Object> queryParameters
+    ) throws KernelException
     {
-        InternalTransaction transaction = queryService.beginTransaction( implicit, authSubject );
         TransactionalContext transactionalContext =
-                new Neo4jTransactionalContext( queryService, transaction, txBridge.get(), statement, params, locker );
+                contextFactory.newContext( BoltQuerySession.descriptor( querySource ), implicit, authSubject, queryText, queryParameters );
         QuerySession session = new BoltQuerySession( transactionalContext, querySource );
-        return queryExecutionEngine.executeQuery( statement, params, session );
+        return queryExecutionEngine.executeQuery( queryText, queryParameters, session );
     }
 
     static class BoltQuerySession extends QuerySession
@@ -81,6 +81,11 @@ public class CypherStatementRunner implements StatementRunner
         public String toString()
         {
             return format( "bolt-session\t%s\t%s", querySource, username );
+        }
+
+        public static QuerySourceDescriptor descriptor( String querySource )
+        {
+            return new QuerySourceDescriptor( "bolt-session", querySource );
         }
     }
 }

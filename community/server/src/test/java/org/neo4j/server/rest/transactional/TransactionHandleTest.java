@@ -559,12 +559,12 @@ public class TransactionHandleTest
         QuerySession querySession = mock( QuerySession.class );
         when(
                 kernel.create(
-                        any( String.class ),
-                        any( Map.class ),
+                        any( HttpServletRequest.class ),
                         any( GraphDatabaseQueryService.class ),
-                        any( Type.class ),
                         any( AccessMode.class ),
-                        any( HttpServletRequest.class ) ) ).
+                        any( Type.class ),
+                        any( String.class ),
+                        any( Map.class ) ) ).
                 thenReturn( querySession );
         return querySession;
     }

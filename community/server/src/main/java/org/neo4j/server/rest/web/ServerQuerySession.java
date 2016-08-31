@@ -22,6 +22,7 @@ package org.neo4j.server.rest.web;
 import javax.servlet.http.HttpServletRequest;
 
 import org.neo4j.kernel.impl.query.QuerySession;
+import org.neo4j.kernel.impl.query.QuerySourceDescriptor;
 import org.neo4j.kernel.impl.query.TransactionalContext;
 
 import static java.lang.String.format;
@@ -44,5 +45,12 @@ public class ServerQuerySession extends QuerySession
         return request == null ?
                format("server-session\t%s", username) :
                format("server-session\thttp\t%s\t%s\t%s", request.getRemoteAddr(), request.getRequestURI(), username );
+    }
+
+    public static QuerySourceDescriptor describe( HttpServletRequest request )
+    {
+        return request == null ?
+            new QuerySourceDescriptor( "server-session" ) :
+            new QuerySourceDescriptor( "server-session", "http", request.getRemoteAddr(), request.getRequestURI() );
     }
 }

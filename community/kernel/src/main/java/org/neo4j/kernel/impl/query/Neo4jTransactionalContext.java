@@ -20,6 +20,7 @@
 package org.neo4j.kernel.impl.query;
 
 import java.util.Map;
+import java.util.function.Function;
 
 import org.neo4j.graphdb.Lock;
 import org.neo4j.graphdb.PropertyContainer;
@@ -63,8 +64,6 @@ public class Neo4jTransactionalContext implements TransactionalContext
         this(
             graph,
             initialTransaction,
-            initialTransaction.transactionType(),
-            initialTransaction.mode(),
             initialStatement,
             initialStatement.queryRegistration().startQueryExecution( queryText, queryParameters ),
             locker,
@@ -73,15 +72,19 @@ public class Neo4jTransactionalContext implements TransactionalContext
         );
     }
 
-    public Neo4jTransactionalContext( GraphDatabaseQueryService graph, InternalTransaction initialTransaction,
-            KernelTransaction.Type transactionType, AccessMode transactionMode, Statement initialStatement, ExecutingQuery executingQuery,
-            PropertyContainerLocker locker, ThreadToStatementContextBridge txBridge,
+    public Neo4jTransactionalContext(
+            GraphDatabaseQueryService graph,
+            InternalTransaction initialTransaction,
+            Statement initialStatement,
+            ExecutingQuery executingQuery,
+            PropertyContainerLocker locker,
+            ThreadToStatementContextBridge txBridge,
             DbmsOperations.Factory dbmsOperationsFactory )
     {
         this.graph = graph;
         this.transaction = initialTransaction;
-        this.transactionType = transactionType;
-        this.mode = transactionMode;
+        this.transactionType = transaction.transactionType();
+        this.mode = transaction.mode();
         this.statement = initialStatement;
         this.executingQuery = executingQuery;
         this.locker = locker;
@@ -260,5 +263,10 @@ public class Neo4jTransactionalContext implements TransactionalContext
     public AccessMode accessMode()
     {
         return mode;
+    }
+
+    public static Function<TransactionalContext, String> describe()
+    {
+        return transactionalContext -> "We didn't really care to describe this for you in this test";
     }
 }

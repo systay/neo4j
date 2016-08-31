@@ -76,4 +76,9 @@ public abstract class QueryEngineProvider extends Service
             }
         };
     }
+
+    public static QuerySourceDescriptor describe()
+    {
+        return new QuerySourceDescriptor( "embedded-session", "thread", Thread.currentThread().getName() );
+    }
 }

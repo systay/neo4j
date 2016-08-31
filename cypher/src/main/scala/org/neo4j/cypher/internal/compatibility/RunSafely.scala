@@ -17,19 +17,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.internal
+package org.neo4j.cypher.internal.compatibility
 
-import org.neo4j.cypher.internal.spi.TransactionalContextWrapperv3_1
-import org.neo4j.graphdb.Transaction
-import org.neo4j.kernel.api.Statement
-
-final case class TransactionInfo(tx: Transaction, isTopLevelTx: Boolean, statement: Statement)
-
-trait ExecutionPlan {
-
-  def run(transactionalContext: TransactionalContextWrapperv3_1, executionMode: CypherExecutionMode, params: Map[String, Any]): ExecutionResult
-
-  def isPeriodicCommit: Boolean
-
-  def isStale(lastCommittedTxId: LastCommittedTxIdProvider, ctx: TransactionalContextWrapperv3_1): Boolean
+trait RunSafely {
+  def apply[T](body: => T)(implicit f: ExceptionHandler = ExceptionHandler.default): T
 }

@@ -17,19 +17,26 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.internal
+package org.neo4j.cypher.internal.compatibility
 
-import org.neo4j.cypher.internal.spi.TransactionalContextWrapperv3_1
-import org.neo4j.graphdb.Transaction
-import org.neo4j.kernel.api.Statement
+import org.neo4j.kernel.api.ExecutingQuery
+import org.neo4j.kernel.impl.query.QueryExecutionMonitor
 
-final case class TransactionInfo(tx: Transaction, isTopLevelTx: Boolean, statement: Statement)
+case class OnlyOnceQueryExecutionMonitor(monitor: QueryExecutionMonitor) extends QueryExecutionMonitor {
+  private var closed = false
 
-trait ExecutionPlan {
+  override def startQueryExecution(query: ExecutingQuery): Unit =
+    monitor.startQueryExecution(query)
 
-  def run(transactionalContext: TransactionalContextWrapperv3_1, executionMode: CypherExecutionMode, params: Map[String, Any]): ExecutionResult
+  override def endFailure(query: ExecutingQuery, failure: Throwable): Unit =
+    if (!closed) {
+      closed = true
+      monitor.endFailure(query, failure)
+    }
 
-  def isPeriodicCommit: Boolean
-
-  def isStale(lastCommittedTxId: LastCommittedTxIdProvider, ctx: TransactionalContextWrapperv3_1): Boolean
+  override def endSuccess(query: ExecutingQuery): Unit =
+    if (!closed) {
+      closed = true
+      monitor.endSuccess(query)
+    }
 }

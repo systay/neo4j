@@ -24,6 +24,7 @@ import org.junit.Assert;
 import org.junit.Before;
 
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -350,6 +351,13 @@ abstract class ProcedureInteractionTestBase<S>
     {
         String err = neo.executeQuery( subject, call, null, resultConsumer );
         assertThat( err, equalTo( "" ) );
+    }
+
+    List<Map<String,Object>> collectSuccessResult( S subject, String call )
+    {
+        List<Map<String, Object>> result = new LinkedList<>();
+        assertSuccess( subject, call, r -> r.stream().forEach( result::add ) );
+        return result;
     }
 
     private String assertCallEmpty( S subject, String call )

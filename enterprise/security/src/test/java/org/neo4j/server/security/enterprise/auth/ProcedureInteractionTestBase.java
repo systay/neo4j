@@ -37,6 +37,7 @@ import org.neo4j.bolt.v1.transport.socket.client.SocketConnection;
 import org.neo4j.bolt.v1.transport.socket.client.TransportConnection;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.ResourceIterator;
+import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.kernel.api.security.exception.InvalidArgumentsException;
 import org.neo4j.kernel.impl.proc.Procedures;
@@ -71,7 +72,7 @@ import static org.neo4j.server.security.enterprise.auth.PredefinedRolesBuilder.R
 abstract class ProcedureInteractionTestBase<S>
 {
     protected boolean PWD_CHANGE_CHECK_FIRST = false;
-    protected String CHANGE_PWD_ERR_MSG = AuthProcedures.PERMISSION_DENIED;
+    protected String CHANGE_PWD_ERR_MSG = AuthorizationViolationException.PERMISSION_DENIED;
     private String BOLT_PWD_ERR_MSG =
             "The credentials you provided were valid, but must be changed before you can use this instance.";
     String READ_OPS_NOT_ALLOWED = "Read operations are not allowed";
@@ -427,7 +428,7 @@ abstract class ProcedureInteractionTestBase<S>
 
         assertEmpty( adminSubject, "CALL " + format(procedure, neo.nameOf( subject ) ) );
 
-        assertSuccess( adminSubject, "CALL dbms.security.listTransactions()",
+        assertSuccess( adminSubject, "CALL dbms.listTransactions()",
                 r -> assertKeyIsMap( r, "username", "activeTransactions", map( "adminSubject", "1" ) ) );
 
         latch.finishAndWaitForAllToFinish();

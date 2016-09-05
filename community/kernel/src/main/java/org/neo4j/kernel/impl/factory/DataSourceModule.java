@@ -389,11 +389,6 @@ public class DataSourceModule
         // Security procedures
         procedures.registerComponent( AuthSubject.class, ctx -> ctx.get( AUTH_SUBJECT ) );
 
-        for ( ProceduresProvider candidate : Service.load( ProceduresProvider.class ) )
-        {
-            candidate.registerProcedures( procedures );
-        }
-
         // Edition procedures
         try
         {
@@ -403,6 +398,12 @@ public class DataSourceModule
         {
             internalLog.error( "Failed to register built-in edition procedures at start up: " + e.getMessage() );
             throw new RuntimeException( e );
+        }
+
+        // Service providers
+        for ( ProceduresProvider candidate : Service.load( ProceduresProvider.class ) )
+        {
+            candidate.registerProcedures( procedures );
         }
 
         return procedures;

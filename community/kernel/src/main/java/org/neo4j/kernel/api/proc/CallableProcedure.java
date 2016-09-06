@@ -46,6 +46,7 @@ public interface CallableProcedure
         Key<Thread> THREAD = Key.key( "Thread", Thread.class );
 
         <T> T get( Key<T> key ) throws ProcedureException;
+        <T> T getOrElse( Key<T> key, T defaultValue ) throws ProcedureException;
     }
 
     /**
@@ -75,6 +76,16 @@ public interface CallableProcedure
             Object o = values.get( key.name() );
             if( o == null ) {
                 throw new ProcedureException( Status.Procedure.ProcedureCallFailed, "There is no `%s` in the current procedure call context.", key.name() );
+            }
+            return (T) o;
+        }
+
+        @Override
+        public <T> T getOrElse( Key<T> key, T defaultValue ) throws ProcedureException
+        {
+            Object o = values.get( key.name() );
+            if( o == null ) {
+                return defaultValue;
             }
             return (T) o;
         }

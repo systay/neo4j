@@ -20,7 +20,6 @@
 package org.neo4j.kernel.impl.factory;
 
 import java.io.File;
-import java.time.Clock;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
@@ -387,7 +386,7 @@ public class DataSourceModule
         procedures.registerComponent( GraphDatabaseAPI.class, ( ctx ) -> platform.graphDatabaseFacade );
 
         // Security procedures
-        procedures.registerComponent( AuthSubject.class, ctx -> ctx.get( AUTH_SUBJECT ) );
+        procedures.registerComponent( AuthSubject.class, ctx -> ctx.getOrElse( AUTH_SUBJECT, AuthSubject.ANONYMOUS ) );
 
         // Edition procedures
         try

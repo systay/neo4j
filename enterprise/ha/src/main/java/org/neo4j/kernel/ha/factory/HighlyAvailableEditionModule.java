@@ -860,9 +860,10 @@ public class HighlyAvailableEditionModule
     }
 
     @Override
-    public void registerProcedures( Procedures procedures ) throws KernelException
+    public void setupProcedures( Procedures procedures ) throws KernelException
     {
-        // TODO
+        procedures.register( org.neo4j.kernel.builtinprocs.BuiltInProcedures.class );
+        procedures.register( org.neo4j.kernel.enterprise.builtinprocs.BuiltInProcedures.class );
     }
 
     @Override

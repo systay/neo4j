@@ -60,7 +60,7 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.DatabaseAvailability;
 import org.neo4j.kernel.NeoStoreDataSource;
 import org.neo4j.kernel.api.bolt.BoltConnectionTracker;
-import org.neo4j.kernel.api.exceptions.ProcedureException;
+import org.neo4j.kernel.api.exceptions.KernelException;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.api.SchemaWriteGuard;
 import org.neo4j.kernel.impl.api.TransactionHeaderInformation;
@@ -105,19 +105,14 @@ public class EnterpriseCoreEditionModule extends EditionModule
     }
 
     @Override
-    public void registerProcedures( Procedures procedures )
+    public void setupProcedures( Procedures procedures ) throws KernelException
     {
-        try
-        {
-            procedures.register( new DiscoverEndpointAcquisitionServersProcedure( topologyService, logProvider ) );
-            procedures.register( new AcquireEndpointsProcedure( topologyService, consensusModule.raftMachine(), logProvider ) );
-            procedures.register( new ClusterOverviewProcedure( topologyService, consensusModule.raftMachine(), logProvider ) );
-            procedures.register( new CoreRoleProcedure( consensusModule.raftMachine()) );
-        }
-        catch ( ProcedureException e )
-        {
-            throw new RuntimeException( e );
-        }
+        procedures.register( new DiscoverEndpointAcquisitionServersProcedure( topologyService, logProvider ) );
+        procedures.register( new AcquireEndpointsProcedure( topologyService, consensusModule.raftMachine(), logProvider ) );
+        procedures.register( new ClusterOverviewProcedure( topologyService, consensusModule.raftMachine(), logProvider ) );
+        procedures.register( new CoreRoleProcedure( consensusModule.raftMachine()) );
+        procedures.register( org.neo4j.kernel.builtinprocs.BuiltInProcedures.class );
+        procedures.register( org.neo4j.kernel.enterprise.builtinprocs.BuiltInProcedures.class );
     }
 
     EnterpriseCoreEditionModule( final PlatformModule platformModule,

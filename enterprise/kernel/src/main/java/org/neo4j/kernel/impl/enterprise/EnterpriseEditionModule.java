@@ -44,9 +44,11 @@ import org.neo4j.kernel.impl.store.stats.IdBasedStoreEntityCounters;
 public class EnterpriseEditionModule extends CommunityEditionModule
 {
     @Override
-    public void registerProcedures( Procedures procedures ) throws KernelException
+    public void setupProcedures( Procedures procedures ) throws KernelException
     {
-        super.registerProcedures( procedures );
+        super.setupProcedures( procedures );
+
+        // If you change this, don't forget to update the HA and Core|Edge editions, too
         procedures.register( BuiltInProcedures.class );
     }
 

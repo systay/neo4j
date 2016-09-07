@@ -50,7 +50,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.DatabaseAvailability;
 import org.neo4j.kernel.api.bolt.BoltConnectionTracker;
-import org.neo4j.kernel.api.exceptions.ProcedureException;
+import org.neo4j.kernel.api.exceptions.KernelException;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.api.CommitProcessFactory;
 import org.neo4j.kernel.impl.api.ReadOnlyTransactionCommitProcess;
@@ -98,17 +98,11 @@ import static org.neo4j.kernel.impl.util.JobScheduler.SchedulingStrategy.NEW_THR
 public class EnterpriseEdgeEditionModule extends EditionModule
 {
     @Override
-    public void registerProcedures( Procedures procedures )
+    public void setupProcedures( Procedures procedures ) throws KernelException
     {
-        // TODO
-        try
-        {
-            procedures.register( new EdgeRoleProcedure() );
-        }
-        catch ( ProcedureException e )
-        {
-            throw new RuntimeException( e );
-        }
+        procedures.register( new EdgeRoleProcedure() );
+        procedures.register( org.neo4j.kernel.builtinprocs.BuiltInProcedures.class );
+        procedures.register( org.neo4j.kernel.enterprise.builtinprocs.BuiltInProcedures.class );
     }
 
     EnterpriseEdgeEditionModule( final PlatformModule platformModule,

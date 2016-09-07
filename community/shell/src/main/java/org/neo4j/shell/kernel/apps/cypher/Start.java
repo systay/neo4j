@@ -35,7 +35,7 @@ import org.neo4j.kernel.impl.query.Neo4jTransactionalContextFactory;
 import org.neo4j.kernel.impl.query.QueryExecutionEngine;
 import org.neo4j.kernel.impl.query.QueryExecutionKernelException;
 import org.neo4j.kernel.impl.query.QuerySession;
-import org.neo4j.kernel.impl.query.QuerySourceDescriptor;
+import org.neo4j.kernel.impl.query.QuerySource;
 import org.neo4j.kernel.impl.query.TransactionalContext;
 import org.neo4j.kernel.impl.query.TransactionalContextFactory;
 import org.neo4j.shell.App;
@@ -221,9 +221,9 @@ public class Start extends TransactionProvidingApp
             return String.format( "shell-session\tshell\t%s\t%s", session.getId(), username );
         }
 
-        public static QuerySourceDescriptor describe( Session session )
+        public static QuerySource describe( Session session )
         {
-            return new QuerySourceDescriptor( "shell-session", "shell", session.getId().toString() );
+            return new QuerySource( "shell-session", "shell", session.getId().toString() );
         }
     }
 }

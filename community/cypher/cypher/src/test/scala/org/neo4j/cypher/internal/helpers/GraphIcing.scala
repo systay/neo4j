@@ -32,7 +32,7 @@ import org.neo4j.kernel.api.Statement
 import org.neo4j.kernel.api.security.AccessMode
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.kernel.impl.coreapi.{InternalTransaction, PropertyContainerLocker}
-import org.neo4j.kernel.impl.query.{Neo4jTransactionalContext, QueryEngineProvider, QuerySession}
+import org.neo4j.kernel.impl.query.{Neo4jTransactionalContext, QueryEngineProvider, QuerySession, QuerySource}
 import org.neo4j.kernel.impl.transaction.TransactionStats
 
 import scala.collection.JavaConverters._
@@ -101,7 +101,7 @@ trait GraphIcing {
 
     private def createSession(txType: Type): (InternalTransaction, QuerySession) = {
       val tx = graph.beginTransaction(txType, AccessMode.Static.FULL)
-      val transactionalContext = new Neo4jTransactionalContext(graphService, tx, txBridge.get(), "X", Collections.emptyMap(), locker)
+      val transactionalContext = Neo4jTransactionalContext.create(graphService, QuerySource.UNKNOWN, tx, txBridge.get(), "X", Collections.emptyMap(), locker)
       val session = QueryEngineProvider.embeddedSession(transactionalContext)
       (tx, session)
     }

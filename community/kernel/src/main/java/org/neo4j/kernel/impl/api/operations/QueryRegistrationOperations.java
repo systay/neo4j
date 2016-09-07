@@ -24,12 +24,18 @@ import java.util.stream.Stream;
 
 import org.neo4j.kernel.api.ExecutingQuery;
 import org.neo4j.kernel.impl.api.KernelStatement;
+import org.neo4j.kernel.impl.query.QuerySource;
 
 public interface QueryRegistrationOperations
 {
     Stream<ExecutingQuery> executingQueries( KernelStatement statement );
 
-    ExecutingQuery startQueryExecution( KernelStatement statement, String queryText, Map<String, Object> queryParameters );
+    ExecutingQuery startQueryExecution(
+        KernelStatement statement,
+        QuerySource descriptor,
+        String queryText,
+        Map<String, Object> queryParameters
+    );
 
     void registerExecutingQuery( KernelStatement statement, ExecutingQuery executingQuery );
     void unregisterExecutingQuery( KernelStatement statement, ExecutingQuery executingQuery );

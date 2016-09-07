@@ -29,7 +29,7 @@ import org.neo4j.cypher.javacompat.internal.GraphDatabaseCypherService
 import org.neo4j.kernel.api.KernelTransaction.Type._
 import org.neo4j.kernel.api.security.AccessMode.Static.FULL
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
-import org.neo4j.kernel.impl.query.Neo4jTransactionalContext
+import org.neo4j.kernel.impl.query.{Neo4jTransactionalContext, QuerySource}
 import org.neo4j.test.TestGraphDatabaseFactory
 
 class TransactionBoundPlanContextTest extends CypherFunSuite {
@@ -38,7 +38,7 @@ class TransactionBoundPlanContextTest extends CypherFunSuite {
     val graph = new GraphDatabaseCypherService(new TestGraphDatabaseFactory().newImpermanentDatabase())
     val transaction = graph.beginTransaction(explicit, FULL)
     val bridge = graph.getDependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge])
-    val transactionalContext = new Neo4jTransactionalContext(graph, transaction, bridge.get(), "X", Collections.emptyMap(), null)
+    val transactionalContext = Neo4jTransactionalContext.create(graph, QuerySource.UNKNOWN, transaction, bridge.get(), "X", Collections.emptyMap(), null)
     val planContext = new TransactionBoundPlanContext(TransactionalContextWrapperv3_1(transactionalContext))
     val statistics = planContext.statistics
 
@@ -63,7 +63,7 @@ class TransactionBoundPlanContextTest extends CypherFunSuite {
 
     val transaction = graph.beginTransaction(explicit, FULL)
     val bridge = graph.getDependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge])
-    val transactionalContext = new Neo4jTransactionalContext(graph, transaction, bridge.get(), "X", Collections.emptyMap(), null)
+    val transactionalContext = Neo4jTransactionalContext.create(graph, QuerySource.UNKNOWN, transaction, bridge.get(), "X", Collections.emptyMap(), null)
     val planContext = new TransactionBoundPlanContext(TransactionalContextWrapperv3_1(transactionalContext))
     val statistics = planContext.statistics
 

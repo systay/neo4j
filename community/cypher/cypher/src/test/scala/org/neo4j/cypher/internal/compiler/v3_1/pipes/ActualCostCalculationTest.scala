@@ -40,7 +40,7 @@ import org.neo4j.kernel.api.KernelTransaction
 import org.neo4j.kernel.api.security.AccessMode
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.kernel.impl.coreapi.{InternalTransaction, PropertyContainerLocker}
-import org.neo4j.kernel.impl.query.Neo4jTransactionalContext
+import org.neo4j.kernel.impl.query.{Neo4jTransactionalContext, QuerySource}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -231,7 +231,7 @@ class ActualCostCalculationTest extends CypherFunSuite {
   private def runSimulation(graph: GraphDatabaseQueryService, pipes: Seq[Pipe]) = {
     val results = new ListBuffer[DataPoint]
     graph.withTx { tx =>
-      val transactionalContext = TransactionalContextWrapperv3_1(new Neo4jTransactionalContext(graph, tx, graph.statement, "X", Collections.emptyMap(), new PropertyContainerLocker))
+      val transactionalContext = TransactionalContextWrapperv3_1(Neo4jTransactionalContext.create(graph, QuerySource.UNKNOWN, tx, graph.statement, "X", Collections.emptyMap(), new PropertyContainerLocker))
       val queryContext = new TransactionBoundQueryContext(transactionalContext)(mock[IndexSearchMonitor])
       val state = QueryStateHelper.emptyWith(queryContext)
       for (x <- 0 to 25) {
@@ -296,7 +296,7 @@ class ActualCostCalculationTest extends CypherFunSuite {
 
   private def indexSeek(graph: GraphDatabaseQueryService) = {
     graph.withTx { tx =>
-      val transactionalContext = TransactionalContextWrapperv3_1(new Neo4jTransactionalContext(graph, tx, graph.statement, "X", Collections.emptyMap(), new PropertyContainerLocker))
+      val transactionalContext = TransactionalContextWrapperv3_1(Neo4jTransactionalContext.create(graph, QuerySource.UNKNOWN, tx, graph.statement, "X", Collections.emptyMap(), new PropertyContainerLocker))
       val ctx = new TransactionBoundPlanContext(transactionalContext)
       val literal = Literal(42)
 
@@ -311,7 +311,7 @@ class ActualCostCalculationTest extends CypherFunSuite {
 
   private def indexScan(graph: GraphDatabaseQueryService) = {
     graph.withTx { tx =>
-      val transactionalContext = TransactionalContextWrapperv3_1(new Neo4jTransactionalContext(graph, tx, graph.statement, "X", Collections.emptyMap(), new PropertyContainerLocker))
+      val transactionalContext = TransactionalContextWrapperv3_1(Neo4jTransactionalContext.create(graph, QuerySource.UNKNOWN, tx, graph.statement, "X", Collections.emptyMap(), new PropertyContainerLocker))
       val ctx = new TransactionBoundPlanContext(transactionalContext)
       val literal = Literal(42)
 

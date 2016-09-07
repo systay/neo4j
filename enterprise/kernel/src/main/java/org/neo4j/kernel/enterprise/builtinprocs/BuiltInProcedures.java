@@ -138,7 +138,7 @@ public class BuiltInProcedures
         Set<ExecutingQuery> executingQueries = getKernelTransactions().executingQueries();
         return executingQueries
             .stream()
-            .filter( query -> isAdminEnterpriseAuthSubject() || authSubject.hasUsername( query.authSubjectName() ) )
+            .filter( query -> isAdminEnterpriseAuthSubject() || authSubject.hasUsername( query.username() ) )
             .map( this::queryStatusResult );
     }
 
@@ -189,10 +189,10 @@ public class BuiltInProcedures
     private QueryTerminationResult killQueryTransaction( Pair<KernelTransactionHandle, ExecutingQuery> pair )
     {
         ExecutingQuery query = pair.other();
-        if ( isAdminEnterpriseAuthSubject() || authSubject.hasUsername( query.authSubjectName() ) )
+        if ( isAdminEnterpriseAuthSubject() || authSubject.hasUsername( query.username() ) )
         {
             pair.first().markForTermination( Status.Transaction.Terminated );
-            return new QueryTerminationResult( queryId( query.kernelQueryId() ), query.authSubjectName() );
+            return new QueryTerminationResult( queryId( query.kernelQueryId() ), query.username() );
         }
         else
         {
@@ -305,7 +305,7 @@ public class BuiltInProcedures
     {
         return new QueryStatusResult(
             queryId( q.kernelQueryId() ),
-            q.authSubjectName(),
+            q.username(),
             q.queryText(),
             q.queryParameters(),
             q.startTime(),

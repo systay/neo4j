@@ -53,26 +53,27 @@ public class Neo4jTransactionalContext implements TransactionalContext
 
     private boolean isOpen = true;
 
-    public Neo4jTransactionalContext(
+    public static Neo4jTransactionalContext create(
             GraphDatabaseQueryService graph,
+            QuerySource descriptor,
             InternalTransaction initialTransaction,
             Statement initialStatement,
             String queryText,
             Map<String, Object> queryParameters,
             PropertyContainerLocker locker )
     {
-        this(
+        return new Neo4jTransactionalContext(
             graph,
             initialTransaction,
             initialStatement,
-            initialStatement.queryRegistration().startQueryExecution( queryText, queryParameters ),
+            initialStatement.queryRegistration().startQueryExecution( descriptor, queryText, queryParameters ),
             locker,
             graph.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class ),
             graph.getDependencyResolver().resolveDependency( DbmsOperations.Factory.class )
         );
     }
 
-    public Neo4jTransactionalContext(
+    protected Neo4jTransactionalContext(
             GraphDatabaseQueryService graph,
             InternalTransaction initialTransaction,
             Statement initialStatement,
@@ -90,6 +91,12 @@ public class Neo4jTransactionalContext implements TransactionalContext
         this.locker = locker;
         this.txBridge = txBridge;
         this.dbmsOperationsFactory = dbmsOperationsFactory;
+    }
+
+    @Override
+    public ExecutingQuery executingQuery()
+    {
+        return executingQuery;
     }
 
     @Override
@@ -212,8 +219,9 @@ public class Neo4jTransactionalContext implements TransactionalContext
         {
             InternalTransaction transaction = graph.beginTransaction( transactionType, mode );
             Statement statement = txBridge.get();
-            return new Neo4jTransactionalContext(
+            return Neo4jTransactionalContext.create(
                 graph,
+                executingQuery.querySource(),
                 transaction,
                 statement,
                 executingQuery.queryText(),

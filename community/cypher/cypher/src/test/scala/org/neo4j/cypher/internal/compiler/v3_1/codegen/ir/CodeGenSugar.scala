@@ -28,7 +28,7 @@ import org.neo4j.cypher.internal.compiler.v3_1.executionplan.ExecutionPlanBuilde
 import org.neo4j.cypher.internal.compiler.v3_1.executionplan._
 import org.neo4j.cypher.internal.compiler.v3_1.planDescription.{Id, InternalPlanDescription}
 import org.neo4j.cypher.internal.compiler.v3_1.planner.logical.plans.LogicalPlan
-import org.neo4j.cypher.internal.compiler.v3_1.spi.{GraphStatistics, InternalResultRow, InternalResultVisitor, PlanContext, QueryContext}
+import org.neo4j.cypher.internal.compiler.v3_1.spi._
 import org.neo4j.cypher.internal.compiler.v3_1.{CostBasedPlannerName, ExecutionMode, NormalMode, TaskCloser}
 import org.neo4j.cypher.internal.frontend.v3_1.SemanticTable
 import org.neo4j.cypher.internal.spi.TransactionalContextWrapperv3_1
@@ -41,7 +41,7 @@ import org.neo4j.kernel.api.security.AccessMode
 import org.neo4j.kernel.api.{KernelTransaction, Statement}
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.kernel.impl.coreapi.PropertyContainerLocker
-import org.neo4j.kernel.impl.query.Neo4jTransactionalContext
+import org.neo4j.kernel.impl.query.{Neo4jTransactionalContext, QuerySource}
 import org.scalatest.mock.MockitoSugar
 
 import scala.collection.JavaConversions
@@ -74,7 +74,7 @@ trait CodeGenSugar extends MockitoSugar {
       val statement = graphDb.getDependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge]).get()
       val locker: PropertyContainerLocker = new PropertyContainerLocker
       // TODO: Get query and parameters down here somehow
-      val transactionalContext = new TransactionalContextWrapperv3_1(new Neo4jTransactionalContext(graphDb, tx, statement, "X", Collections.emptyMap(), locker))
+      val transactionalContext = new TransactionalContextWrapperv3_1(Neo4jTransactionalContext.create(graphDb, QuerySource.UNKNOWN, tx, statement, "X", Collections.emptyMap(), locker))
       val queryContext = new TransactionBoundQueryContext(transactionalContext)(mock[IndexSearchMonitor])
       val result = plan.executionResultBuilder(queryContext, mode, tracer(mode), params, taskCloser)
       tx.success()

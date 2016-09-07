@@ -28,8 +28,8 @@ import java.util.Collections;
 import org.neo4j.cypher.internal.DocsExecutionEngine;
 import org.neo4j.cypher.internal.compiler.v3_1.executionplan.InternalExecutionResult;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
-import org.neo4j.kernel.api.security.AccessMode;
 import org.neo4j.kernel.api.KernelTransaction;
+import org.neo4j.kernel.api.security.AccessMode;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.coreapi.PropertyContainerLocker;
@@ -85,9 +85,9 @@ public class DocsExecutionEngineTest
     {
         InternalTransaction transaction = database.beginTransaction( KernelTransaction.Type.implicit, AccessMode.Static.FULL );
         ThreadToStatementContextBridge bridge =
-                database.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
+            database.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
         Neo4jTransactionalContext context =
-                new Neo4jTransactionalContext( database, transaction, bridge.get(), "X", Collections.emptyMap(), new PropertyContainerLocker() );
+            Neo4jTransactionalContext.create( database, QueryEngineProvider.describe(), transaction, bridge.get(), "X", Collections.emptyMap(), new PropertyContainerLocker() );
         return QueryEngineProvider.embeddedSession( context );
     }
 }

@@ -30,7 +30,7 @@ import org.neo4j.kernel.GraphDatabaseQueryService
 import org.neo4j.kernel.api.Statement
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.kernel.impl.coreapi.{InternalTransaction, PropertyContainerLocker}
-import org.neo4j.kernel.impl.query.Neo4jTransactionalContext
+import org.neo4j.kernel.impl.query.{Neo4jTransactionalContext, QuerySource}
 import org.neo4j.kernel.monitoring.{Monitors => KernelMonitors}
 
 import scala.collection.mutable
@@ -47,7 +47,7 @@ object QueryStateHelper {
   def queryStateFrom(db: GraphDatabaseQueryService, tx: InternalTransaction, params: Map[String, Any] = Map.empty): QueryState = {
     val statement: Statement = db.getDependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge]).get()
     val searchMonitor = new KernelMonitors().newMonitor(classOf[IndexSearchMonitor])
-    val transactionalContext = TransactionalContextWrapperv3_1(new Neo4jTransactionalContext(db, tx, statement, "X", Collections.emptyMap(), locker))
+    val transactionalContext = TransactionalContextWrapperv3_1(Neo4jTransactionalContext.create(db, QuerySource.UNKNOWN, tx, statement, "X", Collections.emptyMap(), locker))
     val queryContext = new TransactionBoundQueryContext(transactionalContext)(searchMonitor)
     newWith(db = db, query = queryContext, params = params)
   }

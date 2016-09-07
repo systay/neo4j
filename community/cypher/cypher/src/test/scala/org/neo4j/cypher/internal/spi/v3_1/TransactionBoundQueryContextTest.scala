@@ -38,7 +38,7 @@ import org.neo4j.kernel.impl.api.{KernelStatement, KernelTransactionImplementati
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.kernel.impl.coreapi.{InternalTransaction, PropertyContainerLocker}
 import org.neo4j.kernel.impl.proc.Procedures
-import org.neo4j.kernel.impl.query.Neo4jTransactionalContext
+import org.neo4j.kernel.impl.query.{Neo4jTransactionalContext, QuerySource}
 import org.neo4j.storageengine.api.StorageStatement
 import org.neo4j.test.TestGraphDatabaseFactory
 
@@ -71,7 +71,7 @@ class TransactionBoundQueryContextTest extends CypherFunSuite {
   test("should mark transaction successful if successful") {
     // GIVEN
     when(outerTx.failure()).thenThrow(new AssertionError("Shouldn't be called"))
-    val tc = new Neo4jTransactionalContext( graph, outerTx, statement, null, locker, null, null )
+    val tc = Neo4jTransactionalContext.create( graph, QuerySource.UNKNOWN, outerTx, statement, "X", Collections.emptyMap(), locker )
     val transactionalContext = new TransactionalContextWrapperv3_1(tc)
     val context = new TransactionBoundQueryContext(transactionalContext)(indexSearchMonitor)
     // WHEN
@@ -86,7 +86,7 @@ class TransactionBoundQueryContextTest extends CypherFunSuite {
   test("should mark transaction failed if not successful") {
     // GIVEN
     when(outerTx.success()).thenThrow(new AssertionError("Shouldn't be called"))
-    val transactionalContext = new TransactionalContextWrapperv3_1(new Neo4jTransactionalContext(graph, outerTx, statement, "X", Collections.emptyMap(), locker))
+    val transactionalContext = new TransactionalContextWrapperv3_1(Neo4jTransactionalContext.create(graph, QuerySource.UNKNOWN, outerTx, statement, "X", Collections.emptyMap(), locker))
     val context = new TransactionBoundQueryContext(transactionalContext)(indexSearchMonitor)
     // WHEN
     context.transactionalContext.close(success = false)
@@ -106,7 +106,7 @@ class TransactionBoundQueryContextTest extends CypherFunSuite {
 
     val tx = graph.beginTransaction(KernelTransaction.Type.explicit, AccessMode.Static.READ)
     val stmt = graph.getDependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge]).get()
-    val transactionalContext = new TransactionalContextWrapperv3_1(new Neo4jTransactionalContext(graph, outerTx, stmt, "X", Collections.emptyMap(), locker))
+    val transactionalContext = new TransactionalContextWrapperv3_1(Neo4jTransactionalContext.create(graph, QuerySource.UNKNOWN, outerTx, stmt, "X", Collections.emptyMap(), locker))
     val context = new TransactionBoundQueryContext(transactionalContext)(indexSearchMonitor)
 
     // WHEN
@@ -127,7 +127,7 @@ class TransactionBoundQueryContextTest extends CypherFunSuite {
     // GIVEN
     val tx = graph.beginTransaction(KernelTransaction.Type.explicit, AccessMode.Static.READ)
     val stmt = graph.getDependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge]).get()
-    val transactionalContext = new TransactionalContextWrapperv3_1(new Neo4jTransactionalContext(graph, outerTx, stmt, "X", Collections.emptyMap(), locker))
+    val transactionalContext = new TransactionalContextWrapperv3_1(Neo4jTransactionalContext.create(graph, QuerySource.UNKNOWN, outerTx, stmt, "X", Collections.emptyMap(), locker))
     val context = new TransactionBoundQueryContext(transactionalContext)(indexSearchMonitor)
 
     // THEN
@@ -146,7 +146,7 @@ class TransactionBoundQueryContextTest extends CypherFunSuite {
     graph = new GraphDatabaseCypherService(new TestGraphDatabaseFactory().newImpermanentDatabase(config.asJava))
     val tx = graph.beginTransaction(KernelTransaction.Type.explicit, AccessMode.Static.READ)
     val stmt = graph.getDependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge]).get()
-    val transactionalContext = new TransactionalContextWrapperv3_1(new Neo4jTransactionalContext(graph, outerTx, stmt, "X", Collections.emptyMap(), locker))
+    val transactionalContext = new TransactionalContextWrapperv3_1(Neo4jTransactionalContext.create(graph, QuerySource.UNKNOWN, outerTx, stmt, "X", Collections.emptyMap(), locker))
     val context = new TransactionBoundQueryContext(transactionalContext)(indexSearchMonitor)
 
     // THEN

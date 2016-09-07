@@ -21,6 +21,8 @@ package org.neo4j.kernel.api;
 
 import java.util.Map;
 
+import org.neo4j.kernel.impl.query.QuerySource;
+
 import static java.lang.String.format;
 
 /**
@@ -30,21 +32,24 @@ public class ExecutingQuery
 {
     private final long queryId;
 
-    private final String authSubjectName;
+    private final QuerySource querySource;
+    private final String username;
     private final String queryText;
     private final Map<String, Object> queryParameters;
     private final long startTime;
 
     public ExecutingQuery(
         long queryId,
-        String authSubjectName,
+        QuerySource querySource,
+        String username,
         String queryText,
         Map<String,Object> queryParameters,
         long startTime
     )
     {
         this.queryId = queryId;
-        this.authSubjectName = authSubjectName;
+        this.querySource = querySource;
+        this.username = username;
         this.queryText = queryText;
         this.queryParameters = queryParameters;
         this.startTime = startTime;
@@ -79,9 +84,14 @@ public class ExecutingQuery
         return queryId;
     }
 
-    public String authSubjectName()
+    public QuerySource querySource()
     {
-        return authSubjectName;
+        return querySource;
+    }
+
+    public String username()
+    {
+        return username;
     }
 
     public String queryText()
@@ -103,7 +113,7 @@ public class ExecutingQuery
     public String toString()
     {
         return format(
-            "ExecutingQuery{queryId=%d, authSubjectName='%s', queryText='%s', queryParameters=%s, startTime=%d}",
-            queryId, authSubjectName, queryText, queryParameters, startTime );
+            "ExecutingQuery{queryId=%d, querySource='%s', username='%s', queryText='%s', queryParameters=%s, startTime=%d}",
+            queryId, querySource.toString( ':' ), username, queryText, queryParameters, startTime );
     }
 }

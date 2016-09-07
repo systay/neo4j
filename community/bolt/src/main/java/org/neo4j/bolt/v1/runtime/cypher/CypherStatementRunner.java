@@ -31,7 +31,7 @@ import org.neo4j.kernel.impl.coreapi.PropertyContainerLocker;
 import org.neo4j.kernel.impl.query.Neo4jTransactionalContextFactory;
 import org.neo4j.kernel.impl.query.QueryExecutionEngine;
 import org.neo4j.kernel.impl.query.QuerySession;
-import org.neo4j.kernel.impl.query.QuerySourceDescriptor;
+import org.neo4j.kernel.impl.query.QuerySource;
 import org.neo4j.kernel.impl.query.TransactionalContext;
 import org.neo4j.kernel.impl.query.TransactionalContextFactory;
 
@@ -83,9 +83,9 @@ public class CypherStatementRunner implements StatementRunner
             return format( "bolt-session\t%s\t%s", querySource, username );
         }
 
-        public static QuerySourceDescriptor descriptor( String querySource )
+        public static QuerySource descriptor( String querySource )
         {
-            return new QuerySourceDescriptor( "bolt-session", querySource );
+            return new QuerySource( "bolt-session", querySource );
         }
     }
 }

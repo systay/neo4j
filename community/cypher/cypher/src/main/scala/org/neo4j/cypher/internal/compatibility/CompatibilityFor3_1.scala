@@ -47,7 +47,7 @@ import org.neo4j.graphdb.impl.notification.{NotificationCode, NotificationDetail
 import org.neo4j.graphdb.spatial
 import org.neo4j.kernel.GraphDatabaseQueryService
 import org.neo4j.kernel.api.KernelAPI
-import org.neo4j.kernel.impl.query.{QueryExecutionMonitor, QuerySession}
+import org.neo4j.kernel.impl.query.{QueryExecutionMonitor, QuerySession, TransactionalContext}
 import org.neo4j.kernel.monitoring.{Monitors => KernelMonitors}
 import org.neo4j.logging.Log
 
@@ -57,7 +57,7 @@ import scala.util.Try
 
 object helpersv3_1 {
   implicit def monitorFailure(t: Throwable)(implicit monitor: QueryExecutionMonitor, session: QuerySession): Unit = {
-    monitor.endFailure(session, t)
+    monitor.endFailure(session.get(TransactionalContext.METADATA_KEY).executingQuery(), t)
   }
 }
 
@@ -294,7 +294,7 @@ case class ExecutionResultWrapperFor3_1(inner: InternalExecutionResult, planner:
   }
 
   private def endQueryExecution() = {
-    monitor.endSuccess(session) // this method is expected to be idempotent
+    monitor.endSuccess(session.get(TransactionalContext.METADATA_KEY).executingQuery()) // this method is expected to be idempotent
   }
 
   def javaIterator: graphdb.ResourceIterator[java.util.Map[String, Any]] = {

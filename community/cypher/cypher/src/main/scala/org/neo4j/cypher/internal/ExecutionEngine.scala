@@ -89,8 +89,7 @@ class ExecutionEngine(val queryService: GraphDatabaseQueryService, logProvider: 
   def profile(query: String, javaParams: JavaMap[String, AnyRef], session: QuerySession): ExecutionResult = {
     // we got deep java parameters => convert to shallow scala parameters for passing into the engine
     val scalaParams = scalaValues.asShallowScalaMap(javaParams)
-    executionMonitor.startQueryExecution(session, query, javaParams)
-    val (preparedPlanExecution, transactionalContext) = planQuery(query, session)
+    val (preparedPlanExecution, transactionalContext) = planQuery(session.get(TransactionalContext.METADATA_KEY))
     preparedPlanExecution.profile(transactionalContext, scalaParams, session)
   }
 
@@ -105,8 +104,7 @@ class ExecutionEngine(val queryService: GraphDatabaseQueryService, logProvider: 
   def execute(query: String, javaParams: JavaMap[String, AnyRef], session: QuerySession): ExecutionResult = {
     // we got deep java parameters => convert to shallow scala parameters for passing into the engine
     val scalaParams = scalaValues.asShallowScalaMap(javaParams)
-    executionMonitor.startQueryExecution(session, query, javaParams)
-    val (preparedPlanExecution, transactionalContext) = planQuery(query, session)
+    val (preparedPlanExecution, transactionalContext) = planQuery(session.get(TransactionalContext.METADATA_KEY))
     preparedPlanExecution.execute(transactionalContext, scalaParams, session)
   }
 
@@ -129,11 +127,14 @@ class ExecutionEngine(val queryService: GraphDatabaseQueryService, logProvider: 
     preParsedQueries.getOrElseUpdate(queryText, compiler.preParseQuery(queryText))
 
   @throws(classOf[SyntaxException])
-  protected def planQuery(queryText: String, session: QuerySession): (PreparedPlanExecution, TransactionalContextWrapperv3_1) = {
+  protected def planQuery(transactionalContext: TransactionalContext): (PreparedPlanExecution, TransactionalContextWrapperv3_1) = {
+    val executingQuery = transactionalContext.executingQuery()
+    val queryText = executingQuery.queryText()
+    executionMonitor.startQueryExecution(executingQuery)
     val phaseTracer = compilationTracer.compileQuery(queryText)
     try {
 
-      val externalTransactionalContext = new TransactionalContextWrapperv3_1(session.get(TransactionalContext.METADATA_KEY))
+      val externalTransactionalContext = new TransactionalContextWrapperv3_1(transactionalContext)
       val preParsedQuery = try {
         preParseQuery(queryText)
       } catch {

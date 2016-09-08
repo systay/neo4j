@@ -55,7 +55,7 @@ public class Neo4jTransactionalContext implements TransactionalContext
 
     public static Neo4jTransactionalContext create(
             GraphDatabaseQueryService graph,
-            QuerySource descriptor,
+            QuerySource querySource,
             InternalTransaction initialTransaction,
             Statement initialStatement,
             String queryText,
@@ -66,7 +66,7 @@ public class Neo4jTransactionalContext implements TransactionalContext
             graph,
             initialTransaction,
             initialStatement,
-            initialStatement.queryRegistration().startQueryExecution( descriptor, queryText, queryParameters ),
+            initialStatement.queryRegistration().startQueryExecution( querySource, queryText, queryParameters ),
             locker,
             graph.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class ),
             graph.getDependencyResolver().resolveDependency( DbmsOperations.Factory.class )

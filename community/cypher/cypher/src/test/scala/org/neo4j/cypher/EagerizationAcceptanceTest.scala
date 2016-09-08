@@ -27,6 +27,7 @@ import org.neo4j.graphdb.Node
 import org.neo4j.kernel.api.exceptions.ProcedureException
 import org.neo4j.kernel.api.proc.CallableProcedure.{BasicProcedure, Context}
 import org.neo4j.kernel.api.proc.{CallableProcedure, Neo4jTypes}
+import org.neo4j.kernel.impl.query.TransactionalContext
 import org.neo4j.storageengine.api.{Direction, RelationshipItem}
 import org.scalatest.prop.TableDrivenPropertyChecks
 
@@ -1707,10 +1708,10 @@ class EagerizationAcceptanceTest
     createLabeledNode("Lol")
     createNode()
     val query = "MATCH (n), (m:Lol) SET n:Lol RETURN count(*)"
-
+    val fullQuery = s"cypher planner=rule $query"
     // this is intended for the rule planner only, since the assumption is made that
     // the left-most node in the match pattern will become the 'stable leaf'
-    val result = eengine.execute(s"cypher planner=rule $query", Map.empty[String, Object], graph.session())
+    val result = eengine.execute(fullQuery, Map.empty[String, Object], graph.transactionalContext(query = fullQuery -> Map.empty))
     result.columnAs[Long]("count(*)").next shouldBe 2
     assertStatsResult(labelsAdded = 1)(result.queryStatistics)
 //    assertNumberOfEagerness(query, 1) -- not with rule planner
@@ -2582,7 +2583,7 @@ class EagerizationAcceptanceTest
       expectedEagerCount shouldBe >=(optimalEagerCount)
     }
     val q = if (query.contains("EXPLAIN")) query else "EXPLAIN CYPHER " + query
-    val result = eengine.execute(q, Map.empty[String, Object], graph.session())
+    val result = eengine.execute(q, Map.empty[String, Object], graph.transactionalContext(query = q -> Map.empty))
     val plan = result.executionPlanDescription().toString
     result.close()
     val eagers = EagerRegEx.findAllIn(plan).length

@@ -36,6 +36,7 @@ import org.neo4j.kernel.impl.coreapi.PropertyContainerLocker;
 import org.neo4j.kernel.impl.query.Neo4jTransactionalContext;
 import org.neo4j.kernel.impl.query.QueryEngineProvider;
 import org.neo4j.kernel.impl.query.QuerySession;
+import org.neo4j.kernel.impl.query.TransactionalContext;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
@@ -66,7 +67,7 @@ public class DocsExecutionEngineTest
     public void actually_works_in_rewindable_fashion()
     {
         InternalExecutionResult result = engine.internalProfile( "CREATE (n:Person {name:'Adam'}) RETURN n",
-                Collections.emptyMap(), createSession() );
+                Collections.emptyMap(), createSession().get( TransactionalContext.METADATA_KEY) );
         String dump = result.dumpToString();
         assertThat( dump, containsString( "1 row" ) );
         assertThat( result.javaIterator().hasNext(), equalTo( true ) );
@@ -75,7 +76,7 @@ public class DocsExecutionEngineTest
     @Test
     public void should_work_in_rewindable_fashion()
     {
-        InternalExecutionResult result = engine.internalProfile( "RETURN 'foo'", Collections.emptyMap(), createSession() );
+        InternalExecutionResult result = engine.internalProfile( "RETURN 'foo'", Collections.emptyMap(), createSession().get(TransactionalContext.METADATA_KEY) );
         String dump = result.dumpToString();
         assertThat( dump, containsString( "1 row" ) );
         assertThat( result.javaIterator().hasNext(), equalTo( true ) );

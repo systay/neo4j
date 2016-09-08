@@ -27,6 +27,7 @@ import org.neo4j.cypher.internal.javacompat.ExecutionEngine;
 import org.neo4j.graphdb.Result;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.kernel.impl.query.QuerySession;
+import org.neo4j.kernel.impl.query.TransactionalContext;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.server.database.CypherExecutor;
@@ -57,7 +58,7 @@ public class CypherSession implements ScriptSession
         {
             QuerySession querySession = cypherExecutor.createSession( script, Collections.emptyMap(), request );
             ExecutionEngine engine = cypherExecutor.getExecutionEngine();
-            Result result = engine.executeQuery( script, Collections.emptyMap(), querySession );
+            Result result = engine.executeQuery( script, Collections.emptyMap(), querySession, querySession.get( TransactionalContext.METADATA_KEY) );
             resultString = result.resultAsString();
         }
         catch ( SyntaxException error )

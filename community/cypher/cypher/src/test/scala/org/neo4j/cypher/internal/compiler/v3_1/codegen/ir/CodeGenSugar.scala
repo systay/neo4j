@@ -49,7 +49,7 @@ import scala.collection.JavaConversions
 trait CodeGenSugar extends MockitoSugar {
   private val semanticTable = mock[SemanticTable]
 
-  def compile(plan: LogicalPlan) = {
+  def compile(plan: LogicalPlan): CompiledPlan = {
     val statistics: GraphStatistics = mock[GraphStatistics]
     val context = mock[PlanContext]
     doReturn(statistics).when(context).statistics
@@ -74,7 +74,7 @@ trait CodeGenSugar extends MockitoSugar {
       val statement = graphDb.getDependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge]).get()
       val locker: PropertyContainerLocker = new PropertyContainerLocker
       // TODO: Get query and parameters down here somehow
-      val transactionalContext = new TransactionalContextWrapperv3_1(Neo4jTransactionalContext.create(graphDb, QuerySource.UNKNOWN, tx, statement, "X", Collections.emptyMap(), locker))
+      val transactionalContext = new TransactionalContextWrapperv3_1(Neo4jTransactionalContext.create(graphDb, QuerySource.UNKNOWN, tx, statement, "YYY", Collections.emptyMap(), locker))
       val queryContext = new TransactionBoundQueryContext(transactionalContext)(mock[IndexSearchMonitor])
       val result = plan.executionResultBuilder(queryContext, mode, tracer(mode), params, taskCloser)
       tx.success()

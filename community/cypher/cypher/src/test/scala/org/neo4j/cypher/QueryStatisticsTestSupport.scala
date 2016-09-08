@@ -19,8 +19,6 @@
  */
 package org.neo4j.cypher
 
-import java.util
-
 import org.neo4j.cypher.internal.QueryStatistics
 import org.neo4j.cypher.internal.compatibility.ExecutionResultWrapperFor3_1
 import org.neo4j.cypher.internal.compiler.v3_1.executionplan.InternalExecutionResult
@@ -28,8 +26,9 @@ import org.neo4j.cypher.internal.compiler.v3_1.{CompiledRuntimeName, CostBasedPl
 import org.neo4j.kernel.api.ExecutingQuery
 import org.neo4j.kernel.impl.query.{QueryExecutionMonitor, QuerySession}
 import org.scalatest.Assertions
+import org.scalatest.mock.MockitoSugar
 
-trait QueryStatisticsTestSupport {
+trait QueryStatisticsTestSupport extends MockitoSugar {
   self: Assertions =>
 
   implicit class QueryStatisticsAssertions(expected: QueryStatistics) {

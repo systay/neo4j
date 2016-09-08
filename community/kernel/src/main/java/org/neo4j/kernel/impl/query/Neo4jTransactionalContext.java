@@ -73,6 +73,25 @@ public class Neo4jTransactionalContext implements TransactionalContext
         );
     }
 
+    public static Neo4jTransactionalContext reCreate(
+            GraphDatabaseQueryService graph,
+            InternalTransaction initialTransaction,
+            Statement initialStatement,
+            PropertyContainerLocker locker,
+            ExecutingQuery executingQuery )
+    {
+        initialStatement.queryRegistration().registerExecutingQuery( executingQuery );
+        return new Neo4jTransactionalContext(
+                graph,
+                initialTransaction,
+                initialStatement,
+                executingQuery,
+                locker,
+                graph.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class ),
+                graph.getDependencyResolver().resolveDependency( DbmsOperations.Factory.class )
+        );
+    }
+
     protected Neo4jTransactionalContext(
             GraphDatabaseQueryService graph,
             InternalTransaction initialTransaction,
@@ -219,14 +238,12 @@ public class Neo4jTransactionalContext implements TransactionalContext
         {
             InternalTransaction transaction = graph.beginTransaction( transactionType, mode );
             Statement statement = txBridge.get();
-            return Neo4jTransactionalContext.create(
-                graph,
-                executingQuery.querySource(),
-                transaction,
-                statement,
-                executingQuery.queryText(),
-                executingQuery.queryParameters(),
-                locker
+            return Neo4jTransactionalContext.reCreate(
+                    graph,
+                    transaction,
+                    statement,
+                    locker,
+                    executingQuery
             );
         }
     }

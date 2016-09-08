@@ -17,15 +17,26 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.internal
+package org.neo4j.cypher.internal.compatibility
 
-import org.neo4j.cypher.internal.spi.TransactionalContextWrapperv3_1
-import org.neo4j.kernel.impl.query.QuerySession
+import org.neo4j.kernel.api.ExecutingQuery
+import org.neo4j.kernel.impl.query.QueryExecutionMonitor
 
-case class PreparedPlanExecution(plan: ExecutionPlan, executionMode: CypherExecutionMode, extractedParams: Map[String, Any]) {
-  def execute(transactionalContext: TransactionalContextWrapperv3_1, params: Map[String, Any]): ExecutionResult =
-    plan.run(transactionalContext, executionMode, params ++ extractedParams)
+case class OnlyOnceQueryExecutionMonitor(monitor: QueryExecutionMonitor) extends QueryExecutionMonitor {
+  private var closed = false
 
-  def profile(transactionalContext: TransactionalContextWrapperv3_1, params: Map[String, Any]): ExecutionResult =
-    plan.run(transactionalContext, CypherExecutionMode.profile, params ++ extractedParams)
+  override def startQueryExecution(query: ExecutingQuery): Unit =
+    monitor.startQueryExecution(query)
+
+  override def endFailure(query: ExecutingQuery, failure: Throwable): Unit =
+    if (!closed) {
+      closed = true
+      monitor.endFailure(query, failure)
+    }
+
+  override def endSuccess(query: ExecutingQuery): Unit =
+    if (!closed) {
+      closed = true
+      monitor.endSuccess(query)
+    }
 }

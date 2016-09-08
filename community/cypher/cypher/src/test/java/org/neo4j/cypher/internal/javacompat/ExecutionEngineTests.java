@@ -61,9 +61,10 @@ public class ExecutionEngineTests
         Result result;
         try ( InternalTransaction tx = graph.beginTransaction( KernelTransaction.Type.implicit, AccessMode.Static.FULL ) )
         {
-            result = executionEngine.executeQuery(
-                    "RETURN { key : 'Value' , collectionKey: [{ inner: 'Map1' }, { inner: 'Map2' }]}", NO_PARAMS,
-                    newSession( graph, tx ) );
+            String query = "RETURN { key : 'Value' , collectionKey: [{ inner: 'Map1' }, { inner: 'Map2' }]}";
+            QuerySession querySession = newSession( graph, tx, query );
+            result = executionEngine.executeQuery( query, NO_PARAMS,
+                     querySession, querySession.get(TransactionalContext.METADATA_KEY) );
             tx.success();
         }
 
@@ -74,13 +75,13 @@ public class ExecutionEngineTests
         assertThat( ((Map) theList.get( 1 )).get( "inner" ), is( "Map2" ) );
     }
 
-    private QuerySession newSession( GraphDatabaseQueryService graph, InternalTransaction tx )
+    private QuerySession newSession( GraphDatabaseQueryService graph, InternalTransaction tx, String query )
     {
         ThreadToStatementContextBridge txBridge =
                 graph.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
         PropertyContainerLocker locker = new PropertyContainerLocker();
         TransactionalContext transactionalContext = Neo4jTransactionalContext.create(
-                graph, QueryEngineProvider.describe(), tx, txBridge.get(), "X", Collections.emptyMap(), locker );
+                graph, QueryEngineProvider.describe(), tx, txBridge.get(), query, Collections.emptyMap(), locker );
         return QueryEngineProvider.embeddedSession( transactionalContext );
     }
 }

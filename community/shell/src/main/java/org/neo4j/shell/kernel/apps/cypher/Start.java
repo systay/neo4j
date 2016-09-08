@@ -118,7 +118,8 @@ public class Start extends TransactionProvidingApp
             throws ShellException, RemoteException, QueryExecutionKernelException
     {
         Map<String,Object> parameters = getParameters( session );
-        return getEngine().executeQuery( query, parameters, shellSession( query, parameters, session ) );
+        QuerySession querySession = shellSession( query, parameters, session );
+        return getEngine().executeQuery( query, parameters, querySession, querySession.get(TransactionalContext.METADATA_KEY));
     }
 
     private String trimQuery( String query )

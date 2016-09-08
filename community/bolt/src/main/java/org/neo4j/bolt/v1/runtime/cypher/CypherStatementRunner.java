@@ -62,7 +62,7 @@ public class CypherStatementRunner implements StatementRunner
         TransactionalContext transactionalContext =
                 contextFactory.newContext( BoltQuerySession.descriptor( querySource ), implicit, authSubject, queryText, queryParameters );
         QuerySession session = new BoltQuerySession( transactionalContext, querySource );
-        return queryExecutionEngine.executeQuery( queryText, queryParameters, session );
+        return queryExecutionEngine.executeQuery( queryText, queryParameters, session, transactionalContext );
     }
 
     static class BoltQuerySession extends QuerySession

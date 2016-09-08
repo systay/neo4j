@@ -17,15 +17,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.internal
+package org.neo4j.cypher.internal.compatibility
 
-import org.neo4j.cypher.internal.spi.TransactionalContextWrapperv3_1
-import org.neo4j.kernel.impl.query.QuerySession
-
-case class PreparedPlanExecution(plan: ExecutionPlan, executionMode: CypherExecutionMode, extractedParams: Map[String, Any]) {
-  def execute(transactionalContext: TransactionalContextWrapperv3_1, params: Map[String, Any]): ExecutionResult =
-    plan.run(transactionalContext, executionMode, params ++ extractedParams)
-
-  def profile(transactionalContext: TransactionalContextWrapperv3_1, params: Map[String, Any]): ExecutionResult =
-    plan.run(transactionalContext, CypherExecutionMode.profile, params ++ extractedParams)
+trait RunSafely {
+  def apply[T](body: => T)(implicit f: ExceptionHandler = ExceptionHandler.default): T
 }

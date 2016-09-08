@@ -42,6 +42,7 @@ import org.neo4j.kernel.api.security.AccessMode;
 import org.neo4j.kernel.impl.query.QueryExecutionEngine;
 import org.neo4j.kernel.impl.query.QueryExecutionKernelException;
 import org.neo4j.kernel.impl.query.QuerySession;
+import org.neo4j.kernel.impl.query.TransactionalContext;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
@@ -81,7 +82,7 @@ public class TransactionHandleTest
         QueryExecutionEngine executionEngine = mock( QueryExecutionEngine.class );
         Result executionResult = mock( Result.class );
         QuerySession querySession = prepareKernelWithQuerySession( kernel );
-        when( executionEngine.executeQuery( "query", map(), querySession ) ).thenReturn( executionResult );
+        when( executionEngine.executeQuery( "query", map(), querySession, querySession.get( TransactionalContext.METADATA_KEY) ) ).thenReturn( executionResult );
         TransactionRegistry registry = mock( TransactionRegistry.class );
         when( registry.begin( any( TransactionHandle.class ) ) ).thenReturn( 1337L );
         TransactionHandle handle = getTransactionHandle( kernel, executionEngine, registry );
@@ -92,7 +93,7 @@ public class TransactionHandleTest
                 mock( HttpServletRequest.class ) );
 
         // then
-        verify( executionEngine ).executeQuery( "query", map(), querySession );
+        verify( executionEngine ).executeQuery( "query", map(), querySession, querySession.get(TransactionalContext.METADATA_KEY) );
 
         InOrder outputOrder = inOrder( output );
         outputOrder.verify( output ).transactionCommitUri( uriScheme.txCommitUri( 1337 ) );
@@ -116,7 +117,7 @@ public class TransactionHandleTest
         QueryExecutionEngine executionEngine = mock( QueryExecutionEngine.class );
         QuerySession querySession = prepareKernelWithQuerySession( kernel );
         Result executionResult = mock( Result.class );
-        when( executionEngine.executeQuery( "query", map(), querySession ) ).thenReturn( executionResult );
+        when( executionEngine.executeQuery( "query", map(), querySession, querySession.get(TransactionalContext.METADATA_KEY)) ).thenReturn( executionResult );
         when( registry.begin( any( TransactionHandle.class ) ) ).thenReturn( 1337L );
         TransactionHandle handle = getTransactionHandle( kernel, executionEngine, registry );
         ExecutionResultSerializer output = mock( ExecutionResultSerializer.class );
@@ -158,7 +159,7 @@ public class TransactionHandleTest
                 mock( HttpServletRequest.class ) );
         reset( transactionContext, registry, executionEngine, output );
         Result executionResult = mock( Result.class );
-        when( executionEngine.executeQuery( "query", map(), querySession ) ).thenReturn( executionResult );
+        when( executionEngine.executeQuery( "query", map(), querySession, querySession.get(TransactionalContext.METADATA_KEY) ) ).thenReturn( executionResult );
 
         // when
         handle.execute( statements( new Statement( "query", map(), false, (ResultDataContent[]) null ) ), output,
@@ -167,7 +168,7 @@ public class TransactionHandleTest
         // then
         InOrder order = inOrder( transactionContext, registry, executionEngine );
         order.verify( transactionContext ).resumeSinceTransactionsAreStillThreadBound();
-        order.verify( executionEngine ).executeQuery( "query", map(), querySession );
+        order.verify( executionEngine ).executeQuery( "query", map(), querySession, querySession.get(TransactionalContext.METADATA_KEY) );
         order.verify( transactionContext ).suspendSinceTransactionsAreStillThreadBound();
         order.verify( registry ).release( 1337L, handle );
 
@@ -192,7 +193,7 @@ public class TransactionHandleTest
         Result executionResult = mock( Result.class );
         QuerySession querySession = prepareKernelWithQuerySession( kernel );
         when( executionEngine.isPeriodicCommit( queryText) ).thenReturn( true );
-        when( executionEngine.executeQuery( eq( queryText ), eq( map() ), eq( querySession ) ) )
+        when( executionEngine.executeQuery( eq( queryText ), eq( map() ), eq( querySession ), eq( querySession.get(TransactionalContext.METADATA_KEY) ) ) )
                 .thenReturn( executionResult );
 
         TransactionRegistry registry = mock( TransactionRegistry.class );
@@ -205,7 +206,7 @@ public class TransactionHandleTest
         handle.commit( statements( statement ), output, mock( HttpServletRequest.class ) );
 
         // then
-        verify( executionEngine ).executeQuery( queryText, map(), querySession );
+        verify( executionEngine ).executeQuery( queryText, map(), querySession, querySession.get(TransactionalContext.METADATA_KEY) );
 
         InOrder outputOrder = inOrder( output );
         outputOrder.verify( output ).statementResult( executionResult, false, (ResultDataContent[]) null );
@@ -227,7 +228,7 @@ public class TransactionHandleTest
         QueryExecutionEngine engine = mock( QueryExecutionEngine.class );
         QuerySession querySession = prepareKernelWithQuerySession( kernel );
         Result result = mock( Result.class );
-        when( engine.executeQuery( "query", map(), querySession ) ).thenReturn( result );
+        when( engine.executeQuery( "query", map(), querySession, querySession.get(TransactionalContext.METADATA_KEY) ) ).thenReturn( result );
         when( registry.begin( any( TransactionHandle.class ) ) ).thenReturn( 1337L );
         GraphDatabaseQueryService queryService = mock( GraphDatabaseQueryService.class );
         TransactionHandle handle = new TransactionHandle( kernel, engine, queryService, registry, uriScheme, false, FULL,
@@ -291,7 +292,7 @@ public class TransactionHandleTest
         QueryExecutionEngine engine = mock( QueryExecutionEngine.class );
         Result executionResult = mock( Result.class );
         QuerySession querySession = prepareKernelWithQuerySession( kernel );
-        when( engine.executeQuery( "query", map(), querySession ) ).thenReturn( executionResult );
+        when( engine.executeQuery( "query", map(), querySession, querySession.get(TransactionalContext.METADATA_KEY) ) ).thenReturn( executionResult );
         when( registry.begin( any( TransactionHandle.class ) ) ).thenReturn( 1337L );
         GraphDatabaseQueryService queryService = mock( GraphDatabaseQueryService.class );
         TransactionHandle handle = new TransactionHandle( kernel, engine, queryService, registry, uriScheme, true, FULL,
@@ -328,7 +329,7 @@ public class TransactionHandleTest
 
         QueryExecutionEngine executionEngine = mock( QueryExecutionEngine.class );
         QuerySession querySession = prepareKernelWithQuerySession( kernel );
-        when( executionEngine.executeQuery( "query", map(), querySession ) ).thenThrow( new NullPointerException() );
+        when( executionEngine.executeQuery( "query", map(), querySession, querySession.get(TransactionalContext.METADATA_KEY) ) ).thenThrow( new NullPointerException() );
 
         when( registry.begin( any( TransactionHandle.class ) ) ).thenReturn( 1337L );
         TransactionHandle handle = getTransactionHandle( kernel, executionEngine, registry );
@@ -366,7 +367,7 @@ public class TransactionHandleTest
         QueryExecutionEngine engine = mock( QueryExecutionEngine.class );
         Result executionResult = mock( Result.class );
         QuerySession querySession = prepareKernelWithQuerySession( kernel );
-        when( engine.executeQuery( "query", map(), querySession ) ).thenReturn( executionResult );
+        when( engine.executeQuery( "query", map(), querySession, querySession.get(TransactionalContext.METADATA_KEY) ) ).thenReturn( executionResult );
         when( registry.begin( any( TransactionHandle.class ) ) ).thenReturn( 1337L );
         GraphDatabaseQueryService queryService = mock( GraphDatabaseQueryService.class );
         TransactionHandle handle = new TransactionHandle( kernel, engine, queryService, registry, uriScheme, false, FULL, logProvider );
@@ -396,7 +397,7 @@ public class TransactionHandleTest
 
         QueryExecutionEngine executionEngine = mock( QueryExecutionEngine.class );
         QuerySession querySession = prepareKernelWithQuerySession( kernel );
-        when( executionEngine.executeQuery( "matsch (n) return n", map(), querySession ) )
+        when( executionEngine.executeQuery( "matsch (n) return n", map(), querySession, querySession.get(TransactionalContext.METADATA_KEY) ) )
                 .thenThrow( new QueryExecutionKernelException( new SyntaxException( "did you mean MATCH?" ) ) );
 
         TransactionRegistry registry = mock( TransactionRegistry.class );
@@ -424,7 +425,7 @@ public class TransactionHandleTest
     {
         // given
         QueryExecutionEngine executionEngine = mock( QueryExecutionEngine.class );
-        when( executionEngine.executeQuery( eq( "match (n) return n" ), eq( map() ), any( QuerySession.class ) ) ).thenAnswer(
+        when( executionEngine.executeQuery( eq( "match (n) return n" ), eq( map() ), any( QuerySession.class ), any( TransactionalContext.class ) ) ).thenAnswer(
                 invocationOnMock -> { throw new Exception("BOO"); } );
 
         TransactionRegistry registry = mock( TransactionRegistry.class );
@@ -476,7 +477,7 @@ public class TransactionHandleTest
     {
         // given
         QueryExecutionEngine executionEngine = mock( QueryExecutionEngine.class );
-        when( executionEngine.executeQuery( anyString(), anyMap(), any( QuerySession.class ) ) )
+        when( executionEngine.executeQuery( anyString(), anyMap(), any( QuerySession.class ), any( TransactionalContext.class ) ) )
                 .thenThrow( new DeadlockDetectedException( "deadlock" ) );
 
         GraphDatabaseQueryService queryService = mock( GraphDatabaseQueryService.class );

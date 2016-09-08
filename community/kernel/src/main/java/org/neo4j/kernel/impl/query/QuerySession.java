@@ -24,7 +24,7 @@ import java.util.Map;
 
 /**
  * A unique QuerySession should be created and provided to
- * {@link QueryExecutionEngine#executeQuery(String, java.util.Map, QuerySession)} for each cypher query.
+ * {@link QueryExecutionEngine#executeQuery(String, Map, QuerySession, TransactionalContext)} for each cypher query.
  * If queryLogging is enabled {@link org.neo4j.graphdb.factory.GraphDatabaseSettings#log_queries},
  * the result of {@link #toString()} will be serialized in the log.
  */

@@ -30,7 +30,6 @@ import org.neo4j.kernel.api.security.AccessMode;
 import org.neo4j.kernel.impl.coreapi.PropertyContainerLocker;
 import org.neo4j.kernel.impl.query.Neo4jTransactionalContextFactory;
 import org.neo4j.kernel.impl.query.QueryExecutionEngine;
-import org.neo4j.kernel.impl.query.QuerySession;
 import org.neo4j.kernel.impl.query.TransactionalContext;
 import org.neo4j.kernel.impl.query.TransactionalContextFactory;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
@@ -72,7 +71,8 @@ public class CypherExecutor extends LifecycleAdapter
         this.contextFactory = null;
     }
 
-    public QuerySession createSession( String query, Map<String, Object> parameters, HttpServletRequest request )
+    public TransactionalContext createTransactionContext( String query, Map<String, Object> parameters,
+            HttpServletRequest request )
     {
         TransactionalContext context = contextFactory.newContext( ServerQuerySession.describe( request ),
             KernelTransaction.Type.implicit,
@@ -80,6 +80,6 @@ public class CypherExecutor extends LifecycleAdapter
             query,
             parameters
         );
-        return new ServerQuerySession( request, context );
+        return context;
     }
 }

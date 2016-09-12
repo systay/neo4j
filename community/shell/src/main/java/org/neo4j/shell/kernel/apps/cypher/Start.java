@@ -34,7 +34,6 @@ import org.neo4j.kernel.impl.coreapi.PropertyContainerLocker;
 import org.neo4j.kernel.impl.query.Neo4jTransactionalContextFactory;
 import org.neo4j.kernel.impl.query.QueryExecutionEngine;
 import org.neo4j.kernel.impl.query.QueryExecutionKernelException;
-import org.neo4j.kernel.impl.query.QuerySession;
 import org.neo4j.kernel.impl.query.QuerySource;
 import org.neo4j.kernel.impl.query.TransactionalContext;
 import org.neo4j.kernel.impl.query.TransactionalContextFactory;
@@ -118,8 +117,8 @@ public class Start extends TransactionProvidingApp
             throws ShellException, RemoteException, QueryExecutionKernelException
     {
         Map<String,Object> parameters = getParameters( session );
-        QuerySession querySession = shellSession( query, parameters, session );
-        return getEngine().executeQuery( query, parameters, querySession, querySession.get(TransactionalContext.METADATA_KEY));
+        TransactionalContext tc = createTransactionContext( query, parameters, session );
+        return getEngine().executeQuery( query, parameters, tc );
     }
 
     private String trimQuery( String query )
@@ -189,39 +188,23 @@ public class Start extends TransactionProvidingApp
         return System.currentTimeMillis();
     }
 
-    private QuerySession shellSession( String queryText, Map<String,Object> queryParameters, Session session )
+    private TransactionalContext createTransactionContext( String queryText, Map<String,Object> queryParameters,
+            Session session )
     {
         DependencyResolver dependencyResolver = getDependencyResolver();
         GraphDatabaseQueryService graph = dependencyResolver.resolveDependency( GraphDatabaseQueryService.class );
         TransactionalContextFactory contextFactory =
                 new Neo4jTransactionalContextFactory( graph, new PropertyContainerLocker() );
-        TransactionalContext context = contextFactory.newContext( ShellQuerySession.describe( session ),
+        return contextFactory.newContext( ShellQuerySession.describe( session ),
                 KernelTransaction.Type.implicit,
                 AccessMode.Static.FULL,
                 queryText,
                 queryParameters
         );
-        return new ShellQuerySession( session, context );
     }
 
-    static class ShellQuerySession extends QuerySession
+    private static class ShellQuerySession
     {
-        private final Session session;
-        private final String username;
-
-        ShellQuerySession( Session session, TransactionalContext transactionalContext )
-        {
-            super( transactionalContext );
-            this.username = transactionalContext.accessMode().name();
-            this.session = session;
-        }
-
-        @Override
-        public String toString()
-        {
-            return String.format( "shell-session\tshell\t%s\t%s", session.getId(), username );
-        }
-
         public static QuerySource describe( Session session )
         {
             return new QuerySource( "shell-session", "shell", session.getId().toString() );

@@ -23,8 +23,6 @@ import org.neo4j.helpers.Service;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
-import static java.lang.String.format;
-
 public abstract class QueryEngineProvider extends Service
 {
     public QueryEngineProvider( String name )
@@ -60,21 +58,6 @@ public abstract class QueryEngineProvider extends Service
     public static QueryExecutionEngine noEngine()
     {
         return NoQueryEngine.INSTANCE;
-    }
-
-    public static QuerySession embeddedSession( TransactionalContext transactionalContext )
-    {
-        final Thread thread = Thread.currentThread();
-        return new QuerySession( transactionalContext )
-        {
-            private final String username = transactionalContext.accessMode().name();
-
-            @Override
-            public String toString()
-            {
-                return format( "embedded-session\tthread\t%s\t%s", thread.getName(), username );
-            }
-        };
     }
 
     public static QuerySource describe()

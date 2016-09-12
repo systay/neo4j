@@ -29,7 +29,7 @@ import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.coreapi.PropertyContainerLocker;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.query.Neo4jTransactionalContextFactory;
-import org.neo4j.kernel.impl.query.QuerySession;
+import org.neo4j.kernel.impl.query.QuerySource;
 import org.neo4j.kernel.impl.query.TransactionalContext;
 import org.neo4j.kernel.impl.query.TransactionalContextFactory;
 import org.neo4j.server.rest.web.ServerQuerySession;
@@ -57,7 +57,7 @@ public class TransitionalPeriodTransactionMessContainer
         return txBridge;
     }
 
-    public QuerySession create(
+    public TransactionalContext create(
             HttpServletRequest request,
             GraphDatabaseQueryService service,
             AccessMode mode,
@@ -67,7 +67,7 @@ public class TransitionalPeriodTransactionMessContainer
     )
     {
         TransactionalContextFactory contextFactory = new Neo4jTransactionalContextFactory( service, locker );
-        TransactionalContext context = contextFactory.newContext( ServerQuerySession.describe( request ), type, mode, queryText, queryParameters );
-        return new ServerQuerySession( request, context );
+        QuerySource querySource = ServerQuerySession.describe( request );
+        return contextFactory.newContext( querySource, type, mode, queryText, queryParameters );
     }
 }

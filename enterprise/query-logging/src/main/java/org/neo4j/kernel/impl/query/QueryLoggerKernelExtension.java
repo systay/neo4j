@@ -33,7 +33,6 @@ import org.neo4j.kernel.api.ExecutingQuery;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.impl.logging.LogService;
-import org.neo4j.kernel.impl.query.QuerySession.MetadataKey;
 import org.neo4j.kernel.impl.spi.KernelContext;
 import org.neo4j.kernel.impl.util.JobScheduler;
 import org.neo4j.kernel.lifecycle.Lifecycle;

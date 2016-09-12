@@ -22,7 +22,6 @@ package org.neo4j.cypher.internal
 import org.neo4j.cypher.internal.spi.TransactionalContextWrapperv3_1
 import org.neo4j.graphdb.Transaction
 import org.neo4j.kernel.api.Statement
-import org.neo4j.kernel.impl.query.QuerySession
 
 final case class TransactionInfo(tx: Transaction, isTopLevelTx: Boolean, statement: Statement)
 

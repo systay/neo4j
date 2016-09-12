@@ -30,12 +30,10 @@ import org.neo4j.kernel.api.security.AuthSubject;
 import org.neo4j.kernel.impl.coreapi.PropertyContainerLocker;
 import org.neo4j.kernel.impl.query.Neo4jTransactionalContextFactory;
 import org.neo4j.kernel.impl.query.QueryExecutionEngine;
-import org.neo4j.kernel.impl.query.QuerySession;
 import org.neo4j.kernel.impl.query.QuerySource;
 import org.neo4j.kernel.impl.query.TransactionalContext;
 import org.neo4j.kernel.impl.query.TransactionalContextFactory;
 
-import static java.lang.String.format;
 import static org.neo4j.kernel.api.KernelTransaction.Type.implicit;
 
 public class CypherStatementRunner implements StatementRunner
@@ -61,28 +59,11 @@ public class CypherStatementRunner implements StatementRunner
     {
         TransactionalContext transactionalContext =
                 contextFactory.newContext( BoltQuerySession.descriptor( querySource ), implicit, authSubject, queryText, queryParameters );
-        QuerySession session = new BoltQuerySession( transactionalContext, querySource );
-        return queryExecutionEngine.executeQuery( queryText, queryParameters, session, transactionalContext );
+        return queryExecutionEngine.executeQuery( queryText, queryParameters, transactionalContext );
     }
 
-    static class BoltQuerySession extends QuerySession
+    static class BoltQuerySession
     {
-        private final String querySource;
-        private final String username;
-
-        BoltQuerySession( TransactionalContext transactionalContext, String querySource )
-        {
-            super( transactionalContext );
-            this.username = transactionalContext.accessMode().name();
-            this.querySource = querySource;
-        }
-
-        @Override
-        public String toString()
-        {
-            return format( "bolt-session\t%s\t%s", querySource, username );
-        }
-
         public static QuerySource descriptor( String querySource )
         {
             return new QuerySource( "bolt-session", querySource );

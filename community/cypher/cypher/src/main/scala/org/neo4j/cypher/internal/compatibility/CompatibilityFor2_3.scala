@@ -43,9 +43,9 @@ import org.neo4j.graphdb._
 import org.neo4j.graphdb.impl.notification.{NotificationCode, NotificationDetail}
 import org.neo4j.helpers.Clock
 import org.neo4j.kernel.GraphDatabaseQueryService
-import org.neo4j.kernel.api.{ExecutingQuery, KernelAPI}
+import org.neo4j.kernel.api.KernelAPI
 import org.neo4j.kernel.impl.core.NodeManager
-import org.neo4j.kernel.impl.query.{QueryExecutionMonitor, QuerySession, TransactionalContext}
+import org.neo4j.kernel.impl.query.{QueryExecutionMonitor, TransactionalContext}
 import org.neo4j.kernel.monitoring.{Monitors => KernelMonitors}
 import org.neo4j.logging.Log
 
@@ -54,8 +54,8 @@ import scala.reflect.ClassTag
 import scala.util.Try
 
 object helpersv2_3 {
-  implicit def monitorFailure(t: Throwable)(implicit monitor: QueryExecutionMonitor, session: QuerySession): Unit = {
-    monitor.endFailure(session.get(TransactionalContext.METADATA_KEY).executingQuery(), t)
+  implicit def monitorFailure(t: Throwable)(implicit monitor: QueryExecutionMonitor, tc: TransactionalContext): Unit = {
+    monitor.endFailure(tc.executingQuery(), t)
   }
 }
 
@@ -142,7 +142,6 @@ case class WrappedMonitors2_3(kernelMonitors: KernelMonitors) extends Monitors {
 }
 
 trait CompatibilityFor2_3 {
-  import org.neo4j.cypher.internal.compatibility.helpersv2_3._
 
   val graph: GraphDatabaseQueryService
   val queryCacheSize: Int

@@ -86,7 +86,6 @@ import org.neo4j.kernel.impl.coreapi.TopLevelTransaction;
 import org.neo4j.kernel.impl.coreapi.schema.SchemaImpl;
 import org.neo4j.kernel.impl.query.Neo4jTransactionalContextFactory;
 import org.neo4j.kernel.impl.query.QueryEngineProvider;
-import org.neo4j.kernel.impl.query.QuerySession;
 import org.neo4j.kernel.impl.query.TransactionalContext;
 import org.neo4j.kernel.impl.query.TransactionalContextFactory;
 import org.neo4j.kernel.impl.store.StoreId;
@@ -168,7 +167,7 @@ public class GraphDatabaseFacade implements GraphDatabaseAPI
         Statement currentStatement();
 
         /** Execute a cypher statement */
-        Result executeQuery( String query, Map<String,Object> parameters, QuerySession querySession );
+        Result executeQuery( String query, Map<String,Object> parameters, TransactionalContext context );
 
         AutoIndexing autoIndexing();
 
@@ -361,7 +360,7 @@ public class GraphDatabaseFacade implements GraphDatabaseAPI
         TransactionalContextFactory contextFactory = contextFactorySupplier.get();
         TransactionalContext context =
                 contextFactory.newContext( QueryEngineProvider.describe(), KernelTransaction.Type.implicit, AccessMode.Static.FULL, query, parameters );
-        return spi.executeQuery( query, parameters, QueryEngineProvider.embeddedSession( context ) );
+        return spi.executeQuery( query, parameters, context );
     }
 
     public Result execute( InternalTransaction tx, String query, Map<String,Object> parameters ) throws QueryExecutionException
@@ -370,7 +369,7 @@ public class GraphDatabaseFacade implements GraphDatabaseAPI
         TransactionalContextFactory contextFactory = contextFactorySupplier.get();
         TransactionalContext context =
                 contextFactory.newContext( QueryEngineProvider.describe(), tx, query, parameters );
-        return spi.executeQuery( query, parameters, QueryEngineProvider.embeddedSession( context ) );
+        return spi.executeQuery( query, parameters, context );
     }
 
     @Override

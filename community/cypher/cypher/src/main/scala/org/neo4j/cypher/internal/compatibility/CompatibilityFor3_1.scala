@@ -44,10 +44,10 @@ import org.neo4j.cypher.internal.spi.v3_1.codegen.GeneratedQueryStructure
 import org.neo4j.graphdb
 import org.neo4j.graphdb.Result.{ResultRow, ResultVisitor}
 import org.neo4j.graphdb.impl.notification.{NotificationCode, NotificationDetail}
-import org.neo4j.graphdb.{ResourceIterator, spatial}
+import org.neo4j.graphdb.spatial
 import org.neo4j.kernel.GraphDatabaseQueryService
-import org.neo4j.kernel.api.{ExecutingQuery, KernelAPI}
-import org.neo4j.kernel.impl.query.{QueryExecutionMonitor, QuerySession, TransactionalContext}
+import org.neo4j.kernel.api.KernelAPI
+import org.neo4j.kernel.impl.query.{QueryExecutionMonitor, TransactionalContext}
 import org.neo4j.kernel.monitoring.{Monitors => KernelMonitors}
 import org.neo4j.logging.Log
 
@@ -56,8 +56,8 @@ import scala.reflect.ClassTag
 import scala.util.Try
 
 object helpersv3_1 {
-  implicit def monitorFailure(t: Throwable)(implicit monitor: QueryExecutionMonitor, session: QuerySession): Unit = {
-    monitor.endFailure(session.get(TransactionalContext.METADATA_KEY).executingQuery(), t)
+  implicit def monitorFailure(t: Throwable)(implicit monitor: QueryExecutionMonitor, tc: TransactionalContext): Unit = {
+    monitor.endFailure(tc.executingQuery(), t)
   }
 }
 

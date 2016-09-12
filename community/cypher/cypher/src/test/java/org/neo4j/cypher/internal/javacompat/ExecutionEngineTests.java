@@ -36,7 +36,6 @@ import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.coreapi.PropertyContainerLocker;
 import org.neo4j.kernel.impl.query.Neo4jTransactionalContext;
 import org.neo4j.kernel.impl.query.QueryEngineProvider;
-import org.neo4j.kernel.impl.query.QuerySession;
 import org.neo4j.kernel.impl.query.TransactionalContext;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.rule.DatabaseRule;
@@ -62,9 +61,8 @@ public class ExecutionEngineTests
         try ( InternalTransaction tx = graph.beginTransaction( KernelTransaction.Type.implicit, AccessMode.Static.FULL ) )
         {
             String query = "RETURN { key : 'Value' , collectionKey: [{ inner: 'Map1' }, { inner: 'Map2' }]}";
-            QuerySession querySession = newSession( graph, tx, query );
-            result = executionEngine.executeQuery( query, NO_PARAMS,
-                     querySession, querySession.get(TransactionalContext.METADATA_KEY) );
+            TransactionalContext tc = createTransactionContext( graph, tx, query );
+            result = executionEngine.executeQuery( query, NO_PARAMS, tc );
             tx.success();
         }
 
@@ -75,13 +73,13 @@ public class ExecutionEngineTests
         assertThat( ((Map) theList.get( 1 )).get( "inner" ), is( "Map2" ) );
     }
 
-    private QuerySession newSession( GraphDatabaseQueryService graph, InternalTransaction tx, String query )
+    private TransactionalContext createTransactionContext( GraphDatabaseQueryService graph, InternalTransaction tx, String query )
     {
         ThreadToStatementContextBridge txBridge =
                 graph.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
         PropertyContainerLocker locker = new PropertyContainerLocker();
         TransactionalContext transactionalContext = Neo4jTransactionalContext.create(
                 graph, QueryEngineProvider.describe(), tx, txBridge.get(), query, Collections.emptyMap(), locker );
-        return QueryEngineProvider.embeddedSession( transactionalContext );
+        return transactionalContext;
     }
 }

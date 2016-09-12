@@ -19,16 +19,13 @@
  */
 package org.neo4j.cypher.internal.frontend.v3_1.ast.functions
 
-import org.neo4j.cypher.internal.frontend.v3_1.ast.Function
-import org.neo4j.cypher.internal.frontend.v3_1.{SemanticError, ast}
+import org.neo4j.cypher.internal.frontend.v3_1.SemanticCheckResult
+import org.neo4j.cypher.internal.frontend.v3_1.ast.Expression.SemanticContext
+import org.neo4j.cypher.internal.frontend.v3_1.ast._
 
-/*
- * Note that HAS has been removed from Cypher,
- * This is only kept to give users a proper error message.
- */
-case object Has extends Function {
-  def name = "HAS"
+case object UnresolvedFunction extends Function {
+  def name = "UNKNOWN"
 
-  def semanticCheck(ctx: ast.Expression.SemanticContext, invocation: ast.FunctionInvocation) =
-    SemanticError(s"HAS is no longer supported in Cypher, please use EXISTS instead", invocation.position)
+  //we cannot do a full semantic check until we have resolved the function call.
+  override protected def semanticCheck(ctx: SemanticContext, invocation: FunctionInvocation) = SemanticCheckResult.success
 }

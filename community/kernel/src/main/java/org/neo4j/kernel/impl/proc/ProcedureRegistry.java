@@ -49,6 +49,14 @@ public class ProcedureRegistry
         validateSignature( signature, signature.inputSignature(), "input" );
         validateSignature( signature, signature.outputSignature(), "output" );
 
+        if ( ! signature.isVoid() && signature.outputSignature().isEmpty() )
+        {
+            throw new ProcedureException(
+                Status.Procedure.ProcedureRegistrationFailed,
+                "Procedures with zero output fields must be declared as VOID"
+            );
+        }
+
         CallableProcedure oldImplementation = procedures.get( name );
         if ( oldImplementation == null )
         {

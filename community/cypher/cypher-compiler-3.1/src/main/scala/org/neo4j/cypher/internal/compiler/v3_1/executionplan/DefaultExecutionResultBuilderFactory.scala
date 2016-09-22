@@ -106,8 +106,9 @@ case class DefaultExecutionResultBuilderFactory(pipeInfo: PipeInfo, columns: Lis
 
     private def buildResultIterator(results: Iterator[ExecutionContext], isUpdating: Boolean): ResultIterator = {
       val closingIterator = new ClosingIterator(results, taskCloser, exceptionDecorator)
-      val resultIterator = if (isUpdating) closingIterator.toEager else closingIterator
-      resultIterator
+//      val resultIterator = if (isUpdating) closingIterator.toEager else closingIterator
+//      resultIterator
+      closingIterator
     }
 
     private def buildDescriptor(pipe: Pipe, isProfileReady: => Boolean): () => InternalPlanDescription =

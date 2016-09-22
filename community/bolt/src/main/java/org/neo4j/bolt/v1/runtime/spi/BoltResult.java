@@ -36,6 +36,8 @@ public abstract class BoltResult implements AutoCloseable
     @Override
     public abstract void close();
 
+    public abstract void terminate();
+
     public interface Visitor
     {
         void visit( Record record ) throws Exception;
@@ -52,6 +54,12 @@ public abstract class BoltResult implements AutoCloseable
 
         @Override
         public void close()
+        {
+
+        }
+
+        @Override
+        public void terminate()
         {
 
         }

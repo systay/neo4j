@@ -46,6 +46,7 @@ public class TopLevelTransaction implements InternalTransaction
 
     public TopLevelTransaction( KernelTransaction transaction, Supplier<Statement> stmt )
     {
+        System.out.println(Thread.currentThread().getId() + " tx created");
         this.stmt = stmt;
         this.transaction = transaction;
     }

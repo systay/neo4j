@@ -57,6 +57,12 @@ public class CypherAdapterStream extends BoltResult
     }
 
     @Override
+    public void terminate()
+    {
+        delegate.terminate();
+    }
+
+    @Override
     public String[] fieldNames()
     {
         return fieldNames;

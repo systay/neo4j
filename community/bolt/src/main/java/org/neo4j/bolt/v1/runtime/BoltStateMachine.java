@@ -573,6 +573,14 @@ public class BoltStateMachine implements AutoCloseable, ManagedBoltStateMachine
         public State reset( BoltStateMachine machine ) throws BoltConnectionFatality
         {
             String msg = "RESET cannot be handled by a session in the " + name() + " state.";
+            try
+            {
+                machine.statementProcessor().reset();
+            }
+            catch ( TransactionFailureException e )
+            {
+                e.printStackTrace();
+            }
             fail( machine, new Neo4jError( Status.Request.Invalid, msg ) );
             throw new BoltConnectionFatality( msg );
         }

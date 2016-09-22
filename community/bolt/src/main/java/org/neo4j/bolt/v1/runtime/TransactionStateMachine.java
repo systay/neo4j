@@ -102,8 +102,9 @@ public class TransactionStateMachine implements StatementProcessor
     @Override
     public void reset() throws TransactionFailureException
     {
+        System.out.println(Thread.currentThread().getId() + " terminating query");
+        state.terminateResult( ctx );
         state.rollbackTransaction( ctx );
-        state.closeResult( ctx );
         state = State.AUTO_COMMIT;
     }
 
@@ -174,7 +175,9 @@ public class TransactionStateMachine implements StatementProcessor
                         }
                         else if( spi.isPeriodicCommit( statement ) )
                         {
+                            System.out.println(Thread.currentThread().getId() + " bolt running periodic commit");
                             Result result = executeQuery( ctx, spi, statement, params );
+                            System.out.println(Thread.currentThread().getId() + " bolt finished periodic commit");
 
                             ctx.currentTransaction = spi.beginTransaction( ctx.authSubject );
 
@@ -330,15 +333,15 @@ public class TransactionStateMachine implements StatementProcessor
             }
         }
 
-        void closeResult( MutableTransactionState ctx )
+        void terminateResult( MutableTransactionState ctx )
         {
             if ( ctx.currentResult != null )
             {
+                ctx.currentResult.terminate();
                 ctx.currentResult.close();
                 ctx.currentResult = null;
             }
         }
-
     }
 
     private static Result executeQuery( MutableTransactionState ctx, SPI spi, String statement,

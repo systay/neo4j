@@ -106,6 +106,7 @@ public class Neo4jTransactionalContext implements TransactionalContext
     @Override
     public void close( boolean success )
     {
+        System.out.println(Thread.currentThread().getId() + "tx closed!" + success);
         if ( isOpen )
         {
             try
@@ -253,6 +254,7 @@ public class Neo4jTransactionalContext implements TransactionalContext
     @Override
     public void terminate()
     {
+        System.out.println(Thread.currentThread().getId() + "trying to terminate!");
         transaction.terminate();
     }
 

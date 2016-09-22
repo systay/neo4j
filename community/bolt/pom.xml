@@ -109,6 +109,11 @@
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-server</artifactId>
+      <scope>test</scope>
+    </dependency>
 
     <!-- This dependency is needed for Netty to be able to generate
     self signed certificate on a JDK without sun.security.* package -->

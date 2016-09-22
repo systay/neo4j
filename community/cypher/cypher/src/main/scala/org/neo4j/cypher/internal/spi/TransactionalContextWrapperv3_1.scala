@@ -63,4 +63,6 @@ case class TransactionalContextWrapperv3_1(tc: TransactionalContext) extends Que
   def restrictCurrentTransaction(accessMode: AccessMode): Revertable = tc.restrictCurrentTransaction(accessMode)
 
   def accessMode: AccessMode = tc.accessMode
+
+  override def terminate(): Unit = tc.terminate()
 }

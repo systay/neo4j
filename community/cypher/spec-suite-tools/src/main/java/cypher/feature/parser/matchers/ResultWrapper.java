@@ -139,6 +139,12 @@ public class ResultWrapper implements Result
     }
 
     @Override
+    public void terminate()
+    {
+        inner.terminate();
+    }
+
+    @Override
     public Stream<Map<String,Object>> stream()
     {
         return inner.stream();

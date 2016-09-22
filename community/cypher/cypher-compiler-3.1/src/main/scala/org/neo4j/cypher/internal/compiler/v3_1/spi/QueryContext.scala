@@ -171,6 +171,10 @@ trait QueryContext extends TokenContext {
   def isGraphKernelResultValue(v: Any): Boolean
 
   def detachDeleteNode(node: Node): Int
+
+  // Terminates the underlying transaction. Can be called from another thread than the one owning the QueryContext
+  // and tx
+  def terminate()
 }
 
 trait Operations[T <: PropertyContainer] {
@@ -215,5 +219,7 @@ trait QueryTransactionalContext {
   def close(success: Boolean)
 
   def commitAndRestartTx()
+
+  def terminate()
 }
 

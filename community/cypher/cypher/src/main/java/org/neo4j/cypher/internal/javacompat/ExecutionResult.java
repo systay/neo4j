@@ -318,6 +318,12 @@ public class ExecutionResult implements ResourceIterable<Map<String,Object>>, Re
     }
 
     @Override
+    public void terminate()
+    {
+        inner.terminate();
+    }
+
+    @Override
     public Iterable<Notification> getNotifications()
     {
         return JavaConversions.asJavaIterable( inner.notifications() );

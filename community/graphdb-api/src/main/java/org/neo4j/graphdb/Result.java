@@ -207,6 +207,17 @@ public interface Result extends ResourceIterator<Map<String, Object>>
     <VisitationException extends Exception> void accept( ResultVisitor<VisitationException> visitor )
             throws VisitationException;
 
+
+    /**
+     * Terminates a running query. In most cases this will also mark any open transactions for failure.
+     * In the case of PERIODIC COMMIT, any already committed work will be kept.
+     *
+     * Note that this method can be called from threads other than the owning thread of the query execution.
+     *
+     * Calling this method on an already closed transaction has no effect.
+     */
+    void terminate();
+
     /**
      * Describes a row of a result. The contents of this object is only stable during the
      * call to the {@code visit(ResultRow)} method of {@link ResultVisitor}.

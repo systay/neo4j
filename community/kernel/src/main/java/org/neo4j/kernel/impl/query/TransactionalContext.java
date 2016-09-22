@@ -67,4 +67,6 @@ public interface TransactionalContext
     AccessMode accessMode();
 
     KernelTransaction.Revertable restrictCurrentTransaction( AccessMode accessMode );
+
+    void terminate();
 }

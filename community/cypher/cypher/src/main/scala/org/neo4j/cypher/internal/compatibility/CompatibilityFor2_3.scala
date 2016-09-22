@@ -317,6 +317,8 @@ class ExecutionResultWrapperFor2_3(val inner: InternalExecutionResult, val plann
   private implicit class ConvertibleCompilerInputPosition(pos: InternalInputPosition) {
     def asInputPosition = new InputPosition(pos.offset, pos.line, pos.column)
   }
+
+  override def terminate(): Unit = throw new InternalException("Cypher 2.3 does not support query termination")
 }
 
 case class CompatibilityPlanDescriptionFor2_3(inner: InternalPlanDescription, version: CypherVersion,

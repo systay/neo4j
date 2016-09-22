@@ -64,6 +64,8 @@ case class ExplainExecutionResult(columns: List[String],
   override def accept[EX <: Exception](visitor: InternalResultVisitor[EX]) = {}
 
   override def executionMode: ExecutionMode = ExplainMode
+
+  override def terminate(): Unit = {}
 }
 
 final class EmptyResourceIterator[T]() extends ResourceIterator[T] {

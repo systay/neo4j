@@ -200,6 +200,8 @@ class DelegatingQueryContext(val inner: QueryContext) extends QueryContext {
     inner.isGraphKernelResultValue(v)
 
   override def detachDeleteNode(node: Node): Int = manyDbHits(inner.detachDeleteNode(node))
+
+  override def terminate(): Unit = inner.terminate()
 }
 
 class DelegatingOperations[T <: PropertyContainer](protected val inner: Operations[T]) extends Operations[T] {
@@ -250,4 +252,6 @@ class DelegatingQueryTransactionalContext(val inner: QueryTransactionalContext) 
   override def isTopLevelTx: Boolean = inner.isTopLevelTx
 
   override def close(success: Boolean) { inner.close(success) }
+
+  override def terminate(): Unit = inner.terminate()
 }

@@ -133,4 +133,10 @@ public class FakeTransactionalContext implements TransactionalContext
     {
         throw new UnsupportedOperationException( "fake test class" );
     }
+
+    @Override
+    public void terminate()
+    {
+        throw new UnsupportedOperationException( "fake test class" );
+    }
 }

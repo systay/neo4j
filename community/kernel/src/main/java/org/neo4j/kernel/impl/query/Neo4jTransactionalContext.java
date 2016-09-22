@@ -251,6 +251,12 @@ public class Neo4jTransactionalContext implements TransactionalContext
     }
 
     @Override
+    public void terminate()
+    {
+        transaction.terminate();
+    }
+
+    @Override
     public AccessMode accessMode()
     {
         return mode;

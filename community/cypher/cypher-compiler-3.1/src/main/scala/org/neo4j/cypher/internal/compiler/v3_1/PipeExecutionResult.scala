@@ -111,4 +111,6 @@ class PipeExecutionResult(val result: ResultIterator,
       self.close()
     }
   }
+
+  override def terminate(): Unit = state.query.terminate()
 }

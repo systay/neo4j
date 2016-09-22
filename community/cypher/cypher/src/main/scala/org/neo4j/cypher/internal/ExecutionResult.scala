@@ -39,4 +39,5 @@ trait ExecutionResult extends Iterator[Map[String, Any]] {
   def executionType: QueryExecutionType
   def notifications: Iterable[Notification]
   def accept[EX <: Exception](visitor: ResultVisitor[EX])
+  def terminate()
 }

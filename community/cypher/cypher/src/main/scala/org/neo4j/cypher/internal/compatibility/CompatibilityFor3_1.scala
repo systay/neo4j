@@ -416,6 +416,8 @@ class ExecutionResultWrapperFor3_1(val inner: InternalExecutionResult, val plann
   private implicit class ConvertibleCompilerInputPosition(pos: frontend.v3_1.InputPosition) {
     def asInputPosition = new graphdb.InputPosition(pos.offset, pos.line, pos.column)
   }
+
+  override def terminate(): Unit = inner.terminate()
 }
 
 case class CompatibilityPlanDescriptionFor3_1(inner: InternalPlanDescription, version: CypherVersion,

@@ -183,4 +183,6 @@ class ClosingExecutionResult(val query: ExecutingQuery, val inner: ExecutionResu
   private def endQueryExecution() = {
     monitor.endSuccess(query) // this method is expected to be idempotent
   }
+
+  override def terminate(): Unit = inner.terminate()
 }

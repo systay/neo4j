@@ -62,4 +62,6 @@ class CompiledExecutionResult(taskCloser: TaskCloser,
 
   //TODO delegate to compiled code once writes are being implemented
   override def executionType = READ_ONLY
+
+  override def terminate(): Unit = context.terminate()
 }

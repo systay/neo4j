@@ -370,6 +370,7 @@ case class ExecutionResultWrapperFor3_0(val inner: InternalExecutionResult, val 
     def asInputPosition = new InputPosition(pos.offset, pos.line, pos.column)
   }
 
+  override def terminate(): Unit = throw new InternalException("Cypher 2.3 does not support query termination")
 }
 
 case class CompatibilityPlanDescriptionFor3_0(inner: InternalPlanDescription, version: CypherVersion,

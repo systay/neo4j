@@ -191,6 +191,8 @@ object RewindableExecutionResult {
     override def next(): Map[String, Any] = inner.next()
 
     override def hasNext: Boolean = inner.hasNext
+
+    override def terminate(): Unit = throw new InternalException("Cypher 2.3 does not support query termination")
   }
 
 }

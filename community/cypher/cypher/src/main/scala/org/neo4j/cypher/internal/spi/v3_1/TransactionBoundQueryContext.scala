@@ -695,6 +695,8 @@ final class TransactionBoundQueryContext(val transactionalContext: Transactional
       case _: exceptions.EntityNotFoundException => 0 // node has been deleted by another transaction, oh well...
     }
   }
+
+  override def terminate(): Unit = transactionalContext.terminate()
 }
 
 object TransactionBoundQueryContext {

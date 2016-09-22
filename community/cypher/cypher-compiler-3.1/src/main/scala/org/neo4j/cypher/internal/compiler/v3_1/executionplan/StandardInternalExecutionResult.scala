@@ -187,6 +187,8 @@ abstract class StandardInternalExecutionResult(context: QueryContext,
         self.close()
       }
   }
+
+  override def terminate(): Unit = context.terminate()
 }
 
 object StandardInternalExecutionResult {

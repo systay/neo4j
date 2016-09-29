@@ -17,24 +17,13 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.internal.compiler.v3_1.helpers
+package org.neo4j.cypher.internal.ir.v3_1.helpers
 
 import java.lang.{Iterable => JavaIterable}
 import java.util.{Map => JavaMap}
 
 import scala.collection.JavaConverters._
 import scala.collection.{Map, Seq}
-
-object IsList extends ListSupport {
-  def unapply(x: Any):Option[Iterable[Any]] = {
-    val collection = isList(x)
-    if (collection) {
-      Some(makeTraversable(x))
-    } else {
-      None
-    }
-  }
-}
 
 trait ListSupport {
 
@@ -110,5 +99,16 @@ trait ListSupport {
     }
 
     def asNonEmptyOption = if (inner.isEmpty) None else Some(inner)
+  }
+}
+
+object IsList extends ListSupport {
+  def unapply(x: Any):Option[Iterable[Any]] = {
+    val collection = isList(x)
+    if (collection) {
+      Some(makeTraversable(x))
+    } else {
+      None
+    }
   }
 }

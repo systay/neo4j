@@ -20,18 +20,17 @@
 package org.neo4j.cypher.internal.compiler.v3_1.mutation
 
 import org.neo4j.cypher.internal.compiler.v3_1._
-import commands.expressions._
-import commands.values.KeyToken
+import org.neo4j.cypher.internal.compiler.v3_1.commands.expressions._
+import org.neo4j.cypher.internal.compiler.v3_1.commands.values.KeyToken
+import org.neo4j.cypher.internal.compiler.v3_1.helpers._
+import org.neo4j.cypher.internal.compiler.v3_1.pipes.QueryState
+import org.neo4j.cypher.internal.compiler.v3_1.spi.Operations
 import org.neo4j.cypher.internal.compiler.v3_1.symbols.TypeSafe
 import org.neo4j.cypher.internal.frontend.v3_1.helpers.Eagerly
-import pipes.QueryState
-import org.neo4j.cypher.internal.frontend.v3_1.symbols._
-import org.neo4j.cypher.internal.compiler.v3_1.spi.Operations
+import org.neo4j.cypher.internal.ir.v3_1.helpers.{IsList, ListSupport, UnNamedNameGenerator}
 import org.neo4j.graphdb.{Node, PropertyContainer, Relationship}
 
-import collection.Map
-import org.neo4j.cypher.internal.compiler.v3_1.helpers._
-import org.neo4j.cypher.internal.ir.v3_1.helpers.UnNamedNameGenerator
+import scala.collection.Map
 
 object NamedExpectation {
   def apply(name: String): NamedExpectation = NamedExpectation(name, Map.empty)

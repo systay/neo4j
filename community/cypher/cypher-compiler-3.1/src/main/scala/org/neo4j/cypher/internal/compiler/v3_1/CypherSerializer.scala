@@ -20,9 +20,10 @@
 package org.neo4j.cypher.internal.compiler.v3_1
 
 import org.neo4j.cypher.internal.compiler.v3_1.commands.values.KeyToken
-import org.neo4j.cypher.internal.compiler.v3_1.helpers.{IsList, IsMap}
+import org.neo4j.cypher.internal.compiler.v3_1.helpers.IsMap
 import org.neo4j.cypher.internal.compiler.v3_1.pipes.QueryState
 import org.neo4j.cypher.internal.compiler.v3_1.spi.QueryContext
+import org.neo4j.cypher.internal.ir.v3_1.helpers.IsList
 import org.neo4j.graphdb.{Node, PropertyContainer, Relationship}
 
 import scala.collection.Map

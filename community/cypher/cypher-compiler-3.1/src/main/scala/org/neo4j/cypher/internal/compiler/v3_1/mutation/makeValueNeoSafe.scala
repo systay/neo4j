@@ -19,7 +19,8 @@
  */
 package org.neo4j.cypher.internal.compiler.v3_1.mutation
 
-import org.neo4j.cypher.internal.compiler.v3_1.helpers.{CastSupport, ListSupport}
+import org.neo4j.cypher.internal.compiler.v3_1.helpers.CastSupport
+import org.neo4j.cypher.internal.ir.v3_1.helpers.ListSupport
 
 object makeValueNeoSafe extends (Any => Any) with ListSupport {
 

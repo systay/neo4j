@@ -21,10 +21,10 @@ package org.neo4j.cypher.internal.compiler.v3_1.commands.expressions
 
 import org.neo4j.cypher.internal.compiler.v3_1._
 import org.neo4j.cypher.internal.compiler.v3_1.commands.predicates.Predicate
-import org.neo4j.cypher.internal.compiler.v3_1.helpers.ListSupport
 import org.neo4j.cypher.internal.compiler.v3_1.pipes.QueryState
 import org.neo4j.cypher.internal.compiler.v3_1.symbols.SymbolTable
 import org.neo4j.cypher.internal.frontend.v3_1.symbols._
+import org.neo4j.cypher.internal.ir.v3_1.helpers.ListSupport
 
 case class FilterFunction(collection: Expression, id: String, predicate: Predicate)
   extends NullInNullOutExpression(collection)

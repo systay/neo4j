@@ -22,11 +22,12 @@ package org.neo4j.cypher.internal.compiler.v3_1.pipes
 import org.neo4j.cypher.internal.compiler.v3_1.ExecutionContext
 import org.neo4j.cypher.internal.compiler.v3_1.commands.expressions.Expression
 import org.neo4j.cypher.internal.compiler.v3_1.executionplan.{CreatesRelationship, Effects}
-import org.neo4j.cypher.internal.compiler.v3_1.helpers.{IsMap, ListSupport}
+import org.neo4j.cypher.internal.compiler.v3_1.helpers.IsMap
 import org.neo4j.cypher.internal.compiler.v3_1.mutation.{GraphElementPropertyFunctions, makeValueNeoSafe}
 import org.neo4j.cypher.internal.compiler.v3_1.spi.QueryContext
 import org.neo4j.cypher.internal.frontend.v3_1.symbols._
 import org.neo4j.cypher.internal.frontend.v3_1.{CypherTypeException, InternalException, InvalidSemanticsException}
+import org.neo4j.cypher.internal.ir.v3_1.helpers.ListSupport
 import org.neo4j.graphdb.{Node, Relationship}
 
 import scala.collection.Map

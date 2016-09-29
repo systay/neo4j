@@ -20,11 +20,12 @@
 package org.neo4j.cypher.internal.compiler.v3_1.commands.expressions
 
 import org.neo4j.cypher.internal.compiler.v3_1._
-import org.neo4j.cypher.internal.compiler.v3_1.helpers.{IsList, TypeSafeMathSupport}
+import org.neo4j.cypher.internal.compiler.v3_1.helpers.TypeSafeMathSupport
 import org.neo4j.cypher.internal.compiler.v3_1.pipes.QueryState
 import org.neo4j.cypher.internal.compiler.v3_1.symbols.SymbolTable
 import org.neo4j.cypher.internal.frontend.v3_1.CypherTypeException
 import org.neo4j.cypher.internal.frontend.v3_1.symbols._
+import org.neo4j.cypher.internal.ir.v3_1.helpers.IsList
 
 case class Add(a: Expression, b: Expression) extends Expression with TypeSafeMathSupport {
   def apply(ctx: ExecutionContext)(implicit state: QueryState) = {

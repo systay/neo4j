@@ -23,9 +23,9 @@ import java.util.{Map => JavaMap}
 
 import org.neo4j.cypher.internal.compiler.v3_1._
 import org.neo4j.cypher.internal.compiler.v3_1.commands.expressions.Expression
-import org.neo4j.cypher.internal.compiler.v3_1.helpers.ListSupport
 import org.neo4j.cypher.internal.compiler.v3_1.pipes.QueryState
 import org.neo4j.cypher.internal.frontend.v3_1.{CypherTypeException, InvalidArgumentException}
+import org.neo4j.cypher.internal.ir.v3_1.helpers.ListSupport
 import org.neo4j.graphdb.{Node, PropertyContainer, Relationship}
 
 import scala.collection.JavaConverters._

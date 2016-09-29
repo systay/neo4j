@@ -22,9 +22,9 @@ package org.neo4j.cypher.internal.compiler.v3_1.pipes
 import org.neo4j.cypher.internal.compiler.v3_1.ExecutionContext
 import org.neo4j.cypher.internal.compiler.v3_1.commands.expressions.Expression
 import org.neo4j.cypher.internal.compiler.v3_1.executionplan.Effects
-import org.neo4j.cypher.internal.compiler.v3_1.helpers.ListSupport
 import org.neo4j.cypher.internal.compiler.v3_1.mutation.GraphElementPropertyFunctions
 import org.neo4j.cypher.internal.frontend.v3_1.CypherTypeException
+import org.neo4j.cypher.internal.ir.v3_1.helpers.ListSupport
 import org.neo4j.graphdb.{Node, Path, Relationship}
 
 import scala.collection.JavaConverters._

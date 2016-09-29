@@ -22,10 +22,10 @@ package org.neo4j.cypher.internal.compiler.v3_1.pipes
 import org.neo4j.cypher.internal.compiler.v3_1.ExecutionContext
 import org.neo4j.cypher.internal.compiler.v3_1.commands.expressions.Expression
 import org.neo4j.cypher.internal.compiler.v3_1.executionplan.{Effects, ReadsAllNodes}
-import org.neo4j.cypher.internal.compiler.v3_1.helpers.{IsList, ListSupport}
 import org.neo4j.cypher.internal.compiler.v3_1.planDescription.{NoChildren, PlanDescriptionImpl}
 import org.neo4j.cypher.internal.compiler.v3_1.symbols.SymbolTable
 import org.neo4j.cypher.internal.frontend.v3_1.symbols.CTNode
+import org.neo4j.cypher.internal.ir.v3_1.helpers.{IsList, ListSupport}
 
 sealed trait SeekArgs {
   def expressions(ctx: ExecutionContext, state: QueryState): Iterable[Any]

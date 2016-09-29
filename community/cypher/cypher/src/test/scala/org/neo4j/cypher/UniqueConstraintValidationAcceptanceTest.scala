@@ -19,9 +19,9 @@
  */
 package org.neo4j.cypher
 
-import org.junit.Assert._
 import org.hamcrest.CoreMatchers._
-import org.neo4j.cypher.internal.compiler.v3_1.helpers.ListSupport
+import org.junit.Assert._
+import org.neo4j.cypher.internal.ir.v3_1.helpers.ListSupport
 
 class UniqueConstraintValidationAcceptanceTest
   extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with ListSupport {

@@ -21,8 +21,9 @@ package org.neo4j.cypher.internal.compiler.v3_1.pipes
 
 import org.neo4j.cypher.internal.compiler.v3_1.ExecutionContext
 import org.neo4j.cypher.internal.compiler.v3_1.executionplan.{Effects, SetLabel}
-import org.neo4j.cypher.internal.compiler.v3_1.helpers.{CastSupport, ListSupport}
+import org.neo4j.cypher.internal.compiler.v3_1.helpers.CastSupport
 import org.neo4j.cypher.internal.compiler.v3_1.mutation.GraphElementPropertyFunctions
+import org.neo4j.cypher.internal.ir.v3_1.helpers.ListSupport
 import org.neo4j.graphdb.Node
 
 case class RemoveLabelsPipe(src: Pipe, variable: String, labels: Seq[LazyLabel])

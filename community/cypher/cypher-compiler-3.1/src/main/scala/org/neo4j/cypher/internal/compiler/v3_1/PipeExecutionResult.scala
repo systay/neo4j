@@ -23,12 +23,13 @@ import java.io.PrintWriter
 import java.util
 
 import org.neo4j.cypher.internal.compiler.v3_1.executionplan.{InternalExecutionResult, InternalQueryType}
-import org.neo4j.cypher.internal.compiler.v3_1.helpers.{ListSupport, RuntimeJavaValueConverter}
+import org.neo4j.cypher.internal.compiler.v3_1.helpers.RuntimeJavaValueConverter
 import org.neo4j.cypher.internal.compiler.v3_1.pipes.QueryState
 import org.neo4j.cypher.internal.compiler.v3_1.planDescription.InternalPlanDescription
 import org.neo4j.cypher.internal.compiler.v3_1.spi.{InternalResultVisitor, QueryContext}
 import org.neo4j.cypher.internal.frontend.v3_1.helpers.Eagerly
 import org.neo4j.cypher.internal.frontend.v3_1.notification.InternalNotification
+import org.neo4j.cypher.internal.ir.v3_1.helpers.ListSupport
 import org.neo4j.graphdb.{NotFoundException, ResourceIterator}
 
 import scala.collection.JavaConverters._

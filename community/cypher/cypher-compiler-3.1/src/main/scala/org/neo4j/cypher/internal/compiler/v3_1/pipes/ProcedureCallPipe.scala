@@ -22,10 +22,11 @@ package org.neo4j.cypher.internal.compiler.v3_1.pipes
 import org.neo4j.cypher.internal.compiler.v3_1.ExecutionContext
 import org.neo4j.cypher.internal.compiler.v3_1.commands.expressions.Expression
 import org.neo4j.cypher.internal.compiler.v3_1.executionplan.{AllEffects, ProcedureCallMode}
-import org.neo4j.cypher.internal.compiler.v3_1.helpers.{ListSupport, RuntimeJavaValueConverter, RuntimeScalaValueConverter}
+import org.neo4j.cypher.internal.compiler.v3_1.helpers.{RuntimeJavaValueConverter, RuntimeScalaValueConverter}
 import org.neo4j.cypher.internal.compiler.v3_1.planDescription.InternalPlanDescription.Arguments.Signature
 import org.neo4j.cypher.internal.compiler.v3_1.planDescription.{InternalPlanDescription, PlanDescriptionImpl, SingleChild}
 import org.neo4j.cypher.internal.frontend.v3_1.symbols.CypherType
+import org.neo4j.cypher.internal.ir.v3_1.helpers.ListSupport
 import org.neo4j.cypher.internal.ir.v3_1.{ProcedureSignature, QualifiedName}
 
 object ProcedureCallRowProcessing {

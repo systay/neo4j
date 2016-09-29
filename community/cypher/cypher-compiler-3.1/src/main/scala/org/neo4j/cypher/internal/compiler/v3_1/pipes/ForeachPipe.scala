@@ -22,9 +22,9 @@ package org.neo4j.cypher.internal.compiler.v3_1.pipes
 import org.neo4j.cypher.internal.compiler.v3_1.ExecutionContext
 import org.neo4j.cypher.internal.compiler.v3_1.commands.expressions.Expression
 import org.neo4j.cypher.internal.compiler.v3_1.executionplan.Effects
-import org.neo4j.cypher.internal.compiler.v3_1.helpers.ListSupport
 import org.neo4j.cypher.internal.compiler.v3_1.planDescription.{PlanDescriptionImpl, TwoChildren}
 import org.neo4j.cypher.internal.compiler.v3_1.symbols.SymbolTable
+import org.neo4j.cypher.internal.ir.v3_1.helpers.ListSupport
 
 case class ForeachPipe(source: Pipe, inner: Pipe, variable: String, expression: Expression)(val estimatedCardinality: Option[Double] = None)(implicit pipeMonitor: PipeMonitor)
   extends PipeWithSource(source, pipeMonitor) with RonjaPipe with ListSupport {

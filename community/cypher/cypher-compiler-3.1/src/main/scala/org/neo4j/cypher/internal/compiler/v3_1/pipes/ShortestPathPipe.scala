@@ -24,9 +24,10 @@ import org.neo4j.cypher.internal.compiler.v3_1.commands._
 import org.neo4j.cypher.internal.compiler.v3_1.commands.expressions.ShortestPathExpression
 import org.neo4j.cypher.internal.compiler.v3_1.commands.predicates.Predicate
 import org.neo4j.cypher.internal.compiler.v3_1.executionplan.{Effects, ReadsAllNodes, ReadsAllRelationships}
-import org.neo4j.cypher.internal.compiler.v3_1.helpers.{CastSupport, ListSupport}
+import org.neo4j.cypher.internal.compiler.v3_1.helpers.CastSupport
 import org.neo4j.cypher.internal.compiler.v3_1.planDescription.InternalPlanDescription.Arguments.LegacyExpression
 import org.neo4j.cypher.internal.frontend.v3_1.symbols._
+import org.neo4j.cypher.internal.ir.v3_1.helpers.ListSupport
 import org.neo4j.graphdb.Path
 
 import scala.collection.JavaConverters._

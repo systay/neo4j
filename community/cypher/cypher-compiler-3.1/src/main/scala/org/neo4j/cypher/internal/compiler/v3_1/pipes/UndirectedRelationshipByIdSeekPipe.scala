@@ -21,10 +21,10 @@ package org.neo4j.cypher.internal.compiler.v3_1.pipes
 
 import org.neo4j.cypher.internal.compiler.v3_1.ExecutionContext
 import org.neo4j.cypher.internal.compiler.v3_1.executionplan.{Effects, ReadsAllNodes, ReadsAllRelationships}
-import org.neo4j.cypher.internal.compiler.v3_1.helpers.ListSupport
 import org.neo4j.cypher.internal.compiler.v3_1.planDescription.{NoChildren, PlanDescriptionImpl}
 import org.neo4j.cypher.internal.compiler.v3_1.symbols.SymbolTable
 import org.neo4j.cypher.internal.frontend.v3_1.symbols._
+import org.neo4j.cypher.internal.ir.v3_1.helpers.ListSupport
 
 case class UndirectedRelationshipByIdSeekPipe(ident: String, relIdExpr: SeekArgs, toNode: String, fromNode: String)
                                              (val estimatedCardinality: Option[Double] = None)(implicit pipeMonitor: PipeMonitor)

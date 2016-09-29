@@ -20,6 +20,7 @@
 package org.neo4j.cypher.internal.compiler.v3_1.executionplan
 
 import org.neo4j.cypher.internal.compiler.v3_1._
+import org.neo4j.cypher.internal.compiler.v3_1.ast.convert.commands.StatementConverters._
 import org.neo4j.cypher.internal.compiler.v3_1.ast.rewriters.reattachAliasedExpressions
 import org.neo4j.cypher.internal.compiler.v3_1.commands._
 import org.neo4j.cypher.internal.compiler.v3_1.commands.predicates.groupInequalityPredicatesForLegacy
@@ -59,7 +60,7 @@ class LegacyExecutablePlanBuilder(monitors: Monitors, config: CypherCompilerConf
     val rewriter = rewriterStepSequencer.apply(reattachAliasedExpressions).rewriter
     val rewrite = in.rewrite(rewriter)
 
-    val res = rewrite.abstractQuery(planContext.notificationLogger()) match {
+    val res = rewrite.statement.asQuery(planContext.notificationLogger()) match {
       case PeriodicCommitQuery(q: Query, batchSize) =>
         buildQuery(q, planContext).
           copy(periodicCommit = Some(PeriodicCommitInfo(batchSize)))

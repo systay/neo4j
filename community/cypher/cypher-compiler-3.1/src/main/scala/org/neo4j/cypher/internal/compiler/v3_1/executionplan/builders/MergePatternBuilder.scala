@@ -22,13 +22,13 @@ package org.neo4j.cypher.internal.compiler.v3_1.executionplan.builders
 import org.neo4j.cypher.internal.compiler.v3_1.commands.expressions.Variable
 import org.neo4j.cypher.internal.compiler.v3_1.commands.{AllVariables, Pattern, Query}
 import org.neo4j.cypher.internal.compiler.v3_1.executionplan.{ExecutionPlanInProgress, PartiallySolvedQuery, Phase, PlanBuilder}
-import org.neo4j.cypher.internal.compiler.v3_1.helpers.ListSupport
 import org.neo4j.cypher.internal.compiler.v3_1.mutation._
 import org.neo4j.cypher.internal.compiler.v3_1.pipes._
 import org.neo4j.cypher.internal.compiler.v3_1.planDescription.InternalPlanDescription
 import org.neo4j.cypher.internal.compiler.v3_1.spi.PlanContext
 import org.neo4j.cypher.internal.compiler.v3_1.symbols.SymbolTable
 import org.neo4j.cypher.internal.frontend.v3_1.symbols._
+import org.neo4j.cypher.internal.ir.v3_1.helpers.ListSupport
 
 /*
 This class solves MERGE for patterns. It does this by creating an execution plan that uses normal pattern matching

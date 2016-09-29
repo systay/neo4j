@@ -19,11 +19,12 @@
  */
 package org.neo4j.cypher.internal.compiler.v3_1.commands
 
-import org.neo4j.cypher.internal.compiler.v3_1.helpers.{IsList, IsMap}
+import org.neo4j.cypher.internal.compiler.v3_1.helpers.IsMap
 import org.neo4j.cypher.internal.compiler.v3_1.spi.QueryContext
 import org.neo4j.cypher.internal.compiler.v3_1.{Geometry, Point}
 import org.neo4j.cypher.internal.frontend.v3_1.CypherTypeException
 import org.neo4j.cypher.internal.frontend.v3_1.symbols._
+import org.neo4j.cypher.internal.ir.v3_1.helpers.IsList
 import org.neo4j.graphdb.{Node, Path, Relationship}
 
 object coerce {

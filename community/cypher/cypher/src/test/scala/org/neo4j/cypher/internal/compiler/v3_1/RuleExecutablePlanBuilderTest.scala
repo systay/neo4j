@@ -83,8 +83,6 @@ class RuleExecutablePlanBuilderTest
   class FakePreparedSemanticQuery(q: AbstractQuery)
     extends PreparedQuerySemantics(mock[Statement], "q", None, Map.empty, mock[SemanticTable], mock[Scope])() {
 
-    override def abstractQuery(notificationLogger: InternalNotificationLogger): AbstractQuery = q
-
     override def isPeriodicCommit: Boolean = q.isInstanceOf[PeriodicCommitQuery]
 
     override def rewrite(rewriter: Rewriter): PreparedQuerySemantics = this

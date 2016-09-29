@@ -21,8 +21,8 @@ package org.neo4j.cypher.internal.compiler.v3_1.commands.predicates
 
 import org.neo4j.cypher.internal.compiler.v3_1.ExecutionContext
 import org.neo4j.cypher.internal.compiler.v3_1.commands.expressions.Expression
-import org.neo4j.cypher.internal.compiler.v3_1.helpers.ListSupport
 import org.neo4j.cypher.internal.compiler.v3_1.pipes.QueryState
+import org.neo4j.cypher.internal.ir.v3_1.helpers.ListSupport
 
 import scala.collection.mutable.ArrayBuffer
 

@@ -20,10 +20,11 @@
 package org.neo4j.cypher.internal.compiler.v3_1.commands.expressions
 
 import org.neo4j.cypher.internal.compiler.v3_1._
-import org.neo4j.cypher.internal.compiler.v3_1.helpers.{CastSupport, ListSupport}
+import org.neo4j.cypher.internal.compiler.v3_1.helpers.CastSupport
 import org.neo4j.cypher.internal.compiler.v3_1.pipes.QueryState
 import org.neo4j.cypher.internal.compiler.v3_1.symbols.SymbolTable
 import org.neo4j.cypher.internal.frontend.v3_1.symbols._
+import org.neo4j.cypher.internal.ir.v3_1.helpers.ListSupport
 
 case class ListSlice(collection: Expression, from: Option[Expression], to: Option[Expression])
   extends NullInNullOutExpression(collection) with ListSupport {

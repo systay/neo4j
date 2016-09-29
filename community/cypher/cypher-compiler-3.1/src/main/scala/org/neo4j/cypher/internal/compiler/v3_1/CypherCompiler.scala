@@ -37,7 +37,7 @@ import org.neo4j.cypher.internal.frontend.v3_1.ast.{FunctionInvocation, Function
 import org.neo4j.cypher.internal.frontend.v3_1.notification.{DeprecatedFunctionNotification, DeprecatedProcedureNotification, InternalNotification}
 import org.neo4j.cypher.internal.frontend.v3_1.parser.CypherParser
 import org.neo4j.cypher.internal.frontend.v3_1.{InputPosition, SemanticTable, inSequence}
-import org.neo4j.cypher.internal.ir.v3_1.{ProcedureSignature, ResolvedCall}
+import org.neo4j.cypher.internal.ir.v3_1.{PreparedQuerySemantics, PreparedQuerySyntax, ProcedureSignature, ResolvedCall}
 import org.neo4j.kernel.GraphDatabaseQueryService
 
 trait AstRewritingMonitor {

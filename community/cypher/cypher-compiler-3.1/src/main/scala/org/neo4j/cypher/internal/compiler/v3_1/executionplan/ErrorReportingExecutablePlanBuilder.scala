@@ -19,10 +19,11 @@
  */
 package org.neo4j.cypher.internal.compiler.v3_1.executionplan
 
+import org.neo4j.cypher.internal.compiler.v3_1.CompilationPhaseTracer
 import org.neo4j.cypher.internal.compiler.v3_1.planner.CantHandleQueryException
 import org.neo4j.cypher.internal.compiler.v3_1.spi.PlanContext
-import org.neo4j.cypher.internal.compiler.v3_1.{PreparedQuerySemantics, CompilationPhaseTracer, PreparedQuerySyntax}
 import org.neo4j.cypher.internal.frontend.v3_1.InvalidArgumentException
+import org.neo4j.cypher.internal.ir.v3_1.PreparedQuerySemantics
 
 case class ErrorReportingExecutablePlanBuilder(inner: ExecutablePlanBuilder) extends ExecutablePlanBuilder {
   override def producePlan(inputQuery: PreparedQuerySemantics, planContext: PlanContext, tracer: CompilationPhaseTracer, createFingerprintReference: (Option[PlanFingerprint]) => PlanFingerprintReference) =

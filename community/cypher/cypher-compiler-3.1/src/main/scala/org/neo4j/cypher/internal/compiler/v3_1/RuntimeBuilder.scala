@@ -36,8 +36,8 @@ import org.neo4j.cypher.internal.compiler.v3_1.planner.execution.{PipeExecutionB
 import org.neo4j.cypher.internal.compiler.v3_1.spi.{GraphStatistics, PlanContext, QueryContext}
 import org.neo4j.cypher.internal.frontend.v3_1.notification.{InternalNotification, RuntimeUnsupportedNotification}
 import org.neo4j.cypher.internal.frontend.v3_1.{InternalException, InvalidArgumentException, SemanticTable}
-import org.neo4j.cypher.internal.ir.v3_1.PeriodicCommit
 import org.neo4j.cypher.internal.ir.v3_1.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.ir.v3_1.{PeriodicCommit, PreparedQuerySemantics}
 
 object RuntimeBuilder {
   def create(runtimeName: Option[RuntimeName], interpretedProducer: InterpretedPlanBuilder,

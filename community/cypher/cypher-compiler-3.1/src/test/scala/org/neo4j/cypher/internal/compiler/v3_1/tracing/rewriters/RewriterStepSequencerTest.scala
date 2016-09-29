@@ -21,6 +21,7 @@ package org.neo4j.cypher.internal.compiler.v3_1.tracing.rewriters
 
 import org.neo4j.cypher.internal.frontend.v3_1.Rewriter
 import org.neo4j.cypher.internal.frontend.v3_1.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.ir.v3_1.RewriterCondition
 
 class RewriterStepSequencerTest extends CypherFunSuite {
 

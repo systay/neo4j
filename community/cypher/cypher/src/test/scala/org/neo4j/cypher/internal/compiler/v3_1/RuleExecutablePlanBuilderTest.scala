@@ -45,6 +45,7 @@ import org.neo4j.cypher.internal.compiler.v3_1.tracing.rewriters.RewriterStepSeq
 import org.neo4j.cypher.internal.frontend.v3_1.ast.Statement
 import org.neo4j.cypher.internal.frontend.v3_1.test_helpers.CypherFunSuite
 import org.neo4j.cypher.internal.frontend.v3_1.{InternalException, Rewriter, Scope, SemanticTable}
+import org.neo4j.cypher.internal.ir.v3_1.PreparedQuerySemantics
 import org.neo4j.cypher.internal.spi.TransactionalContextWrapperv3_1
 import org.neo4j.cypher.internal.spi.v3_1.TransactionBoundQueryContext
 import org.neo4j.cypher.internal.spi.v3_1.codegen.GeneratedQueryStructure

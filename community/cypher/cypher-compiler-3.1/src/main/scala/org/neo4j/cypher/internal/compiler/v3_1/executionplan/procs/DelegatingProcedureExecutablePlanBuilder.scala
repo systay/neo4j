@@ -21,10 +21,10 @@ package org.neo4j.cypher.internal.compiler.v3_1.executionplan.procs
 
 import org.neo4j.cypher.internal.compiler.v3_1.executionplan._
 import org.neo4j.cypher.internal.compiler.v3_1.spi.{PlanContext, QueryContext}
-import org.neo4j.cypher.internal.compiler.v3_1.{CompilationPhaseTracer, PreparedQuerySemantics, SyntaxExceptionCreator}
+import org.neo4j.cypher.internal.compiler.v3_1.{CompilationPhaseTracer, SyntaxExceptionCreator}
 import org.neo4j.cypher.internal.frontend.v3_1._
 import org.neo4j.cypher.internal.frontend.v3_1.ast._
-import org.neo4j.cypher.internal.ir.v3_1.ResolvedCall
+import org.neo4j.cypher.internal.ir.v3_1.{PreparedQuerySemantics, ResolvedCall}
 
 /**
   * This planner takes on queries that requires no planning such as procedures and schema commands

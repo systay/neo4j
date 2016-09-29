@@ -35,6 +35,7 @@ import org.neo4j.cypher.internal.compiler.v3_1.tracing.rewriters.RewriterStepSeq
 import org.neo4j.cypher.internal.frontend.v3_1.SyntaxException
 import org.neo4j.cypher.internal.frontend.v3_1.helpers.{NonEmptyList, fixedPoint}
 import org.neo4j.cypher.internal.frontend.v3_1.notification.DeprecatedPlannerNotification
+import org.neo4j.cypher.internal.ir.v3_1.PreparedQuerySemantics
 
 trait ExecutionPlanInProgressRewriter {
   def rewrite(in: ExecutionPlanInProgress)(implicit context: PipeMonitor): ExecutionPlanInProgress

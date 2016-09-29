@@ -21,9 +21,10 @@ package org.neo4j.cypher.internal.compiler.v3_1
 
 import org.neo4j.cypher.internal.compiler.v3_1.ast.conditions._
 import org.neo4j.cypher.internal.compiler.v3_1.ast.rewriters._
-import org.neo4j.cypher.internal.compiler.v3_1.tracing.rewriters.{ApplyRewriter, RewriterCondition, RewriterStepSequencer}
+import org.neo4j.cypher.internal.compiler.v3_1.tracing.rewriters.{ApplyRewriter, RewriterStepSequencer}
 import org.neo4j.cypher.internal.frontend.v3_1.ast._
 import org.neo4j.cypher.internal.frontend.v3_1.{Rewriter, SemanticState}
+import org.neo4j.cypher.internal.ir.v3_1.RewriterCondition
 
 class ASTRewriter(rewriterSequencer: (String) => RewriterStepSequencer, shouldExtractParameters: Boolean = true) {
 

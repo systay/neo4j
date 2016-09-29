@@ -21,8 +21,9 @@ package org.neo4j.cypher.internal.compiler.v3_1.executionplan
 
 import org.neo4j.cypher.internal.compiler.v3_1.planner.CantHandleQueryException
 import org.neo4j.cypher.internal.compiler.v3_1.spi.PlanContext
-import org.neo4j.cypher.internal.compiler.v3_1.{CompilationPhaseTracer, InternalNotificationLogger, PreparedQuery, PreparedQuerySemantics}
+import org.neo4j.cypher.internal.compiler.v3_1.{CompilationPhaseTracer, InternalNotificationLogger}
 import org.neo4j.cypher.internal.frontend.v3_1.notification.PlannerUnsupportedNotification
+import org.neo4j.cypher.internal.ir.v3_1.{PreparedQuery, PreparedQuerySemantics}
 
 trait FallbackBuilder extends ExecutablePlanBuilder {
 

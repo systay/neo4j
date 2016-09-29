@@ -17,11 +17,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.internal.compiler.v3_1
+package org.neo4j.cypher.internal.ir.v3_1
 
-import org.neo4j.cypher.internal.compiler.v3_1.tracing.rewriters.RewriterCondition
 import org.neo4j.cypher.internal.frontend.v3_1.ast.{Query, Statement}
-import org.neo4j.cypher.internal.frontend.v3_1.{InputPosition, Rewriter, Scope, SemanticTable}
+import org.neo4j.cypher.internal.frontend.v3_1.{InputPosition, Scope, SemanticTable, _}
 
 // A Cypher query goes through various stages of pre-processing before planning
 //

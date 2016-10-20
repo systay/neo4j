@@ -23,10 +23,6 @@ import org.neo4j.cypher.internal.compiler.v3_1.planner.{CardinalityEstimation, P
 import org.neo4j.cypher.internal.frontend.v3_1.SemanticDirection
 import org.neo4j.cypher.internal.frontend.v3_1.ast.{Expression, RelTypeName, Variable}
 
-sealed trait ExpansionMode
-case object ExpandAll extends ExpansionMode
-case object ExpandInto extends ExpansionMode
-
 case class Expand(left: LogicalPlan,
                   from: IdName,
                   dir: SemanticDirection,
@@ -34,23 +30,18 @@ case class Expand(left: LogicalPlan,
                   to: IdName, relName: IdName,
                   mode: ExpansionMode = ExpandAll)(val solved: PlannerQuery with CardinalityEstimation)
   extends LogicalPlan with LazyLogicalPlan {
-
-  val lhs = Some(left)
-  def rhs = None
-
-  def availableSymbols: Set[IdName] = left.availableSymbols + relName + to
+  override val lhs = Some(left)
+  override def rhs = None
+  override def availableSymbols: Set[IdName] = left.availableSymbols + relName + to
 }
 
 case class OptionalExpand(left: LogicalPlan, from: IdName, dir: SemanticDirection, types: Seq[RelTypeName], to: IdName, relName: IdName, mode: ExpansionMode = ExpandAll, predicates: Seq[Expression] = Seq.empty)
                          (val solved: PlannerQuery with CardinalityEstimation) extends LogicalPlan with LazyLogicalPlan {
-  val lhs = Some(left)
-  def rhs = None
-
-  def availableSymbols: Set[IdName] = left.availableSymbols + relName + to
+  override val lhs = Some(left)
+  override def rhs = None
+  override def availableSymbols = left.availableSymbols + relName + to
 }
 
-// TODO: Support proper var length handling in Ronja again
-// TODO: Fix cost and cardinality calculation for this
 case class VarExpand(left: LogicalPlan,
                      from: IdName,
                      dir: SemanticDirection,
@@ -63,8 +54,12 @@ case class VarExpand(left: LogicalPlan,
                      predicates: Seq[(Variable, Expression)] = Seq.empty)
                     (val solved: PlannerQuery with CardinalityEstimation) extends LogicalPlan with LazyLogicalPlan {
 
-  val lhs = Some(left)
-  def rhs = None
+  override val lhs = Some(left)
+  override def rhs = None
 
-  def availableSymbols: Set[IdName] = left.availableSymbols + relName + to
+  override def availableSymbols = left.availableSymbols + relName + to
 }
+
+sealed trait ExpansionMode
+case object ExpandAll extends ExpansionMode
+case object ExpandInto extends ExpansionMode

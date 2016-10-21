@@ -84,7 +84,7 @@ case class VarLengthStep(id: Int,
       }
     }
 
-    val matchingRelationships = DynamicIterable( state.query.getRelationshipsForIds(node, direction, types.types(state.query)) )
+    val matchingRelationships = DynamicIterable( state.query.getRelationshipsForIds(node.getId, direction, types.types(state.query)) )
 
 
     val result = if (matchingRelationships.isEmpty && min == 0) {

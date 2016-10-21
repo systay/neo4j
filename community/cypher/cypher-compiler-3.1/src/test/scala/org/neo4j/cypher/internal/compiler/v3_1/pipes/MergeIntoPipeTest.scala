@@ -396,7 +396,7 @@ class MergeIntoPipeTest extends CypherFunSuite {
 
   private def setupRelationshipFromNode(startNode: Node, dir: SemanticDirection, rels: Relationship*)(implicit query: QueryContext) {
     val typeId = rels.head.getType.name().hashCode
-    when(query.getRelationshipsForIds(startNode, dir, Some(Seq(typeId)))).thenReturn(rels.toIterator)
+    when(query.getRelationshipsForIds(startNode.getId, dir, Some(Seq(typeId)))).thenReturn(rels.toIterator)
   }
 
   private def markAsNotDense(node: Node)(implicit query: QueryContext) {
@@ -412,7 +412,7 @@ class MergeIntoPipeTest extends CypherFunSuite {
 
   private def setUpNodesWithoutRelationships(nodes: Node*)(implicit query: QueryContext) {
     nodes.foreach { node =>
-      when(query.getRelationshipsForIds(mockEq(node), mockAny(), mockAny())).thenReturn(Iterator.empty)
+      when(query.getRelationshipsForIds(mockEq(node.getId), mockAny(), mockAny())).thenReturn(Iterator.empty)
     }
   }
 

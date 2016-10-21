@@ -180,7 +180,7 @@ class ExceptionTranslatingQueryContextFor3_1(val inner: QueryContext) extends Qu
   override def getOrCreateRelTypeId(relTypeName: String) =
     translateException(inner.getOrCreateRelTypeId(relTypeName))
 
-  override def getRelationshipsForIds(node: Node, dir: SemanticDirection, types: Option[Seq[Int]]) =
+  override def getRelationshipsForIds(node: Long, dir: SemanticDirection, types: Option[Seq[Int]]) =
     translateException(inner.getRelationshipsForIds(node, dir, types))
 
   override def indexSeekByRange(index: IndexDescriptor, value: Any) =

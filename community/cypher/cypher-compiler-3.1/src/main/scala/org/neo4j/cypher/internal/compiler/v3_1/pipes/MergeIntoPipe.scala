@@ -121,7 +121,7 @@ case class MergeIntoPipe(source: Pipe,
                           typeId: Int)(implicit queryState: QueryState, execution: ExecutionContext) = {
     val query = queryState.query
     val (start, localDirection, end) = if (preserveDirection) (fromNode, dir, toNode) else (toNode, dir.reversed, fromNode)
-    val relationships = query.getRelationshipsForIds(start, localDirection, Some(Seq(typeId)))
+    val relationships = query.getRelationshipsForIds(start.getId, localDirection, Some(Seq(typeId)))
 
     new PrefetchingIterator[Relationship] {
 

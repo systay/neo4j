@@ -19,10 +19,10 @@
  */
 package org.neo4j.cypher.internal.compiler.v3_1.pipes.matching
 
-import SingleStep.FilteringIterator
 import org.neo4j.cypher.internal.compiler.v3_1._
-import org.neo4j.cypher.internal.compiler.v3_1.commands.predicates.{True, And, Predicate}
+import org.neo4j.cypher.internal.compiler.v3_1.commands.predicates.{And, Predicate, True}
 import org.neo4j.cypher.internal.compiler.v3_1.helpers.DynamicIterable
+import org.neo4j.cypher.internal.compiler.v3_1.pipes.matching.SingleStep.FilteringIterator
 import org.neo4j.cypher.internal.compiler.v3_1.pipes.{LazyTypes, QueryState}
 import org.neo4j.cypher.internal.frontend.v3_1.SemanticDirection
 import org.neo4j.graphdb.{Node, Relationship}
@@ -43,7 +43,7 @@ case class SingleStep(id: Int,
 
   def expand(node: Node, parameters: ExecutionContext, state: QueryState): (Iterable[Relationship], Option[ExpanderStep]) = {
     val rels = DynamicIterable {
-      val allRelationships = state.query.getRelationshipsForIds(node, direction, types.types(state.query))
+      val allRelationships = state.query.getRelationshipsForIds(node.getId, direction, types.types(state.query))
       if (needToFilter) FilteringIterator( node, combinedPredicate, state, allRelationships ) else allRelationships
     }
     (rels, next)

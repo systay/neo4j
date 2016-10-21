@@ -73,7 +73,7 @@ trait QueryContextAdaptation {
 
   override def indexSeek(index: IndexDescriptor, value: Any): scala.Iterator[Node] = ???
 
-  override def getRelationshipsForIds(node: Node, dir: SemanticDirection, types: Option[Seq[Int]]): scala.Iterator[Relationship] = ???
+  override def getRelationshipsForIds(node: Long, dir: SemanticDirection, types: Option[Seq[Int]]): scala.Iterator[Relationship] = ???
 
   override def relationshipStartNode(rel: Relationship): Node = ???
 

@@ -21,7 +21,7 @@ package org.neo4j.cypher.internal.compiler.v3_1.mutation
 
 import org.neo4j.cypher.internal.compiler.v3_1._
 import org.neo4j.cypher.internal.compiler.v3_1.commands._
-import org.neo4j.cypher.internal.compiler.v3_1.commands.expressions.{Expression, Variable, Literal}
+import org.neo4j.cypher.internal.compiler.v3_1.commands.expressions.{Expression, Literal, Variable}
 import org.neo4j.cypher.internal.compiler.v3_1.commands.predicates.True
 import org.neo4j.cypher.internal.compiler.v3_1.commands.values.KeyToken
 import org.neo4j.cypher.internal.compiler.v3_1.executionplan.{Effects, _}
@@ -29,9 +29,8 @@ import org.neo4j.cypher.internal.compiler.v3_1.helpers.{IsMap, MapSupport, UnNam
 import org.neo4j.cypher.internal.compiler.v3_1.pipes.QueryState
 import org.neo4j.cypher.internal.compiler.v3_1.symbols.SymbolTable
 import org.neo4j.cypher.internal.frontend.v3_1.symbols._
-import org.neo4j.cypher.internal.frontend.v3_1.SemanticDirection
-import org.neo4j.cypher.internal.frontend.v3_1.{CypherTypeException, SyntaxException, UniquePathNotUniqueException}
-import org.neo4j.graphdb.{Node}
+import org.neo4j.cypher.internal.frontend.v3_1.{CypherTypeException, SemanticDirection, SyntaxException, UniquePathNotUniqueException}
+import org.neo4j.graphdb.Node
 
 import scala.collection.Map
 
@@ -63,7 +62,7 @@ case class UniqueLink(start: NamedExpectation, end: NamedExpectation, rel: Named
     // If any matching rels are found, they are returned. Otherwise, a new one is
     // created and returned.
     def twoNodes(startNode: Node, endNode: Node): Option[(UniqueLink, CreateUniqueResult)] = {
-      val rels = state.query.getRelationshipsForIds(startNode, dir, Some(state.query.getOptRelTypeId(relType).toIndexedSeq)).
+      val rels = state.query.getRelationshipsForIds(startNode.getId, dir, Some(state.query.getOptRelTypeId(relType).toIndexedSeq)).
         filter(r => r.getOtherNode(startNode) == endNode && rel.compareWithExpectations(r, context, state) ).
         toList
 
@@ -103,7 +102,7 @@ case class UniqueLink(start: NamedExpectation, end: NamedExpectation, rel: Named
         Seq(nodeCreate, relUpdate)
       }
 
-      val rels = state.query.getRelationshipsForIds(startNode, dir, Some(state.query.getOptRelTypeId(relType).toIndexedSeq)).
+      val rels = state.query.getRelationshipsForIds(startNode.getId, dir, Some(state.query.getOptRelTypeId(relType).toIndexedSeq)).
         filter(r => rel.compareWithExpectations(r, context, state) && other.compareWithExpectations(r.getOtherNode(startNode), context, state)).toList
 
       rels match {

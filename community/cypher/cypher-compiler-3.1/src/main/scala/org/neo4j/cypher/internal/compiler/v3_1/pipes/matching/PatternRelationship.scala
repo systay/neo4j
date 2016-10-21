@@ -47,7 +47,7 @@ class PatternRelationship(key: String,
 
     val result: Iterator[GraphRelationship] =
       state.query.
-        getRelationshipsForIds(realNode, getDirection(node), types.types(state.query)).
+        getRelationshipsForIds(realNode.getId, getDirection(node), types.types(state.query)).
         filter(r => canUseThis(r, state, f)).
         map(new SingleGraphRelationship(_))
 

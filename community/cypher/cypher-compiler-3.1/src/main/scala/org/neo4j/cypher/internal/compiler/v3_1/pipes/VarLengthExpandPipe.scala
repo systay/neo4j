@@ -34,7 +34,6 @@ trait VarLenghtPredicate {
 }
 
 object VarLenghtPredicate {
-
   val NONE = new VarLenghtPredicate {
 
     override def filterNode(row: ExecutionContext, state:QueryState)(node: Node): Boolean = true
@@ -42,6 +41,7 @@ object VarLenghtPredicate {
     override def filterRelationship(row: ExecutionContext, state:QueryState)(rel: Relationship): Boolean = true
   }
 }
+
 case class VarLengthExpandPipe(source: Pipe,
                                fromName: String,
                                relName: String,
@@ -65,7 +65,7 @@ case class VarLengthExpandPipe(source: Pipe,
       def next(): (Node, Seq[Relationship]) = {
         val (node, rels) = stack.pop()
         if (rels.length < maxDepth.getOrElse(Int.MaxValue) && filteringStep.filterNode(row,state)(node)) {
-          val relationships: Iterator[Relationship] = state.query.getRelationshipsForIds(node, dir, types.types(state.query))
+          val relationships: Iterator[Relationship] = state.query.getRelationshipsForIds(node.getId, dir, types.types(state.query))
 
           relationships.filter(filteringStep.filterRelationship(row, state)).foreach { rel =>
             val otherNode = rel.getOtherNode(node)

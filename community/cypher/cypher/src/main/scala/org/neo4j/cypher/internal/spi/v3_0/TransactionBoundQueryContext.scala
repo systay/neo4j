@@ -586,7 +586,7 @@ final class TransactionBoundQueryContext(val transactionalContext: Transactional
   override def allShortestPath(left: Node, right: Node, depth: Int, expander: expressions.Expander,
                                pathPredicate: KernelPredicate[Path],
                                filters: Seq[KernelPredicate[PropertyContainer]]): scala.Iterator[Path] = {
-    val pathFinder = buildPathFinder(depth, expander, pathPredicate, filters)
+    val pathFinder: ShortestPath = buildPathFinder(depth, expander, pathPredicate, filters)
 
     pathFinder.findAllPaths(left, right).iterator().asScala
   }

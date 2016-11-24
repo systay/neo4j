@@ -32,6 +32,8 @@ case class Query(periodicCommitHint: Option[PeriodicCommitHint], part: QueryPart
     when(periodicCommitHint.nonEmpty && !part.containsUpdates) {
       SemanticError("Cannot use periodic commit in a non-updating query", periodicCommitHint.get.position)
     }
+
+  override def myChildren: Iterator[ASTNode] = Iterator(part)
 }
 
 sealed trait QueryPart extends ASTNode with ASTPhrase with SemanticCheckable {
@@ -41,6 +43,9 @@ sealed trait QueryPart extends ASTNode with ASTPhrase with SemanticCheckable {
 
 case class SingleQuery(clauses: Seq[Clause])(val position: InputPosition) extends QueryPart {
   assert(clauses.nonEmpty)
+
+
+  override def myChildren: Iterator[ASTNode] = clauses.toIterator
 
   override def containsUpdates =
     clauses.exists {

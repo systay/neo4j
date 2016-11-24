@@ -199,6 +199,7 @@ case class CypherCompiler(parser: CypherParser,
       semanticChecker.check(queryText, cleanedStatement, mkException)
     }
     originalSemanticState.notifications.foreach(notificationLogger += _)
+    // TODO: Rewrite semantic analysis here
 
     val (rewrittenStatement, extractedParams, postConditions) = closing(tracer.beginPhase(AST_REWRITE)) {
       astRewriter.rewrite(queryText, cleanedStatement, originalSemanticState)

@@ -27,6 +27,9 @@ import scala.util.Try
 
 case class Add(lhs: Expression, rhs: Expression)(val position: InputPosition)
   extends Expression with BinaryOperatorExpression {
+
+  override def myChildren: Iterator[ASTNode] = Iterator(lhs, rhs)
+
   def semanticCheck(ctx: SemanticContext) =
     lhs.semanticCheck(ctx) chain
     lhs.expectType(TypeSpec.all) chain

@@ -17,13 +17,26 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.internal.frontend.v3_2.ast
+package org.neo4j.cypher.internal.frontend.v3_2.semantic.analysis
 
-import org.neo4j.cypher.internal.frontend.v3_2.semantic.analysis.IKnowMyType
-import org.neo4j.cypher.internal.frontend.v3_2.symbols.TypeSpec
-import org.neo4j.cypher.internal.frontend.v3_2.{DummyPosition, InputPosition}
+import org.neo4j.cypher.internal.frontend.v3_2.ast._
 
-case class DummyExpression(possibleTypes: TypeSpec, position: InputPosition = DummyPosition(0))
-  extends Expression with SimpleTyping with IKnowMyType {
-  override def knownType: TypeSpec = possibleTypes
+trait Phase[ENV] {
+  def enrich(node: ASTNode): Unit = visit(node, initialValue)
+
+  def visit(node: ASTNode, environment: ENV): ENV = {
+    val beforeEnv = before(node, environment)
+    val afterChildren = node.myChildren.foldLeft(beforeEnv) {
+      case (env, child) => visit(child, env)
+    }
+    val afterEnvironment = after(node, afterChildren)
+
+    afterEnvironment
+  }
+
+  def initialValue: ENV
+
+  protected def before(node: ASTNode, environment: ENV): ENV
+
+  protected def after(node: ASTNode, environment: ENV): ENV
 }

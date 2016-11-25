@@ -67,6 +67,8 @@ import org.neo4j.cypher.internal.frontend.v3_2.ast.Pattern._
 
 case class Pattern(patternParts: Seq[PatternPart])(val position: InputPosition) extends ASTNode with ASTParticle {
 
+  override def myChildren: Iterator[ASTNode] = patternParts.iterator
+
   lazy val length = this.fold(0) {
     case RelationshipChain(_, _, _) => _ + 1
     case _ => identity
@@ -113,6 +115,9 @@ case class NamedPatternPart(variable: Variable, patternPart: AnonymousPatternPar
 sealed trait AnonymousPatternPart extends PatternPart
 
 case class EveryPath(element: PatternElement) extends AnonymousPatternPart {
+
+  override def myChildren: Iterator[ASTNode] = Iterator(element)
+
   def position = element.position
 
   def declareVariables(ctx: SemanticContext) = (element, ctx) match {
@@ -259,6 +264,9 @@ case class NodePattern(variable: Option[Variable],
                        labels: Seq[LabelName],
                        properties: Option[Expression])(val position: InputPosition)
   extends PatternElement with SemanticChecking {
+
+
+  override def myChildren: Iterator[ASTNode] = variable.iterator ++ labels ++ properties.iterator
 
   def declareVariables(ctx: SemanticContext): SemanticCheck =
     variable.fold(SemanticCheckResult.success) {

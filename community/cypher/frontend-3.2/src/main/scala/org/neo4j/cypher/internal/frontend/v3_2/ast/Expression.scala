@@ -86,6 +86,8 @@ abstract class Expression extends ASTNode with ASTExpression with SemanticChecki
 
   import Expression.TreeAcc
 
+  val myType: Unchangable[TypeSpec] = new Unchangable[TypeSpec]()
+
   def types: TypeGenerator = s => s.expressionType(this).actual
 
   def arguments: Seq[Expression] = this.treeFold(List.empty[Expression]) {

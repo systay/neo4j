@@ -55,6 +55,8 @@ case class ReturnItems(includeExisting: Boolean, items: Seq[ReturnItem])(val pos
   }
 
   def containsAggregate = items.exists(_.expression.containsAggregate)
+
+  override def myChildren: Iterator[ASTNode] = items.iterator
 }
 
 sealed trait ReturnItem extends ASTNode with ASTPhrase with SemanticCheckable {
@@ -64,6 +66,8 @@ sealed trait ReturnItem extends ASTNode with ASTPhrase with SemanticCheckable {
   def makeSureIsNotUnaliased(state: SemanticState): SemanticCheckResult
 
   def semanticCheck = expression.semanticCheck(Expression.SemanticContext.Results)
+
+  override def myChildren: Iterator[ASTNode] = Iterator(expression)
 }
 
 case class UnaliasedReturnItem(expression: Expression, inputText: String)(val position: InputPosition) extends ReturnItem {

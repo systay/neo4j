@@ -70,7 +70,11 @@ case class Start(items: Seq[StartItem], where: Option[Where])(val position: Inpu
   override def semanticCheck = items.semanticCheck chain where.semanticCheck
 }
 
-case class Match(optional: Boolean, pattern: Pattern, hints: Seq[UsingHint], where: Option[Where])(val position: InputPosition) extends Clause with SemanticChecking {
+case class Match(optional: Boolean, pattern: Pattern, hints: Seq[UsingHint], where: Option[Where])(val position: InputPosition)
+  extends Clause with SemanticChecking {
+
+  override def myChildren: Iterator[ASTNode] = Iterator(pattern) ++ hints ++ where.toSeq
+
   override def name = "MATCH"
 
   override def semanticCheck =
@@ -268,7 +272,8 @@ case class Remove(items: Seq[RemoveItem])(val position: InputPosition) extends U
   override def semanticCheck = items.semanticCheck
 }
 
-case class Foreach(variable: Variable, expression: Expression, updates: Seq[Clause])(val position: InputPosition) extends UpdateClause with SemanticChecking {
+case class Foreach(variable: Variable, expression: Expression, updates: Seq[Clause])(val position: InputPosition)
+  extends UpdateClause with SemanticChecking {
   override def name = "FOREACH"
 
   override def semanticCheck =
@@ -279,6 +284,8 @@ case class Foreach(variable: Variable, expression: Expression, updates: Seq[Clau
         val possibleInnerTypes: TypeGenerator = expression.types(_).unwrapLists
         variable.declare(possibleInnerTypes) chain updates.semanticCheck
       }
+
+  override def myChildren: Iterator[ASTNode] = updates.toIterator
 }
 
 case class Unwind(expression: Expression, variable: Variable)(val position: InputPosition) extends Clause {
@@ -438,6 +445,8 @@ case class Return(distinct: Boolean,
       Seq(SemanticError("RETURN * is not allowed when there are no variables in scope", position))
     else
       Seq()
+
+  override def myChildren: Iterator[ASTNode] = Iterator(returnItems) ++ orderBy.iterator ++ skip.iterator ++ limit.iterator
 }
 
 case class PragmaWithout(excluded: Seq[Variable])(val position: InputPosition) extends HorizonClause {

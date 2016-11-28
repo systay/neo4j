@@ -20,10 +20,13 @@
 package org.neo4j.cypher.internal.frontend.v3_2.ast
 
 import org.neo4j.cypher.internal.frontend.v3_2.ast.Expression.SemanticContext
+import org.neo4j.cypher.internal.frontend.v3_2.semantic.analysis.Binding
 import org.neo4j.cypher.internal.frontend.v3_2.symbols._
 import org.neo4j.cypher.internal.frontend.v3_2.{InputPosition, SemanticCheckResult, SemanticState, SymbolUse}
 
 case class Variable(name: String)(val position: InputPosition) extends Expression {
+
+  val binding = new Unchangable[Binding]()
 
   def toSymbolUse = SymbolUse(name, position)
 

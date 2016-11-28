@@ -20,8 +20,8 @@
 package org.neo4j.cypher.internal.frontend.v3_2.ast
 
 import org.neo4j.cypher.internal.frontend.v3_2.ast.Expression.SemanticContext
-import org.neo4j.cypher.internal.frontend.v3_2.{InputPosition, InternalException, SemanticCheck, SemanticError}
 import org.neo4j.cypher.internal.frontend.v3_2.symbols._
+import org.neo4j.cypher.internal.frontend.v3_2.{InputPosition, InternalException, SemanticCheck, SemanticError}
 
 case class Property(map: Expression, propertyKey: PropertyKeyName)(val position: InputPosition) extends Expression with SimpleTyping {
   protected def possibleTypes = CTAny.covariant
@@ -30,6 +30,8 @@ case class Property(map: Expression, propertyKey: PropertyKeyName)(val position:
     map.semanticCheck(ctx) chain
       map.expectType(CTMap.covariant | CTAny.invariant) chain
       super.semanticCheck(ctx)
+
+  override def myChildren: Iterator[ASTNode] = Iterator(map)
 }
 
 object LegacyProperty {

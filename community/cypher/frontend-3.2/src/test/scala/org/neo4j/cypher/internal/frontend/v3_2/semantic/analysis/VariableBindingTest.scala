@@ -19,50 +19,57 @@
  */
 package org.neo4j.cypher.internal.frontend.v3_2.semantic.analysis
 
-import org.neo4j.cypher.internal.frontend.v3_2.DummyPosition
 import org.neo4j.cypher.internal.frontend.v3_2.ast._
 import org.neo4j.cypher.internal.frontend.v3_2.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.frontend.v3_2.{DummyPosition, InvalidSemanticsException}
 
-class ScopingTest extends CypherFunSuite {
+class VariableBindingTest extends CypherFunSuite {
   val pos = DummyPosition(0)
 
-  test("MATCH (a) RETURN *") {
-    val path = EveryPath(NodePattern(Some(Variable("a")(pos)), Seq.empty, None)(pos))
-    val pattern = Pattern(Seq(path))(pos)
-    val matchClause = Match(optional = false, pattern, Seq.empty, None)(pos)
-
-    val items = ReturnItems(includeExisting = true, Seq.empty)(pos)
+  test("RETURN x should fail with missing variable") {
+    val items = ReturnItems(includeExisting = false, Seq(UnaliasedReturnItem(Variable("x")(pos), "x")(pos)))(pos)
     val returnClause = Return(distinct = false, items, None, None, None)(pos)
 
-    val singleQuery = SingleQuery(Seq(matchClause, returnClause))(pos)
+    val singleQuery = SingleQuery(Seq(returnClause))(pos)
     val query = Query(None, singleQuery)(pos)
 
     Scoping.enrich(query)
 
-    query.myScope.value._1 should equal(Scope.empty)
-    singleQuery.myScope.value._1 should equal(Scope.empty)
-    returnClause.myScope.value._1 should equal(Scope.empty.enterScope())
+
+    intercept[InvalidSemanticsException](VariableBinding.enrich(query))
   }
 
-  test("MATCH (a) FOREACH(x in [1,2] | CREATE ())") {
-    val matchPattern = Pattern(Seq(EveryPath(NodePattern(Some(Variable("a")(pos)), Seq.empty, None)(pos))))(pos)
+  test("FOREACH(x in x | CREATE ())") {
+    val createPattern = Pattern(Seq(EveryPath(NodePattern(None, Seq.empty, None)(pos))))(pos)
+    val create = Create(createPattern)(pos)
+
+    val foreach = Foreach(Variable("x")(pos), Variable("x")(pos), Seq(create))(pos)
+
+    val singleQuery = SingleQuery(Seq(foreach))(pos)
+    val query = Query(None, singleQuery)(pos)
+
+    Scoping.enrich(query)
+
+    intercept[InvalidSemanticsException](VariableBinding.enrich(query))
+  }
+
+  test("MATCH (a) FOREACH(x in a.prop | CREATE ())") {
+    val matchVariable = Variable("a")(pos)
+    val matchPattern = Pattern(Seq(EveryPath(NodePattern(Some(matchVariable), Seq.empty, None)(pos))))(pos)
     val matchClause = Match(optional = false, matchPattern, Seq.empty, None)(pos)
 
     val createPattern = Pattern(Seq(EveryPath(NodePattern(None, Seq.empty, None)(pos))))(pos)
     val create = Create(createPattern)(pos)
-
-    val foreach = Foreach(Variable("x")(pos), ListLiteral(Seq(SignedDecimalIntegerLiteral("1")(pos)))(pos), Seq(create))(pos)
+    val foreachVariable = Variable("a")(pos)
+    val foreach = Foreach(Variable("x")(pos), Property(foreachVariable, PropertyKeyName("prop")(pos))(pos), Seq(create))(pos)
 
     val singleQuery = SingleQuery(Seq(matchClause, foreach))(pos)
     val query = Query(None, singleQuery)(pos)
 
     Scoping.enrich(query)
+    VariableBinding.enrich(query)
 
-    query.myScope.value._1 should equal(Scope.empty)
-    singleQuery.myScope.value._1 should equal(Scope.empty)
-    val matchScope = Scope.empty.enterScope()
-    foreach.myScope.value._1 should equal(matchScope)
-    val createScope = matchScope.enterScope()
-    create.myScope.value._1 should equal(createScope)
+    matchVariable.binding.value should equal(Declaration)
+    foreachVariable.binding.value should equal(Bound(matchVariable))
   }
 }

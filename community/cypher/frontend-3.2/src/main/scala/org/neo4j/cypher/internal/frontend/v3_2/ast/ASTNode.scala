@@ -119,5 +119,7 @@ class Unchangable[A]() {
     if (_seen) throw new InternalException("Can't change a seen value")
     _value = Some(newValue)
   }
+
+  override def toString: String = s"Unchangable(${_value.getOrElse("NOT SET")})"
 }
 

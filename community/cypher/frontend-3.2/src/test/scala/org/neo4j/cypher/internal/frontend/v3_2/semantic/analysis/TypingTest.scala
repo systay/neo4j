@@ -62,6 +62,28 @@ class TypingTest extends CypherFunSuite {
     testValidTypes(CTFloat, CTList(CTFloat))(CTList(CTFloat))
   }
 
+//  test("MATCH (a) FOREACH(x in [1,2] | CREATE ())") {
+//    val matchPattern = Pattern(Seq(EveryPath(NodePattern(Some(Variable("a")(pos)), Seq.empty, None)(pos))))(pos)
+//    val matchClause = Match(optional = false, matchPattern, Seq.empty, None)(pos)
+//
+//    val createPattern = Pattern(Seq(EveryPath(NodePattern(None, Seq.empty, None)(pos))))(pos)
+//    val create = Create(createPattern)(pos)
+//
+//    val foreach = Foreach(Variable("x")(pos), ListLiteral(Seq(SignedDecimalIntegerLiteral("1")(pos)))(pos), Seq(create))(pos)
+//
+//    val singleQuery = SingleQuery(Seq(matchClause, foreach))(pos)
+//    val query = Query(None, singleQuery)(pos)
+//
+//    SemanticAnalysis.visit(query)
+//
+//    query.myScope.value._1 should equal(Scope.empty)
+//    singleQuery.myScope.value._1 should equal(Scope.empty)
+//    val matchScope = Scope.empty.enterScope().add(Variable("a")(pos))
+//    foreach.myScope.value._1 should equal(matchScope)
+//    val createScope = matchScope.enterScope().add(Variable("x")(pos))
+//    create.myScope.value._1 should equal(createScope)
+//  }
+
 
 
   protected def testValidTypes(lhsTypes: TypeSpec, rhsTypes: TypeSpec)(expected: TypeSpec)

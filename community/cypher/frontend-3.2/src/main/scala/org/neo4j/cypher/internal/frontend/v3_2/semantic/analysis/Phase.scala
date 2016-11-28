@@ -26,12 +26,11 @@ trait Phase[ENV] {
 
   def visit(node: ASTNode, environment: ENV): ENV = {
     val beforeEnv = before(node, environment)
-    val afterChildren = node.myChildren.foldLeft(beforeEnv) {
+    val envAfterChildren = node.myChildren.foldLeft(beforeEnv) {
       case (env, child) => visit(child, env)
     }
-    val afterEnvironment = after(node, afterChildren)
 
-    afterEnvironment
+    after(node, envAfterChildren)
   }
 
   def initialValue: ENV
@@ -39,4 +38,12 @@ trait Phase[ENV] {
   protected def before(node: ASTNode, environment: ENV): ENV
 
   protected def after(node: ASTNode, environment: ENV): ENV
+}
+
+object SemanticAnalysis {
+  def visit(n: ASTNode): Unit = {
+    Scoping.enrich(n)
+    VariableBinding.enrich(n)
+    Typing.enrich(n)
+  }
 }

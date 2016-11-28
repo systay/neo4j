@@ -19,125 +19,47 @@
  */
 package org.neo4j.cypher.internal.frontend.v3_2.semantic.analysis
 
-import org.neo4j.cypher.internal.frontend.v3_2.InvalidSemanticsException
 import org.neo4j.cypher.internal.frontend.v3_2.ast._
 import org.neo4j.cypher.internal.frontend.v3_2.semantic.analysis.Scope.ScopingContext
-import org.neo4j.cypher.internal.frontend.v3_2.symbols.TypeSpec
 
-import scala.collection.mutable.ListBuffer
+/*
+This phase is concerned with two things - declaring variables and creating scopes that said variables exist in
 
-object Scoping extends Phase[Scope] {
+The Scope keeps information about the scope tree, and the ScopingContext is used by the Variable objects to know
+if they should declare or reference existing variables.
+ */
+object Scoping extends Phase[(Scope, ScopingContext)] {
 
-  override def initialValue: Scope = Scope.empty
+  override def initialValue: (Scope, ScopingContext) = (Scope.empty, ScopingContext.Default)
 
-  override protected def before(node: ASTNode, environment: Scope): Scope = {
-    node.myScope.value = (environment, environment.context)
+  override protected def before(node: ASTNode, environment: (Scope, ScopingContext)): (Scope, ScopingContext) = {
+    println(node)
+    val (currentScope, scopingContext) = environment
 
     node match {
       case _: SingleQuery =>
-        environment.enterScope(ScopingContext.Default)
+        (currentScope.enterScope(), scopingContext)
 
       case foreach: Foreach =>
-        visit(foreach.expression, environment.changeContext(ScopingContext.Expression))
-        environment.enterScope(ScopingContext.Default).add(foreach.variable)
+        visit(foreach.expression, (currentScope, ScopingContext.Expression))
+
+        val foreachScope = currentScope.enterScope()
+        visit(foreach.variable, (foreachScope, ScopingContext.Expression))
+        (foreachScope, scopingContext)
 
       case _: Match =>
-        environment.changeContext(ScopingContext.Match)
+        (currentScope, ScopingContext.Match)
 
       case _: Return =>
-        environment.changeContext(ScopingContext.Expression)
-
-      case v: Variable if environment.context == ScopingContext.Match =>
-        environment.add(v)
-
-      case v: Variable if environment.context == ScopingContext.Expression && !environment.variableDefined(v) =>
-        throw new InvalidSemanticsException(s"Variable `${v.name}` not declared, at ${v.position}")
+        (currentScope, ScopingContext.Expression)
 
       case _ =>
         environment
     }
   }
 
-  override protected def after(node: ASTNode, environment: Scope): Scope = node match {
-    case _: SingleQuery | _: Foreach =>
-      environment.exitScope()
-
-    case _ =>
-      environment
+  override protected def after(node: ASTNode, env: (Scope, ScopingContext)): (Scope, ScopingContext) = {
+    node.myScope.value = env
+    env
   }
-}
-
-class Scope(val outer: Scope, var context: ScopingContext) {
-  private val locals = new ListBuffer[Variable]
-  private val types = scala.collection.mutable.HashMap[Variable, TypeSpec]()
-
-  def add(l: Variable): Scope = {
-    locals += l
-    this
-  }
-
-  def setTypeTo(v: Variable, t: TypeSpec): Unit = types.put(v, t)
-
-  def getTypeOf(v: Variable): TypeSpec = types(v)
-
-  def enterScope(context: ScopingContext) = new Scope(this, context)
-
-  def exitScope(): Scope = {
-    assert(outer != null, "Tried to exit the outermost scope")
-    outer
-  }
-
-  def changeContext(context: ScopingContext): Scope = {
-    this.context = context
-    this
-  }
-
-  def variableDefined(v: Variable): Boolean = {
-    if (locals.contains(v)) return true
-    if (outer == null) return false
-    outer.variableDefined(v)
-  }
-
-  // Equality and toString
-  override def toString: String = locals.map(_.name).mkString(outer.toString + "[", ", ", "]")
-
-  def canEqual(other: Any): Boolean = other.isInstanceOf[Scope]
-
-  override def equals(other: Any): Boolean = other match {
-    case that: Scope =>
-      (that canEqual this) &&
-        locals == that.locals &&
-        outer == that.outer
-    case _ => false
-  }
-
-  override def hashCode(): Int = {
-    val state = Seq(locals, outer)
-    state.map(_.hashCode()).foldLeft(0)((a, b) => 31 * a + b)
-  }
-}
-
-object Scope {
-  def empty = new Scope(null, ScopingContext.Default) {
-    override def toString = "[]"
-  }
-
-  sealed trait ScopingContext
-
-  object ScopingContext {
-
-    case object Default extends ScopingContext
-
-    case object Match extends ScopingContext
-
-    case object Merge extends ScopingContext
-
-    case object Create extends ScopingContext
-
-    case object CreateUnique extends ScopingContext
-
-    case object Expression extends ScopingContext
-
-  }
-
 }

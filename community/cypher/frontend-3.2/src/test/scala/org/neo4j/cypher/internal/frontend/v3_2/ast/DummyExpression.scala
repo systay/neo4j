@@ -19,11 +19,8 @@
  */
 package org.neo4j.cypher.internal.frontend.v3_2.ast
 
-import org.neo4j.cypher.internal.frontend.v3_2.semantic.analysis.IKnowMyType
 import org.neo4j.cypher.internal.frontend.v3_2.symbols.TypeSpec
 import org.neo4j.cypher.internal.frontend.v3_2.{DummyPosition, InputPosition}
 
 case class DummyExpression(possibleTypes: TypeSpec, position: InputPosition = DummyPosition(0))
-  extends Expression with SimpleTyping with IKnowMyType {
-  override def knownType: TypeSpec = possibleTypes
-}
+  extends Expression with SimpleTyping

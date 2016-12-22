@@ -67,14 +67,13 @@ case class CypherCompiler(createExecutionPlan: Transformer,
                         offset: Option[InputPosition] = None,
                         tracer: CompilationPhaseTracer): (ExecutionPlan, Map[String, Any]) = {
     val context = createContext(tracer, notificationLogger, planContext, input.queryText, input.startPosition)
-    val preparedCompilationState = prepareForCaching.transform(input, context)
     val cache = provideCache(cacheAccessor, cacheMonitor, planContext)
     val isStale = (plan: ExecutionPlan) => plan.isStale(planContext.txIdProvider, planContext.statistics)
     val (executionPlan, _) = cache.getOrElseUpdate(input.statement, input.queryText, isStale, {
-      val result: CompilationState = planAndCreateExecPlan.transform(preparedCompilationState, context)
+      val result: CompilationState = planAndCreateExecPlan.transform(input, context)
       result.executionPlan
     })
-    (executionPlan, preparedCompilationState.extractedParams)
+    (executionPlan, input.extractedParams)
   }
 
   def parseQuery(queryText: String,
@@ -96,16 +95,12 @@ case class CypherCompiler(createExecutionPlan: Transformer,
     SemanticAnalysis(warn = true).adds[SemanticState] andThen
     AstRewriting(sequencer, shouldExtractParams = true)
 
-  val prepareForCaching: Transformer =
-    RewriteProcedureCalls andThen
-    ProcedureDeprecationWarnings
-
-  val costBasedPlanning: PipeLine =
-    SemanticAnalysis(warn = false) andThen
-    Namespacer andThen
+  val costBasedPlanning: Transformer =
     rewriteEqualityToInPredicate andThen
     CNFNormalizer andThen
     LateAstRewriting andThen
+    SemanticAnalysis(warn = false) andThen // This is needed because the AST has changed a lot since last semantic analysis
+    Namespacer andThen
     ResolveTokens andThen
     CreatePlannerQuery.adds[UnionQuery] andThen
     OptionalMatchRemover andThen
@@ -116,10 +111,12 @@ case class CypherCompiler(createExecutionPlan: Transformer,
     )
 
   val planAndCreateExecPlan: Transformer =
+    RewriteProcedureCalls andThen
+    ProcedureDeprecationWarnings andThen
     ProcedureCallOrSchemaCommandPlanBuilder andThen
     If(_.maybeExecutionPlan.isEmpty)(
       costBasedPlanning andThen
-      createExecutionPlan.adds[ExecutionPlan]
+        createExecutionPlan.adds[ExecutionPlan]
     )
 
   private def provideCache(cacheAccessor: CacheAccessor[Statement, ExecutionPlan],

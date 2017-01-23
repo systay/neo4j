@@ -147,8 +147,12 @@ case class CypherCompiler(createExecutionPlan: Transformer,
     else
       metricsFactory.newMetrics(planContext.statistics)
 
-    Context(exceptionCreator, tracer, notificationLogger, planContext, typeConverter, createFingerprintReference,
-      monitors, metrics, queryGraphSolver, config, updateStrategy, clock, structure, codeGenConfiguration)
+    val context = Context(exceptionCreator, tracer, notificationLogger, planContext, typeConverter, createFingerprintReference,
+      monitors, metrics, queryGraphSolver, config, updateStrategy, clock)
+
+    context.
+      set(structure).
+      set(codeGenConfiguration)
   }
 }
 

@@ -19,18 +19,12 @@
  */
 package org.neo4j.cypher.internal.compiler.v3_2
 
-import org.neo4j.cypher.internal.compiler.v3_2.phases._
-import org.neo4j.cypher.internal.frontend.v3_2.InvalidArgumentException
+import org.neo4j.cypher.internal.frontend.v3_2.test_helpers.CypherFunSuite
 
-trait RuntimeBuilder[C <: CompilerContext] {
-  def create(runtimeName: Option[RuntimeName], useErrorsOverWarnings: Boolean): Transformer[C]
-}
-
-object CommunityRuntimeBuilder extends RuntimeBuilder[CompilerContext] {
-  def create(runtimeName: Option[RuntimeName], useErrorsOverWarnings: Boolean): Transformer[CompilerContext] = runtimeName match {
-    case None | Some(InterpretedRuntimeName) =>
-      BuildInterpretedExecutionPlan
-
-    case Some(x) => throw new InvalidArgumentException(s"This version of Neo4j does not support requested runtime: $x")
+class ResultRowImplTest extends CypherFunSuite {
+  test("int can be handled as a Number") {
+    val row = new ResultRowImpl
+    row.set("x", 10)
+    row.getNumber("x") should equal(10)
   }
 }

@@ -17,20 +17,25 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.internal.compiler.v3_2
+package org.neo4j.cypher.internal.javacompat;
 
-import org.neo4j.cypher.internal.compiler.v3_2.phases._
-import org.neo4j.cypher.internal.frontend.v3_2.InvalidArgumentException
+import static org.junit.Assert.*;
+import org.junit.Test;
+import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.kernel.impl.query.QueryEngineProvider;
 
-trait RuntimeBuilder[C <: CompilerContext] {
-  def create(runtimeName: Option[RuntimeName], useErrorsOverWarnings: Boolean): Transformer[C]
-}
+import java.util.ServiceLoader;
 
-object CommunityRuntimeBuilder extends RuntimeBuilder[CompilerContext] {
-  def create(runtimeName: Option[RuntimeName], useErrorsOverWarnings: Boolean): Transformer[CompilerContext] = runtimeName match {
-    case None | Some(InterpretedRuntimeName) =>
-      BuildInterpretedExecutionPlan
+public class CommunityCypherEngineProviderTest
+{
 
-    case Some(x) => throw new InvalidArgumentException(s"This version of Neo4j does not support requested runtime: $x")
-  }
+    @Test
+    public void shouldServiceLoaderFindCypherEngineProvider() {
+
+        // WHEN
+        ServiceLoader<QueryEngineProvider> services = ServiceLoader.load(QueryEngineProvider.class);
+
+        // THEN
+        assertTrue(Iterables.single(services) instanceof CommunityCypherEngineProvider );
+    }
 }

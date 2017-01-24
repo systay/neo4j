@@ -17,20 +17,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.internal.compiler.v3_2
+package org.neo4j.cypher.internal.compiler.v3_2.executionplan
 
-import org.neo4j.cypher.internal.compiler.v3_2.phases._
-import org.neo4j.cypher.internal.frontend.v3_2.InvalidArgumentException
-
-trait RuntimeBuilder[C <: CompilerContext] {
-  def create(runtimeName: Option[RuntimeName], useErrorsOverWarnings: Boolean): Transformer[C]
-}
-
-object CommunityRuntimeBuilder extends RuntimeBuilder[CompilerContext] {
-  def create(runtimeName: Option[RuntimeName], useErrorsOverWarnings: Boolean): Transformer[CompilerContext] = runtimeName match {
-    case None | Some(InterpretedRuntimeName) =>
-      BuildInterpretedExecutionPlan
-
-    case Some(x) => throw new InvalidArgumentException(s"This version of Neo4j does not support requested runtime: $x")
-  }
+trait SuccessfulCloseable {
+  def success(): Unit
+  def close(): Unit
 }

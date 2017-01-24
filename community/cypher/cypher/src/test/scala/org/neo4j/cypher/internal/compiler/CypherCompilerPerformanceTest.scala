@@ -20,15 +20,13 @@
 package org.neo4j.cypher.internal.compiler
 
 import org.neo4j.cypher.GraphDatabaseFunSuite
-import org.neo4j.cypher.internal.CypherCompiler.{CLOCK, DEFAULT_QUERY_PLAN_TTL, DEFAULT_STATISTICS_DIVERGENCE_THRESHOLD}
+import org.neo4j.cypher.internal.CompilerEngineDelegator.{CLOCK, DEFAULT_QUERY_PLAN_TTL, DEFAULT_STATISTICS_DIVERGENCE_THRESHOLD}
 import org.neo4j.cypher.internal.compatibility.v3_2.WrappedMonitors
 import org.neo4j.cypher.internal.compiler.v3_2.CompilationPhaseTracer.NO_TRACING
-import org.neo4j.cypher.internal.compiler.v3_2.codegen.CodeGenConfiguration
 import org.neo4j.cypher.internal.compiler.v3_2.helpers.IdentityTypeConverter
 import org.neo4j.cypher.internal.compiler.v3_2.phases.CompilationState
 import org.neo4j.cypher.internal.compiler.v3_2.tracing.rewriters.RewriterStepSequencer
 import org.neo4j.cypher.internal.compiler.v3_2.{CypherCompilerFactory, InfoLogger, _}
-import org.neo4j.cypher.internal.spi.v3_2.codegen.GeneratedQueryStructure
 
 import scala.concurrent.duration._
 
@@ -197,15 +195,14 @@ class CypherCompilerPerformanceTest extends GraphDatabaseFunSuite {
         nonIndexedLabelWarningThreshold = 10000L
       ),
       clock = CLOCK,
-      structure = GeneratedQueryStructure,
       monitors = WrappedMonitors(kernelMonitors),
       logger = DEV_NULL,
       rewriterSequencer = RewriterStepSequencer.newPlain,
       plannerName = Some(IDPPlannerName),
       runtimeName = Some(CompiledRuntimeName),
-      codeGenMode = None,
       updateStrategy = None,
-      typeConverter = IdentityTypeConverter
+      typeConverter = IdentityTypeConverter,
+      runtimeBuilder = CommunityRuntimeBuilder
     )
   }
 

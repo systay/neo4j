@@ -22,8 +22,6 @@ package org.neo4j.cypher.internal.compiler.v3_2
 import java.time.Clock
 
 import org.neo4j.cypher.internal.compiler.v3_2.ast.rewriters.{CNFNormalizer, Namespacer, rewriteEqualityToInPredicate}
-import org.neo4j.cypher.internal.compiler.v3_2.codegen.CodeGenConfiguration
-import org.neo4j.cypher.internal.compiler.v3_2.codegen.spi.CodeStructure
 import org.neo4j.cypher.internal.compiler.v3_2.executionplan._
 import org.neo4j.cypher.internal.compiler.v3_2.executionplan.procs.ProcedureCallOrSchemaCommandPlanBuilder
 import org.neo4j.cypher.internal.compiler.v3_2.helpers.RuntimeTypeConverter
@@ -50,9 +48,8 @@ case class CypherCompiler(createExecutionPlan: Transformer,
                           queryGraphSolver: QueryGraphSolver,
                           config: CypherCompilerConfiguration,
                           updateStrategy: UpdateStrategy,
-                          codeGenConfiguration: CodeGenConfiguration,
                           clock: Clock,
-                          structure: CodeStructure[GeneratedQuery]) {
+                          contextUpdater: Context => Context = identity) {
 
   def planQuery(queryText: String,
                 context: PlanContext,
@@ -68,7 +65,7 @@ case class CypherCompiler(createExecutionPlan: Transformer,
                         planContext: PlanContext,
                         offset: Option[InputPosition] = None,
                         tracer: CompilationPhaseTracer): (ExecutionPlan, Map[String, Any]) = {
-    val context = createContext(tracer, notificationLogger, planContext, input.queryText, input.startPosition, codeGenConfiguration)
+    val context = createContext(tracer, notificationLogger, planContext, input.queryText, input.startPosition)
     val preparedCompilationState = prepareForCaching.transform(input, context)
     val cache = provideCache(cacheAccessor, cacheMonitor, planContext)
     val isStale = (plan: ExecutionPlan) => plan.isStale(planContext.txIdProvider, planContext.statistics)
@@ -88,7 +85,7 @@ case class CypherCompiler(createExecutionPlan: Transformer,
     val plannerName = PlannerName(plannerNameText)
     val startState = CompilationState(queryText, offset, plannerName)
     //TODO: these nulls are a short cut
-    val context = createContext(tracer, notificationLogger, planContext = null, rawQueryText, offset, codeGenConfiguration = null)
+    val context = createContext(tracer, notificationLogger, planContext = null, rawQueryText, offset)
     parsing.transform(startState, context)
   }
 
@@ -138,8 +135,7 @@ case class CypherCompiler(createExecutionPlan: Transformer,
                             notificationLogger: InternalNotificationLogger,
                             planContext: PlanContext,
                             queryText: String,
-                            offset: Option[InputPosition],
-                            codeGenConfiguration: CodeGenConfiguration): Context = {
+                            offset: Option[InputPosition]): Context = {
     val exceptionCreator = new SyntaxExceptionCreator(queryText, offset)
 
     val metrics: Metrics = if (planContext == null)
@@ -150,9 +146,7 @@ case class CypherCompiler(createExecutionPlan: Transformer,
     val context = Context(exceptionCreator, tracer, notificationLogger, planContext, typeConverter, createFingerprintReference,
       monitors, metrics, queryGraphSolver, config, updateStrategy, clock)
 
-    context.
-      set(structure).
-      set(codeGenConfiguration)
+    contextUpdater(context)
   }
 }
 

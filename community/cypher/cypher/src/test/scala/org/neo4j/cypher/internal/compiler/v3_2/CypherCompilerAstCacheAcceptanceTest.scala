@@ -23,7 +23,6 @@ import java.time.{Clock, Instant, ZoneOffset}
 
 import org.neo4j.cypher.GraphDatabaseTestSupport
 import org.neo4j.cypher.internal.compatibility.v3_2.{StringInfoLogger, WrappedMonitors}
-import org.neo4j.cypher.internal.compiler.v3_2.CompilationPhaseTracer.NO_TRACING
 import org.neo4j.cypher.internal.compiler.v3_2.executionplan.ExecutionPlan
 import org.neo4j.cypher.internal.compiler.v3_2.helpers.IdentityTypeConverter
 import org.neo4j.cypher.internal.compiler.v3_2.tracing.rewriters.RewriterStepSequencer
@@ -38,7 +37,7 @@ import scala.collection.Map
 
 class CypherCompilerAstCacheAcceptanceTest extends CypherFunSuite with GraphDatabaseTestSupport {
   def createCompiler(queryCacheSize: Int = 128, statsDivergenceThreshold: Double = 0.5, queryPlanTTL: Long = 1000,
-                     clock: Clock = Clock.systemUTC(), log: Log = NullLog.getInstance) = {
+                     clock: Clock = Clock.systemUTC(), log: Log = NullLog.getInstance): CypherCompiler = {
 
     CypherCompilerFactory.costBasedCompiler(
       CypherCompilerConfiguration(
@@ -54,8 +53,8 @@ class CypherCompilerAstCacheAcceptanceTest extends CypherFunSuite with GraphData
       clock,
       WrappedMonitors(kernelMonitors),
       new StringInfoLogger(log),
-      plannerName = Some(IDPPlannerName),
-      runtimeName = Some(CompiledRuntimeName),
+      plannerName = None,
+      runtimeName = None,
       updateStrategy = None,
       rewriterSequencer = RewriterStepSequencer.newValidating,
       typeConverter = IdentityTypeConverter,
@@ -135,7 +134,7 @@ class CypherCompilerAstCacheAcceptanceTest extends CypherFunSuite with GraphData
     graph.createConstraint("Person", "id")
     runQuery("return 42")
 
-    counter.counts should equal(CacheCounts(hits = 0, misses = 2, flushes = 2))
+    counter.counts should equal(CacheCounts(misses = 2, flushes = 2))
   }
 
   test("should monitor cache remove") {
@@ -161,11 +160,10 @@ class CypherCompilerAstCacheAcceptanceTest extends CypherFunSuite with GraphData
   test("should log on cache remove") {
     // given
     val logProvider = new AssertableLogProvider()
+    val logName = "testlog"
     val clock: Clock = Clock.fixed(Instant.ofEpochMilli(1000L), ZoneOffset.UTC)
-    compiler = createCompiler(queryPlanTTL = 0, clock = clock, log = logProvider.getLog(getClass))
-    compiler.monitors.addMonitorListener(counter)
+    compiler = createCompiler(queryPlanTTL = 0, clock = clock, log = logProvider.getLog(logName))
     val query: String = "match (n:Person:Dog) return n"
-    val statement = compiler.parseQuery(query, query, devNullLogger, offset = None, tracer = NO_TRACING).statement
 
     createLabeledNode("Dog")
     (0 until 50).foreach { _ => createLabeledNode("Person") }
@@ -177,7 +175,7 @@ class CypherCompilerAstCacheAcceptanceTest extends CypherFunSuite with GraphData
 
     // then
     logProvider.assertExactly(
-      inLog(getClass).info( s"Discarded stale query from the query cache: $query" )
+      inLog(logName).info( s"Discarded stale query from the query cache: $query" )
     )
   }
 }

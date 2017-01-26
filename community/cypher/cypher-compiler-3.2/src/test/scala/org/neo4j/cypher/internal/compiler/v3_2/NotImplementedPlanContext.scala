@@ -20,7 +20,6 @@
 package org.neo4j.cypher.internal.compiler.v3_2
 
 import org.neo4j.cypher.internal.compiler.v3_2.spi._
-import org.neo4j.kernel.api.constraints.UniquenessConstraint
 
 class NotImplementedPlanContext extends PlanContext {
   override def getIndexRule(labelName: String, propertyKey: String): Option[IndexDescriptor] = ???
@@ -28,8 +27,6 @@ class NotImplementedPlanContext extends PlanContext {
   override def hasIndexRule(labelName: String): Boolean = ???
 
   override def getUniqueIndexRule(labelName: String, propertyKey: String): Option[IndexDescriptor] = ???
-
-  override def getUniquenessConstraint(labelName: String, propertyKey: String): Option[UniquenessConstraint] = ???
 
   override def hasPropertyExistenceConstraint(labelName: String, propertyKey: String): Boolean = ???
 

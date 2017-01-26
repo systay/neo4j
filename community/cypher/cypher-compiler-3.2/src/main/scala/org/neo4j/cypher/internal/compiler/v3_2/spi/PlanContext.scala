@@ -19,9 +19,7 @@
  */
 package org.neo4j.cypher.internal.compiler.v3_2.spi
 
-import org.neo4j.cypher.internal.compiler.v3_2.InternalNotificationLogger
-import org.neo4j.cypher.internal.compiler.v3_2.IndexDescriptor
-import org.neo4j.kernel.api.constraints.UniquenessConstraint
+import org.neo4j.cypher.internal.compiler.v3_2.{IndexDescriptor, InternalNotificationLogger}
 
 /**
  * PlanContext is an internal access layer to the graph that is solely used during plan building
@@ -37,8 +35,6 @@ trait PlanContext extends TokenContext with ProcedureSignatureResolver {
   def hasIndexRule(labelName: String): Boolean
 
   def getUniqueIndexRule(labelName: String, propertyKey: String): Option[IndexDescriptor]
-
-  def getUniquenessConstraint(labelName: String, propertyKey: String): Option[UniquenessConstraint]
 
   def hasPropertyExistenceConstraint(labelName: String, propertyKey: String): Boolean
 

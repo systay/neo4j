@@ -23,6 +23,7 @@ import java.time.Clock
 
 import org.neo4j.cypher.internal.compiler.v3_2.executionplan._
 import org.neo4j.cypher.internal.compiler.v3_2.helpers.RuntimeTypeConverter
+import org.neo4j.cypher.internal.compiler.v3_2.phases.Context
 import org.neo4j.cypher.internal.compiler.v3_2.planner.logical._
 import org.neo4j.cypher.internal.compiler.v3_2.planner.logical.idp._
 import org.neo4j.cypher.internal.compiler.v3_2.tracing.rewriters.RewriterStepSequencer
@@ -39,7 +40,8 @@ object CypherCompilerFactory {
                         runtimeName: Option[RuntimeName],
                         updateStrategy: Option[UpdateStrategy],
                         typeConverter: RuntimeTypeConverter,
-                        runtimeBuilder: RuntimeBuilder): CypherCompiler = {
+                        runtimeBuilder: RuntimeBuilder,
+                        contextUpdater: Context => Context = identity): CypherCompiler = {
     val rewriter = new ASTRewriter(rewriterSequencer)
     val metricsFactory = CachedMetricsFactory(SimpleMetricsFactory)
 
@@ -59,7 +61,8 @@ object CypherCompilerFactory {
     val cache = new MonitoringCacheAccessor[Statement, ExecutionPlan](cacheMonitor)
 
     CypherCompiler(runtimePipeline, rewriter, cache, planCacheFactory, cacheMonitor, monitors, rewriterSequencer,
-      createFingerprintReference, typeConverter, metricsFactory, queryGraphSolver, config, actualUpdateStrategy, clock)
+      createFingerprintReference, typeConverter, metricsFactory, queryGraphSolver, config, actualUpdateStrategy,
+      clock, contextUpdater)
   }
 
   def createQueryGraphSolver(n: CostBasedPlannerName, monitors: Monitors, config: CypherCompilerConfiguration): QueryGraphSolver = n match {

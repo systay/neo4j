@@ -44,7 +44,9 @@ object BuildCompiledExecutionPlan extends Phase {
 
   override def process(from: CompilationState, context: Context): CompilationState =
     try {
-      val codeGen = new CodeGenerator(context.get[CodeStructure[GeneratedQuery]], context.clock, context.get[CodeGenConfiguration])
+      val structure = context.get[CodeStructure[GeneratedQuery]]
+      val conf = context.get[CodeGenConfiguration]
+      val codeGen = new CodeGenerator(structure, context.clock, conf)
       val compiled: CompiledPlan = codeGen.generate(from.logicalPlan, context.planContext, from.semanticTable, from.plannerName)
       val executionPlan: ExecutionPlan = createExecutionPlan(context, compiled)
       from.copy(maybeExecutionPlan = Some(executionPlan))

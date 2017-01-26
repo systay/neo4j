@@ -44,11 +44,9 @@ case class Context(exceptionCreator: (String, InputPosition) => CypherException,
                    clock: Clock,
                    extra: Map[Class[_], AnyRef] = Map.empty) {
 
-  def get[T: ClassTag](implicit manifest: Manifest[T]) = {
-    extra.get(manifest.runtimeClass).asInstanceOf[T]
-  }
+  def get[T: ClassTag](implicit manifest: Manifest[T]): T =
+    extra(manifest.runtimeClass).asInstanceOf[T]
 
-  def set[T <: AnyRef : ClassTag](value: T)(implicit manifest: Manifest[T]): Context = {
+  def set[T <: AnyRef : ClassTag](value: T)(implicit manifest: Manifest[T]): Context =
     copy(extra = extra + (manifest.runtimeClass -> value))
-  }
 }

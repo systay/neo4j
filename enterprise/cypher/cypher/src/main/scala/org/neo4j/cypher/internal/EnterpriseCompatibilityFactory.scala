@@ -20,8 +20,16 @@
 package org.neo4j.cypher.internal
 
 import org.neo4j.cypher.internal.compatibility.{v2_3, v3_1, _}
-import org.neo4j.cypher.internal.compiler.v3_2.CypherCompilerConfiguration
-import org.neo4j.cypher.{CypherPlanner, CypherRuntime}
+import org.neo4j.cypher.internal.compiled_runtime.v3_2.BuildCompiledExecutionPlan
+import org.neo4j.cypher.internal.compiled_runtime.v3_2.codegen.spi.CodeStructure
+import org.neo4j.cypher.internal.compiled_runtime.v3_2.codegen.{ByteCodeMode, CodeGenConfiguration, CodeGenMode, SourceCodeMode}
+import org.neo4j.cypher.internal.compiled_runtime.v3_2.executionplan.GeneratedQuery
+import org.neo4j.cypher.internal.compiler.v3_2._
+import org.neo4j.cypher.internal.compiler.v3_2.phases.{Context, Do, If, Transformer}
+import org.neo4j.cypher.internal.frontend.v3_2.InvalidArgumentException
+import org.neo4j.cypher.internal.frontend.v3_2.notification.RuntimeUnsupportedNotification
+import org.neo4j.cypher.internal.spi.v3_2.codegen.GeneratedQueryStructure
+import org.neo4j.cypher.{CypherCodeGenMode, CypherPlanner, CypherRuntime}
 import org.neo4j.kernel.GraphDatabaseQueryService
 import org.neo4j.kernel.api.KernelAPI
 import org.neo4j.kernel.monitoring.{Monitors => KernelMonitors}
@@ -41,9 +49,49 @@ class EnterpriseCompatibilityFactory(inner: CompatibilityFactory, graph: GraphDa
       case (CypherPlanner.rule, _) => inner.create(spec, config)
 
       case (_, CypherRuntime.compiled) | (_, CypherRuntime.default) =>
-        v3_2.CostCompatibility(config, CompilerEngineDelegator.CLOCK, kernelMonitors, kernelAPI,
-          logProvider.getLog(getClass), spec.planner, spec.runtime, spec.codeGenMode, spec.updateStrategy)
+
+        val codeGenMode = spec.codeGenMode match {
+          case CypherCodeGenMode.default => CodeGenMode.default
+          case CypherCodeGenMode.byteCode => ByteCodeMode
+          case CypherCodeGenMode.sourceCode => SourceCodeMode
+        }
+
+        val codeGenConfiguration = CodeGenConfiguration(mode = codeGenMode)
+        def contextUpdater(context: Context): Context = context.
+          set[CodeStructure[GeneratedQuery]](GeneratedQueryStructure).
+          set(codeGenConfiguration)
+
+        v3_2.CostCompatibility(config, CompilerEngineDelegator.CLOCK, kernelMonitors, kernelAPI, logProvider.getLog
+        (getClass), spec.planner, spec.runtime, spec.updateStrategy, EnterpriseRuntimeBuilder, contextUpdater)
 
       case _ => inner.create(spec, config)
     }
+}
+
+object EnterpriseRuntimeBuilder extends RuntimeBuilder {
+  def create(runtimeName: Option[RuntimeName], useErrorsOverWarnings: Boolean): Transformer = runtimeName match {
+    case None =>
+      BuildCompiledExecutionPlan andThen
+      If(_.maybeExecutionPlan.isEmpty) {
+        BuildInterpretedExecutionPlan
+      }
+
+    case Some(InterpretedRuntimeName) =>
+      BuildInterpretedExecutionPlan
+
+    case Some(CompiledRuntimeName) if useErrorsOverWarnings =>
+      BuildCompiledExecutionPlan andThen
+      If(_.maybeExecutionPlan.isEmpty)(
+        Do(_ => throw new InvalidArgumentException("The given query is not currently supported in the selected runtime"))
+      )
+
+    case Some(CompiledRuntimeName) =>
+      BuildCompiledExecutionPlan andThen
+      If(_.maybeExecutionPlan.isEmpty)(
+        Do(_.notificationLogger.log(RuntimeUnsupportedNotification)) andThen
+        BuildInterpretedExecutionPlan
+      )
+
+    case Some(x) => throw new InvalidArgumentException(s"This version of Neo4j does not support requested runtime: $x")
+  }
 }

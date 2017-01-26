@@ -21,9 +21,9 @@ package org.neo4j.cypher.internal.compatibility.v3_2
 
 import java.time.Clock
 
-import org.neo4j.cypher.internal.compiler.v3_1.codegen.{ByteCodeMode, SourceCodeMode}
 import org.neo4j.cypher.internal.compiler.v3_2._
-import org.neo4j.cypher.{CypherCodeGenMode, CypherPlanner, CypherRuntime, CypherUpdateStrategy}
+import org.neo4j.cypher.internal.compiler.v3_2.phases.Context
+import org.neo4j.cypher.{CypherPlanner, CypherRuntime, CypherUpdateStrategy}
 import org.neo4j.kernel.api.KernelAPI
 import org.neo4j.kernel.monitoring.{Monitors => KernelMonitors}
 import org.neo4j.logging.Log
@@ -35,8 +35,9 @@ case class CostCompatibility(config: CypherCompilerConfiguration,
                              log: Log,
                              planner: CypherPlanner,
                              runtime: CypherRuntime,
-                             codeGenMode: CypherCodeGenMode,
-                             updateStrategy: CypherUpdateStrategy) extends Compatibility {
+                             updateStrategy: CypherUpdateStrategy,
+                             runtimeBuilder: RuntimeBuilder,
+                             contextUpdater: Context => Context = identity) extends Compatibility {
 
   protected override val compiler: CypherCompiler = {
     val maybePlannerName = planner match {
@@ -52,12 +53,6 @@ case class CostCompatibility(config: CypherCompilerConfiguration,
       case CypherRuntime.compiled => Some(CompiledRuntimeName)
     }
 
-    val maybeCodeGenMode = codeGenMode match {
-      case CypherCodeGenMode.default => None
-      case CypherCodeGenMode.byteCode => Some(ByteCodeMode)
-      case CypherCodeGenMode.sourceCode => Some(SourceCodeMode)
-    }
-
     val maybeUpdateStrategy = updateStrategy match {
       case CypherUpdateStrategy.eager => Some(eagerUpdateStrategy)
       case _ => None
@@ -66,7 +61,7 @@ case class CostCompatibility(config: CypherCompilerConfiguration,
     val logger = new StringInfoLogger(log)
     val monitors = WrappedMonitors(kernelMonitors)
     CypherCompilerFactory.costBasedCompiler(config, clock, monitors, logger, rewriterSequencer,
-      maybePlannerName, maybeRuntimeName, maybeUpdateStrategy, typeConversions, CommunityRuntimeBuilder)
+      maybePlannerName, maybeRuntimeName, maybeUpdateStrategy, typeConversions, runtimeBuilder, contextUpdater)
   }
 
   override val queryCacheSize: Int = config.queryCacheSize

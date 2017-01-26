@@ -21,12 +21,17 @@ package org.neo4j.cypher.internal.compiler
 
 import org.neo4j.cypher.GraphDatabaseFunSuite
 import org.neo4j.cypher.internal.CompilerEngineDelegator.{CLOCK, DEFAULT_QUERY_PLAN_TTL, DEFAULT_STATISTICS_DIVERGENCE_THRESHOLD}
+import org.neo4j.cypher.internal.EnterpriseRuntimeBuilder
 import org.neo4j.cypher.internal.compatibility.v3_2.WrappedMonitors
+import org.neo4j.cypher.internal.compiled_runtime.v3_2.codegen.CodeGenConfiguration
+import org.neo4j.cypher.internal.compiled_runtime.v3_2.codegen.spi.CodeStructure
+import org.neo4j.cypher.internal.compiled_runtime.v3_2.executionplan.GeneratedQuery
 import org.neo4j.cypher.internal.compiler.v3_2.CompilationPhaseTracer.NO_TRACING
 import org.neo4j.cypher.internal.compiler.v3_2._
 import org.neo4j.cypher.internal.compiler.v3_2.helpers.IdentityTypeConverter
-import org.neo4j.cypher.internal.compiler.v3_2.phases.CompilationState
+import org.neo4j.cypher.internal.compiler.v3_2.phases.{CompilationState, Context}
 import org.neo4j.cypher.internal.compiler.v3_2.tracing.rewriters.RewriterStepSequencer
+import org.neo4j.cypher.internal.spi.v3_2.codegen.GeneratedQueryStructure
 
 import scala.concurrent.duration._
 
@@ -183,6 +188,12 @@ class CypherCompilerPerformanceTest extends GraphDatabaseFunSuite {
   }
 
   private def createCurrentCompiler = {
+
+    val codeGenConfiguration = CodeGenConfiguration()
+    def contextUpdater(context: Context): Context = context.
+      set[CodeStructure[GeneratedQuery]](GeneratedQueryStructure).
+      set(codeGenConfiguration)
+
     CypherCompilerFactory.costBasedCompiler(
       CypherCompilerConfiguration(
         queryCacheSize = 1,
@@ -202,7 +213,8 @@ class CypherCompilerPerformanceTest extends GraphDatabaseFunSuite {
       runtimeName = Some(CompiledRuntimeName),
       updateStrategy = None,
       typeConverter = IdentityTypeConverter,
-      runtimeBuilder = CommunityRuntimeBuilder
+      runtimeBuilder = EnterpriseRuntimeBuilder,
+      contextUpdater = contextUpdater
     )
   }
 

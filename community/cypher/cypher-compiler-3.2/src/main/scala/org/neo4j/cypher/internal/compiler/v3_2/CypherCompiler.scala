@@ -49,7 +49,7 @@ case class CypherCompiler(createExecutionPlan: Transformer,
                           config: CypherCompilerConfiguration,
                           updateStrategy: UpdateStrategy,
                           clock: Clock,
-                          contextUpdater: Context => Context = identity) {
+                          contextUpdater: Context => Context) {
 
   def planQuery(queryText: String,
                 context: PlanContext,

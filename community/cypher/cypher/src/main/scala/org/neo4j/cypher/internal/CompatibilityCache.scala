@@ -22,7 +22,7 @@ package org.neo4j.cypher.internal
 import org.neo4j.cypher.internal.compatibility.v2_3.helpers._
 import org.neo4j.cypher.internal.compatibility.v3_1.helpers._
 import org.neo4j.cypher.internal.compatibility.{v2_3, v3_1, _}
-import org.neo4j.cypher.internal.compiler.v3_2.CypherCompilerConfiguration
+import org.neo4j.cypher.internal.compiler.v3_2.{CommunityRuntimeBuilder, CypherCompilerConfiguration}
 import org.neo4j.cypher.internal.frontend.v3_2.InvalidArgumentException
 import org.neo4j.cypher.{CypherCodeGenMode, CypherPlanner, CypherRuntime, CypherUpdateStrategy}
 import org.neo4j.helpers.Clock
@@ -72,7 +72,8 @@ class CommunityCompatibilityFactory(graph: GraphDatabaseQueryService, kernelAPI:
       case (_, CypherRuntime.compiled) =>
         throw new InvalidArgumentException("The compiled runtime is only available in the Enterprise version of Neo4j")
       case _ =>
-        v3_2.CostCompatibility(config, CompilerEngineDelegator.CLOCK, kernelMonitors, kernelAPI, log, spec.planner, spec.runtime, spec.codeGenMode, spec.updateStrategy)
+        v3_2.CostCompatibility(config, CompilerEngineDelegator.CLOCK, kernelMonitors, kernelAPI, log,
+          spec.planner, spec.runtime, spec.updateStrategy, CommunityRuntimeBuilder)
     }
 }
 

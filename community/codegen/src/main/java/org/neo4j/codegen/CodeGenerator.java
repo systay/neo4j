@@ -95,7 +95,8 @@ public abstract class CodeGenerator
                 throw new IllegalStateException( "Compilation has not completed." );
             }
             this.generation++;
-            loader.addSources( compile( loader.getParent() ), byteCodeVisitor );
+            Iterable<? extends ByteCodes> compile = compile( loader.getParent() );
+            loader.addSources( compile, byteCodeVisitor );
         }
         try
         {

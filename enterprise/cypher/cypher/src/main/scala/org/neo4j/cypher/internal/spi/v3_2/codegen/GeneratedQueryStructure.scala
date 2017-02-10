@@ -46,7 +46,6 @@ import org.neo4j.kernel.impl.core.NodeManager
 
 object GeneratedQueryStructure extends CodeStructure[GeneratedQuery] {
 
-
   case class GeneratedQueryStructureResult(query: GeneratedQuery, source: Option[(String, String)])
     extends CodeStructureResult[GeneratedQuery]
 
@@ -55,7 +54,27 @@ object GeneratedQueryStructure extends CodeStructure[GeneratedQuery] {
       case SourceCodeMode => SourceCode.SOURCECODE
       case ByteCodeMode => SourceCode.BYTECODE
     }
-    val option = if (conf.saveSource) new SourceVisitor {
+    val option = if (true) new SourceVisitor {
+      override protected def visitSource(reference: TypeReference,
+                                         sourceCode: CharSequence) = source(Some(reference.name(), sourceCode.toString))
+    } else {
+      source(None)
+      BLANK_OPTION
+    }
+
+    try {
+      CodeGenerator.generateCode(classOf[CodeStructure[_]].getClassLoader, mode, option)
+    } catch {
+      case e: Exception => throw new CantCompileQueryException(e.getMessage, e)
+    }
+  }
+
+  private def alwaysSource(conf: CodeGenConfiguration, source: (Option[(String, String)]) => Unit) = {
+    val mode = conf.mode match {
+      case SourceCodeMode => SourceCode.SOURCECODE
+      case ByteCodeMode => SourceCode.SOURCECODE
+    }
+    val option = if (true) new SourceVisitor {
       override protected def visitSource(reference: TypeReference,
                                          sourceCode: CharSequence) = source(Some(reference.name(), sourceCode.toString))
     } else {
@@ -88,13 +107,22 @@ object GeneratedQueryStructure extends CodeStructure[GeneratedQuery] {
 
     val sourceSaver = new SourceSaver
     val generator = createGenerator(conf, sourceSaver)
+    val sourceCodeGen = alwaysSource(conf, sourceSaver)
     val execution: ClassHandle = using(
       generator.generateClass(conf.packageName, className + "Execution", typeRef[GeneratedQueryExecution])) { clazz =>
-
       val fields: Fields = createFields(columns, clazz)
       setOperatorIds(clazz, operatorIds)
       addSimpleMethods(clazz, fields)
       addAccept(methodStructure, generator, clazz, fields, conf)
+      clazz.handle()
+    }
+    val sourceCodeExecution: ClassHandle = using(
+      sourceCodeGen.generateClass(conf.packageName, className + "Execution", typeRef[GeneratedQueryExecution])) { clazz =>
+
+      val fields: Fields = createFields(columns, clazz)
+      setOperatorIds(clazz, operatorIds)
+      addSimpleMethods(clazz, fields)
+      addAccept(methodStructure, sourceCodeGen, clazz, fields, conf)
       clazz.handle()
     }
     val query = using(generator.generateClass(conf.packageName, className, typeRef[GeneratedQuery])) { clazz =>
@@ -123,14 +151,49 @@ object GeneratedQueryStructure extends CodeStructure[GeneratedQuery] {
             execute.load("params")))
       }
       clazz.handle()
-    }.newInstance().asInstanceOf[GeneratedQuery]
+    }
+    val sourceCodeQuery = using(sourceCodeGen.generateClass(conf.packageName, className, typeRef[GeneratedQuery])) { clazz =>
+      using(clazz.generateMethod(typeRef[GeneratedQueryExecution], "execute",
+        param[TaskCloser]("closer"),
+        param[QueryContext]("queryContext"),
+        param[ExecutionMode]("executionMode"),
+        param[Provider[InternalPlanDescription]]("description"),
+        param[QueryExecutionTracer]("tracer"),
+        param[util.Map[String, Object]]("params"))) { execute =>
+        execute.returns(
+          invoke(
+            newInstance(execution),
+            constructorReference(execution,
+              typeRef[TaskCloser],
+              typeRef[QueryContext],
+              typeRef[ExecutionMode],
+              typeRef[Provider[InternalPlanDescription]],
+              typeRef[QueryExecutionTracer],
+              typeRef[util.Map[String, Object]]),
+            execute.load("closer"),
+            execute.load("queryContext"),
+            execute.load("executionMode"),
+            execute.load("description"),
+            execute.load("tracer"),
+            execute.load("params")))
+      }
+      clazz.handle()
+    }
+
+    // if we use sourceCodeExecution and sourceCodeQuery below it works ...
+    // Haven't understood why -- I'm suspecting ClassByteCodeWriter, but it's a hunch
+
     val clazz: Class[_] = execution.loadClass()
+//    val clazz: Class[_] = sourceCodeExecution.loadClass()
     operatorIds.foreach {
       case (key, id) => setStaticField(clazz, key, id)
     }
+    val bar = query.newInstance()
+//    val bar = sourceCodeQuery.newInstance()
+    val foo = bar.asInstanceOf[GeneratedQuery]
 
     println(sourceSaver.source)
-    GeneratedQueryStructureResult(query, sourceSaver.source)
+    GeneratedQueryStructureResult(foo, sourceSaver.source)
   }
 
   private def addAccept(methodStructure: (MethodStructure[_]) => Unit,

@@ -37,6 +37,7 @@ package object helpers {
       block(resource)
     } catch {
       case f: Throwable =>
+        println(f)
         failure = true
         try {
           try {

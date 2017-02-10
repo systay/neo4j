@@ -19,6 +19,8 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import java.io.PrintWriter
+
 import org.neo4j.cypher.{ExecutionEngineFunSuite, NewPlannerTestSupport}
 
 class AggregationAcceptanceTest extends ExecutionEngineFunSuite with NewPlannerTestSupport {

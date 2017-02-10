@@ -21,6 +21,10 @@ package org.neo4j.cypher.internal.compiled_runtime.v3_2.codegen
 
 object setStaticField {
   def apply(clazz: Class[_], name: String, value: AnyRef) = {
-    clazz.getDeclaredField(name).set(null, value)
+    println(s"$clazz $name $value")
+    val declaredField = clazz.getDeclaredField(name)
+    val r = declaredField.set(null, value)
+    println("DONE")
+    r
   }
 }

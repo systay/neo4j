@@ -22,6 +22,7 @@ package org.neo4j.cypher.internal
 import org.neo4j.cypher.internal.spi.v3_2.TransactionalContextWrapper
 import org.neo4j.graphdb.Transaction
 import org.neo4j.kernel.api.Statement
+import org.neo4j.kernel.api.query.PlannerInfo
 
 final case class TransactionInfo(tx: Transaction, isTopLevelTx: Boolean, statement: Statement)
 
@@ -33,5 +34,5 @@ trait ExecutionPlan {
 
   def isStale(lastCommittedTxId: LastCommittedTxIdProvider, ctx: TransactionalContextWrapper): Boolean
 
-  def plannerInfo: org.neo4j.kernel.api.ExecutingQuery.PlannerInfo
+  def plannerInfo: PlannerInfo
 }

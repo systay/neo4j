@@ -19,13 +19,13 @@
  */
 package org.neo4j.cypher.internal.compiler.v3_2.planner.logical.steps
 
+import org.neo4j.cypher.internal.compiler.v3_2.planner.PlannerQuery
 import org.neo4j.cypher.internal.compiler.v3_2.planner.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.compiler.v3_2.planner.logical.{LogicalPlanningContext, PlanTransformer}
-import org.neo4j.cypher.internal.compiler.v3_2.planner.{CantHandleQueryException, PlannerQuery}
 import org.neo4j.cypher.internal.compiler.v3_2.spi.PlanContext
 import org.neo4j.cypher.internal.frontend.v3_2.ast._
 import org.neo4j.cypher.internal.frontend.v3_2.notification.{IndexHintUnfulfillableNotification, JoinHintUnfulfillableNotification}
-import org.neo4j.cypher.internal.frontend.v3_2.{IndexHintException, JoinHintException}
+import org.neo4j.cypher.internal.frontend.v3_2.{IndexHintException, InvalidArgumentException, JoinHintException}
 
 object verifyBestPlan extends PlanTransformer[PlannerQuery] {
   def apply(plan: LogicalPlan, expected: PlannerQuery)(implicit context: LogicalPlanningContext): LogicalPlan = {
@@ -39,10 +39,15 @@ object verifyBestPlan extends PlanTransformer[PlannerQuery] {
         val b: PlannerQuery = constructed.withoutHints(constructed.allHints)
         if (a != b) {
           // unknown planner issue failed to find plan (without regard for differences in hints)
-          throw new CantHandleQueryException(s"Expected \n$expected \n\n\nInstead, got: \n$constructed")
+          throw new InvalidArgumentException(s"Expected \n$expected \n\n\nInstead, got: \n$constructed")
         } else {
           // unknown planner issue failed to find plan matching hints (i.e. "implicit hints")
-          throw new CantHandleQueryException(s"Expected \n${expected.allHints} \n\n\nInstead, got: \n${constructed.allHints}")
+          val expectedHints = expected.allHints.mkString(System.lineSeparator())
+          val actualHints = constructed.allHints.mkString(System.lineSeparator())
+          val message =
+            s"Something went when trying to fulfill the index hints of your query.\n" +
+            s"Expected: \n$expectedHints \n\n\nInstead, got: \n$actualHints"
+          throw new InvalidArgumentException(message)
         }
       } else {
         processUnfulfilledIndexHints(context, unfulfillableIndexHints)

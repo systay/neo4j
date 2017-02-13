@@ -21,15 +21,15 @@ package org.neo4j.cypher.internal.compiler.v3_2.planner.logical.steps
 
 import org.mockito.Matchers._
 import org.mockito.Mockito._
+import org.neo4j.cypher.internal.compiler.v3_2.IndexDescriptor
 import org.neo4j.cypher.internal.compiler.v3_2.planner._
 import org.neo4j.cypher.internal.compiler.v3_2.planner.logical.plans._
 import org.neo4j.cypher.internal.compiler.v3_2.spi.PlanContext
-import org.neo4j.cypher.internal.compiler.v3_2.IndexDescriptor
 import org.neo4j.cypher.internal.frontend.v3_2.ast._
 import org.neo4j.cypher.internal.frontend.v3_2.notification.{IndexHintUnfulfillableNotification, JoinHintUnfulfillableNotification}
 import org.neo4j.cypher.internal.frontend.v3_2.phases.RecordingNotificationLogger
 import org.neo4j.cypher.internal.frontend.v3_2.test_helpers.CypherFunSuite
-import org.neo4j.cypher.internal.frontend.v3_2.{IndexHintException, JoinHintException, SemanticDirection}
+import org.neo4j.cypher.internal.frontend.v3_2.{IndexHintException, InvalidArgumentException, JoinHintException, SemanticDirection}
 import org.neo4j.cypher.internal.ir.v3_2.{IdName, PatternRelationship, VarPatternLength}
 
 class ExtractBestPlanTest extends CypherFunSuite with LogicalPlanningTestSupport {
@@ -76,7 +76,7 @@ class ExtractBestPlanTest extends CypherFunSuite with LogicalPlanningTestSupport
       planContext = newMockedPlanContext)
     val plan = newMockedLogicalPlan("b")
 
-    a [CantHandleQueryException] should be thrownBy {
+    a [InvalidArgumentException] should be thrownBy {
       verifyBestPlan(plan, query)
     }
   }
@@ -93,7 +93,7 @@ class ExtractBestPlanTest extends CypherFunSuite with LogicalPlanningTestSupport
       planContext= newMockedPlanContext
     )
 
-    a [CantHandleQueryException] should be thrownBy {
+    a [InvalidArgumentException] should be thrownBy {
       verifyBestPlan(getSimpleLogicalPlanWithAandB(), query)
     }
   }
@@ -175,7 +175,7 @@ class ExtractBestPlanTest extends CypherFunSuite with LogicalPlanningTestSupport
     implicit val logicalPlanContext = newMockedLogicalPlanningContext(
       planContext = getPlanContext(true), useErrorsOverWarnings = false)
 
-    a [CantHandleQueryException] should be thrownBy {
+    a [InvalidArgumentException] should be thrownBy {
       verifyBestPlan(getSimpleLogicalPlanWithAandB(), newQueryWithIdxHint())
     }
   }

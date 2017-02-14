@@ -17,13 +17,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.internal.compiler.v3_2.planner
+package org.neo4j.cypher.internal.compiler.v3_2.executionplan
 
-import org.neo4j.cypher.internal.frontend.v3_2.CypherException
-import org.neo4j.cypher.internal.frontend.v3_2.spi.MapToPublicExceptions
-
-class CantCompileQueryException(message: String = "Internal error - should have used fall back to execute query, but something went horribly wrong", cause:Throwable=null)
-  extends CypherException(message, cause) {
-
-  def mapToPublic[T <: Throwable](thrower: MapToPublicExceptions[T]) = throw new CantCompileQueryException(message)
+/**
+  * This trait is used to signal up the abstraction levels that running a query is completed, either
+  * because the results have been exhausted, or because a failure has terminated the execution of the query.
+  */
+trait Completable {
+  def completed(success: Boolean): Unit
 }

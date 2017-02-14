@@ -17,13 +17,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.internal.compiler.v3_2.planner
+package org.neo4j.cypher.internal.compiler.v3_2
 
-import org.neo4j.cypher.internal.frontend.v3_2.CypherException
-import org.neo4j.cypher.internal.frontend.v3_2.spi.MapToPublicExceptions
+import org.neo4j.cypher.internal.frontend.v3_2.test_helpers.CypherFunSuite
 
-class CantCompileQueryException(message: String = "Internal error - should have used fall back to execute query, but something went horribly wrong", cause:Throwable=null)
-  extends CypherException(message, cause) {
-
-  def mapToPublic[T <: Throwable](thrower: MapToPublicExceptions[T]) = throw new CantCompileQueryException(message)
+class ResultRowImplTest extends CypherFunSuite {
+  test("int can be handled as a Number") {
+    val row = new ResultRowImpl
+    row.set("x", 10)
+    row.getNumber("x") should equal(10)
+  }
 }

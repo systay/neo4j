@@ -17,13 +17,25 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.internal.compiler.v3_2.planner
+package org.neo4j.cypher.internal.javacompat;
 
-import org.neo4j.cypher.internal.frontend.v3_2.CypherException
-import org.neo4j.cypher.internal.frontend.v3_2.spi.MapToPublicExceptions
+import static org.junit.Assert.*;
+import org.junit.Test;
+import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.kernel.impl.query.QueryEngineProvider;
 
-class CantCompileQueryException(message: String = "Internal error - should have used fall back to execute query, but something went horribly wrong", cause:Throwable=null)
-  extends CypherException(message, cause) {
+import java.util.ServiceLoader;
 
-  def mapToPublic[T <: Throwable](thrower: MapToPublicExceptions[T]) = throw new CantCompileQueryException(message)
+public class CommunityCypherEngineProviderTest
+{
+
+    @Test
+    public void shouldServiceLoaderFindCypherEngineProvider() {
+
+        // WHEN
+        ServiceLoader<QueryEngineProvider> services = ServiceLoader.load(QueryEngineProvider.class);
+
+        // THEN
+        assertTrue(Iterables.single(services) instanceof CommunityCypherEngineProvider );
+    }
 }

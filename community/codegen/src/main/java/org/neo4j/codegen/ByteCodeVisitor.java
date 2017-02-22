@@ -113,6 +113,8 @@ interface ByteCodeVisitor
             out.format( "  %s %s%s%n  {%n", Modifier.toString( access ), name, desc );
             return new MethodVisitor( API )
             {
+                int offset;
+
                 @Override
                 public void visitFrame( int type, int nLocal, Object[] local, int nStack, Object[] stack )
                 {
@@ -196,49 +198,71 @@ interface ByteCodeVisitor
                 @Override
                 public void visitInsn( int opcode )
                 {
-                    out.format( "    %s%n", opcode( opcode ) );
+                    out.format( "    @%d: %s%n", offset, opcode( opcode ) );
+                    offset += 1;
                 }
 
                 @Override
                 public void visitIntInsn( int opcode, int operand )
                 {
-                    out.format( "    %s %d%n", opcode( opcode ), operand );
+                    out.format( "    @%d: %s %d%n", offset, opcode( opcode ), operand );
+                    offset += opcode == Opcodes.SIPUSH ? 3 : 2;
                 }
 
                 @Override
                 public void visitVarInsn( int opcode, int var )
                 {
-                    out.format( "    %s var:%d%n", opcode( opcode ), var );
+                    out.format( "    @%d: %s var:%d%n", offset, opcode( opcode ), var );
+                    offset += 0; // TODO!!!
                 }
 
                 @Override
                 public void visitTypeInsn( int opcode, String type )
                 {
-                    out.format( "    %s %s%n", opcode( opcode ), type );
+                    out.format( "    @%d: %s %s%n", offset, opcode( opcode ), type );
+                    offset += 3;
                 }
 
                 @Override
                 public void visitFieldInsn( int opcode, String owner, String name, String desc )
                 {
-                    out.format( "    %s %s.%s:%s%n", opcode( opcode ), owner, name, desc );
+                    out.format( "    @%d: %s %s.%s:%s%n", offset, opcode( opcode ), owner, name, desc );
+                    if ( opcode == Opcodes.INVOKEINTERFACE )
+                    {
+                        offset += 5;
+                    }
+                    else
+                    {
+                        offset += 3;
+                    }
                 }
 
                 @Override
                 public void visitMethodInsn( int opcode, String owner, String name, String desc, boolean itf )
                 {
-                    out.format( "    %s %s.%s%s%n", opcode( opcode ), owner, name, desc );
+                    out.format( "    @%d: %s %s.%s%s%n", offset, opcode( opcode ), owner, name, desc );
+                    if ( opcode == Opcodes.INVOKEINTERFACE )
+                    {
+                        offset += 5;
+                    }
+                    else
+                    {
+                        offset += 3;
+                    }
                 }
 
                 @Override
                 public void visitInvokeDynamicInsn( String name, String desc, Handle bsm, Object... bsmArgs )
                 {
-                    out.format( "    InvokeDynamic %s%s / bsm:%s%s%n", name, desc, bsm, Arrays.toString( bsmArgs ) );
+                    out.format( "    @%d: InvokeDynamic %s%s / bsm:%s%s%n", offset, name, desc, bsm, Arrays.toString( bsmArgs ) );
+                    offset += 5;
                 }
 
                 @Override
                 public void visitJumpInsn( int opcode, Label label )
                 {
-                    out.format( "    %s %s%n", opcode( opcode ), label );
+                    out.format( "    @%d: %s %s%n", offset, opcode( opcode ), label );
+                    offset += 0; // TODO!!!
                 }
 
                 @Override
@@ -250,41 +274,51 @@ interface ByteCodeVisitor
                 @Override
                 public void visitLdcInsn( Object cst )
                 {
-                    out.format( "    LDC %s%n", cst );
+                    out.format( "    @%d: LDC %s%n", offset, cst );
+                    offset += 0; // TODO!!!
                 }
 
                 @Override
                 public void visitIincInsn( int var, int increment )
                 {
-                    out.format( "    IINC %d += %d%n", var, increment );
+                    out.format( "    @%d: IINC %d += %d%n", offset, var, increment );
+                    offset += 0; // TODO!!!
                 }
 
                 @Override
                 public void visitTableSwitchInsn( int min, int max, Label dflt, Label... labels )
                 {
-                    out.format( "    TABLE_SWITCH(min=%d, max=%d)%n    {%n", min, max );
+                    out.format( "    @%d: TABLE_SWITCH(min=%d, max=%d)%n    {%n", offset, min, max );
                     for ( int i = 0, val = min; i < labels.length; i++, val++ )
                     {
                         out.format( "      case %d goto %s%n", val, labels[i] );
                     }
                     out.printf( "      default goto %s%n    }%n", dflt );
+//                    u = u + 4 - (offset & 3);
+
+                    offset += 12 + 4 * (max - min + 1); // TODO!!!
                 }
 
                 @Override
                 public void visitLookupSwitchInsn( Label dflt, int[] keys, Label[] labels )
                 {
-                    out.format( "    LOOKUP_SWITCH%n    {%n" );
+                    out.format( "    @%d: LOOKUP_SWITCH%n    {%n", offset );
                     for ( int i = 0; i < labels.length; i++ )
                     {
                         out.format( "      case %d goto %s%n", keys[i], labels[i] );
                     }
                     out.printf( "      default goto %s%n    }%n", dflt );
+
+                    offset += 8 + 8 * keys.length;
+
+                    offset += 0; // TODO!!!
                 }
 
                 @Override
                 public void visitMultiANewArrayInsn( String desc, int dims )
                 {
-                    out.format( "    MULTI_ANEW_ARRAY %s, dims:%d%n", desc, dims );
+                    out.format( "    @%d: MULTI_ANEW_ARRAY %s, dims:%d%n", offset, desc, dims );
+                    offset += 4;
                 }
 
                 @Override

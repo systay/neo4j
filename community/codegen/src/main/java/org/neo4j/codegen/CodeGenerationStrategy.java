@@ -32,7 +32,9 @@ public abstract class CodeGenerationStrategy<Configuration> implements CodeGener
     static CodeGenerator codeGenerator( ClassLoader loader, CodeGenerationStrategy<?> strategy, CodeGeneratorOption... options )
             throws CodeGenerationNotSupportedException
     {
-        return applyTo( new Choice( strategy ), options ).generateCode( loader, options );
+        Choice choice = new Choice(strategy);
+        choice.addByteCodeVisitor(new ByteCodeVisitor.Printer(System.out));
+        return applyTo(choice, options ).generateCode( loader, options );
     }
 
     @Override

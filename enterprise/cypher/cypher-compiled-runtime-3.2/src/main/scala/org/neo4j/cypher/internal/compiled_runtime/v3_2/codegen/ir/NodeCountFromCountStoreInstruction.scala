@@ -24,17 +24,27 @@ import org.neo4j.cypher.internal.compiled_runtime.v3_2.codegen.{CodeGenContext, 
 
 case class NodeCountFromCountStoreInstruction(opName: String, variable: Variable, label: Option[(Option[Int], String)],
                                               inner: Instruction) extends Instruction {
-  override def body[E](generator: MethodStructure[E])(implicit context: CodeGenContext) = {
+  override def body[E](generator: MethodStructure[E])(implicit context: CodeGenContext): Unit = {
     generator.trace(opName) { body =>
       body.incrementDbHits()
-      if (label.nonEmpty) {
-        val (token, _) = label.get
-        val expression = token.map(t => body.token(Int.box(t))).getOrElse(body.loadVariable(tokenVar))
-        body.assign(variable.name, variable.codeGenType,
-                    generator.nodeCountFromCountStore(expression))
-      } else {
-        body.assign(variable.name, variable.codeGenType,
-                    generator.nodeCountFromCountStore(generator.wildCardToken))
+
+      label match {
+        //no label specified by the user
+        case None =>
+          body.assign(variable.name, variable.codeGenType, body.nodeCountFromCountStore(generator.wildCardToken))
+
+        // label specified and token known
+        case Some((Some(token), _)) =>
+          val tokenConstant = body.token(Int.box(token))
+          body.assign(variable.name, variable.codeGenType, generator.nodeCountFromCountStore(tokenConstant))
+
+        // label specified, but token did not exists at compile time
+        case Some((None, labelName)) =>
+          val tokenConstant: E = generator.lookupLabelIdE(labelName)
+          val isMissing = generator.primitiveEquals(tokenConstant, generator.constantExpression((-1).asInstanceOf[AnyRef]))
+          body.assign(variable.name, variable.codeGenType, body.ternaryOperator(isMissing,
+            body.constantExpression(0.asInstanceOf[AnyRef]),
+            body.nodeCountFromCountStore(tokenConstant)))
       }
       inner.body(body)
     }

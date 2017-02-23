@@ -32,6 +32,9 @@ trait Clauses extends Parser
   def Clause: Rule1[ast.Clause]
 
   def LoadCSV: Rule1[ast.LoadCSV] = rule("LOAD CSV") {
+
+    new collection.mutable.ArrayBuilder[String]()
+
     keyword("LOAD CSV") ~~
       group(keyword("WITH HEADERS") ~ push(true) | push(false)) ~~
       keyword("FROM") ~~ (Expression) ~~

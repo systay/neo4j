@@ -110,6 +110,7 @@ trait MethodStructure[E] {
   def threeValuedEqualsExpression(lhs: E, rhs: E): E
   def threeValuedPrimitiveEqualsExpression(lhs: E, rhs: E, codeGenType: CodeGenType): E
   def equalityExpression(lhs: E, rhs: E, codeGenType: CodeGenType): E
+  def primitiveEquals(lhs: E, rhs: E): E
   def orExpression(lhs: E, rhs: E): E
   def threeValuedOrExpression(lhs: E, rhs: E): E
 
@@ -139,6 +140,7 @@ trait MethodStructure[E] {
   def hasLabel(nodeVar: String, labelVar: String, predVar: String): E
   def allNodesScan(iterVar: String): Unit
   def lookupLabelId(labelIdVar: String, labelName: String): Unit
+  def lookupLabelIdE(labelName: String): E
   def lookupRelationshipTypeId(typeIdVar: String, typeName: String): Unit
   def nodeGetAllRelationships(iterVar: String, nodeVar: String, direction: SemanticDirection): Unit
   def nodeGetRelationships(iterVar: String, nodeVar: String, direction: SemanticDirection, typeVars: Seq[String]): Unit

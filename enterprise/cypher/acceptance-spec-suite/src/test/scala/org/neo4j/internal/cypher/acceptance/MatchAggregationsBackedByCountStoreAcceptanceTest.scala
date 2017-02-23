@@ -24,7 +24,8 @@ import org.neo4j.cypher.internal.compiler.v3_2.planDescription.InternalPlanDescr
 import org.neo4j.cypher.{ExecutionEngineFunSuite, NewPlannerTestSupport, QueryStatisticsTestSupport}
 import org.scalatest.matchers.{MatchResult, Matcher}
 
-class MatchAggregationsBackedByCountStoreAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with NewPlannerTestSupport {
+class MatchAggregationsBackedByCountStoreAcceptanceTest
+  extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with NewPlannerTestSupport {
 
   test("counts nodes using count store") {
     // Given
@@ -608,6 +609,15 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest extends ExecutionEngineF
     result.columnAs("count(r)").toSet[Int] should equal(Set(1))
   }
 
+  test("runtime checking of tokens - nodes") {
+    createLabeledNode("NotRelated")
+    executeWithAllPlannersAndRuntimesAndCompatibilityMode("MATCH (n:Nonexistent) RETURN count(n)")
+  }
+
+  test("runtime checking of tokens - relationships") {
+    relate(createNode(), createNode(), "UNRELATED")
+    executeWithAllPlannersAndRuntimesAndCompatibilityMode("MATCH ()-[r:Nonexistent]->() RETURN count(r)")
+  }
 
   def withModel(label1: String = "User",
                 label2: String = "User",

@@ -30,7 +30,7 @@ import org.neo4j.collection.primitive._
 import org.neo4j.collection.primitive.hopscotch.LongKeyIntValueTable
 import org.neo4j.cypher.internal.codegen.CompiledConversionUtils.CompositeKey
 import org.neo4j.cypher.internal.codegen._
-import org.neo4j.cypher.internal.compiled_runtime.v3_2.codegen.ir.expressions.{BoolType, CodeGenType, FloatType, IntType, Parameter => _, ReferenceType, _}
+import org.neo4j.cypher.internal.compiled_runtime.v3_2.codegen.ir.expressions.{BoolType, CodeGenType, FloatType, IntType, ReferenceType, Parameter => _, _}
 import org.neo4j.cypher.internal.compiled_runtime.v3_2.codegen.spi._
 import org.neo4j.cypher.internal.compiled_runtime.v3_2.codegen.{CodeGenContext, QueryExecutionEvent}
 import org.neo4j.cypher.internal.compiler.v3_2.ast.convert.commands.DirectionConverter.toGraphDb
@@ -154,6 +154,9 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
   override def lookupLabelId(labelIdVar: String, labelName: String) =
     generator.assign(typeRef[Int], labelIdVar,
                      invoke(readOperations, labelGetForName, constant(labelName)))
+
+  override def lookupLabelIdE(labelName: String): Expression =
+    invoke(readOperations, labelGetForName, constant(labelName))
 
   override def lookupRelationshipTypeId(typeIdVar: String, typeName: String) =
     generator.assign(typeRef[Int], typeIdVar, invoke(readOperations, relationshipTypeGetForName, constant(typeName)))
@@ -379,6 +382,8 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
   override def equalityExpression(lhs: Expression, rhs: Expression, codeGenType: CodeGenType) =
     if (codeGenType.isPrimitive) equal(lhs, rhs)
     else invoke(lhs, Methods.equals, rhs)
+
+  override def primitiveEquals(lhs: Expression, rhs: Expression): Expression = equal(lhs, rhs)
 
   override def orExpression(lhs: Expression, rhs: Expression) = or(lhs, rhs)
 

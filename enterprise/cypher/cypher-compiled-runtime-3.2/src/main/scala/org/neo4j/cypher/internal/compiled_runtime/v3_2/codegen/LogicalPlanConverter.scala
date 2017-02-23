@@ -560,7 +560,7 @@ object LogicalPlanConverter {
       val (methodHandle, actions :: tl) = context.popParent().consume(context, this)
       val opName = context.registerOperator(logicalPlan)
 
-      val label = nodeCount.labelName.map(l => l.id(context.semanticTable).map(_.id) -> l.name)
+      val label: Option[(Option[Int], String)] = nodeCount.labelName.map(l => l.id(context.semanticTable).map(_.id) -> l.name)
       (methodHandle, NodeCountFromCountStoreInstruction(opName, variable, label, actions) :: tl)
     }
   }

@@ -55,7 +55,11 @@ object QueryPlannerConfiguration {
     legacyHintLeafPlanner,
 
     // Handles OR between other leaf planners
-    OrLeafPlanner(leafPlanFromExpressions))
+    OrLeafPlanner(leafPlanFromExpressions),
+
+    // Produces cartesian products of low cardinality plans
+    CartesianProductLeafPlanner(leafPlanFromExpressions)
+  )
 
 
   val default: QueryPlannerConfiguration = QueryPlannerConfiguration(

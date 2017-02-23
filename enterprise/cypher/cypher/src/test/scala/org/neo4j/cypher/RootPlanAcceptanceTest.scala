@@ -101,6 +101,7 @@ class RootPlanAcceptanceTest extends ExecutionEngineFunSuite {
     def shouldHavePlanner(planner: PlannerName): TestQuery = {
       planDescription.getArguments.get("planner") should equal(s"${planner.toTextOutput}")
       planDescription.getArguments.get("planner-impl") should equal(s"${planner.name}")
+      planDescription.getArguments should contain("apa")
       this
     }
 

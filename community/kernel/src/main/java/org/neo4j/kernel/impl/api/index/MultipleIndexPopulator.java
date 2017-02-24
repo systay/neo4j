@@ -20,6 +20,7 @@
 package org.neo4j.kernel.impl.api.index;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -309,7 +310,9 @@ public class MultipleIndexPopulator implements IndexPopulator
 
     private int[] propertyKeyIds()
     {
-        return populations.stream().mapToInt( population -> population.descriptor.schema().getPropertyId() ).toArray();
+        return populations.stream()
+                .flatMapToInt( population -> Arrays.stream( population.descriptor.schema().getPropertyIds() ) )
+                .toArray();
     }
 
     private int[] labelIds()

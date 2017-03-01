@@ -924,14 +924,14 @@ public class StateHandlingStatementOperations implements
     private PrimitiveLongIterator filterExactIndexMatches( final KernelStatement state, NewIndexDescriptor index,
             Object value, PrimitiveLongIterator committed )
     {
-        // TODO: composite index
         if ( index.schema().getPropertyIds().length == 1 )
         {
             return LookupFilter.exactIndexMatches( this, state, committed, index.schema().getPropertyIds()[0], value );
         }
         else
         {
-            return PrimitiveLongCollections.emptyIterator();
+            // TODO: composite index
+            return committed;
         }
     }
 

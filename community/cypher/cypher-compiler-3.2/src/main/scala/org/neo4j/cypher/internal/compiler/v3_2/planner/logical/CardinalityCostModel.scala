@@ -25,7 +25,7 @@ import org.neo4j.cypher.internal.frontend.v3_2.ast.{HasLabels, Property}
 import org.neo4j.cypher.internal.ir.v3_2._
 
 object CardinalityCostModel extends CostModel {
-  def VERBOSE = java.lang.Boolean.getBoolean("CardinalityCostModel.VERBOSE")
+  private val VERBOSE: Boolean = java.lang.Boolean.getBoolean("CardinalityCostModel.VERBOSE")
 
   private val DEFAULT_COST_PER_ROW: CostPerRow = 0.1
   private val PROBE_BUILD_COST: CostPerRow = 3.1
@@ -106,17 +106,30 @@ object CardinalityCostModel extends CostModel {
     case _ => plan.lhs.map(p => p.solved.estimatedCardinality).getOrElse(plan.solved.estimatedCardinality)
   }
 
+  private def verbose(text: String) = {
+    if(VERBOSE)
+      println(text)
+  }
+
   def apply(plan: LogicalPlan, input: QueryGraphSolverInput): Cost = {
     val cost = plan match {
       case CartesianProduct(lhs, rhs) =>
-        apply(lhs, input) + lhs.solved.estimatedCardinality * apply(rhs, input)
+
+        val lhsCost = apply(lhs, input)
+        val rhsCost = apply(rhs, input)
+        val lhsCardinality = lhs.solved.estimatedCardinality
+        val total = lhsCost + lhsCardinality * rhsCost
+        verbose(s"${plan.getClass.getSimpleName}: $total ${plan.solved.estimatedCardinality} <= l($lhsCost) + l($lhsCardinality) * r($rhsCost)")
+        total
 
       case ApplyVariants(lhs, rhs) =>
         val lCost = apply(lhs, input)
         val rCost = apply(rhs, input)
 
         // the rCost has already been multiplied by the lhs cardinality
-        lCost + rCost
+        val total = lCost + rCost
+        verbose(s"${plan.getClass.getSimpleName}: $total ${plan.solved.estimatedCardinality} <= l($lCost) + r($rCost)")
+        total
 
       case HashJoin(lhs, rhs) =>
         val lCost = apply(lhs, input)
@@ -125,9 +138,12 @@ object CardinalityCostModel extends CostModel {
         val lhsCardinality = lhs.solved.estimatedCardinality
         val rhsCardinality = rhs.solved.estimatedCardinality
 
-        lCost + rCost +
-          lhsCardinality * PROBE_BUILD_COST +
-          rhsCardinality * PROBE_SEARCH_COST
+        val total =
+          lCost + rCost +
+            lhsCardinality * PROBE_BUILD_COST +
+            rhsCardinality * PROBE_SEARCH_COST
+        verbose(s"${plan.getClass.getSimpleName}: $total ${plan.solved.estimatedCardinality} <= l($lCost) + r($rCost) + l($lhsCardinality) * BUILD_COST + r($rhsCardinality) * PROBE_COST")
+        total
 
       case _ =>
         val lhsCost = plan.lhs.map(p => apply(p, input)).getOrElse(Cost(0))
@@ -136,6 +152,7 @@ object CardinalityCostModel extends CostModel {
         val rowCost = costPerRow(plan)
         val costForThisPlan = planCardinality * rowCost
         val totalCost = costForThisPlan + lhsCost + rhsCost
+        verbose(s"${plan.getClass.getSimpleName}: $totalCost ${plan.solved.estimatedCardinality} <= thisPlan($costForThisPlan) + l($lhsCost) + r($rhsCost)")
         totalCost
     }
 

@@ -6,4 +6,5 @@ public interface Register
     void setLongAt(int idx, long value);
     Object get(int idx);
     void set(int idx, Object value);
+    Object get(Slot slot);
 }

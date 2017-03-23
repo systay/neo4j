@@ -1,23 +1,52 @@
 package org.neo4j.cypher.internal.compiler.v3_2.bork
 
-import org.neo4j.cypher.internal.compiler.v3_2.planner.logical.plans
-import org.neo4j.cypher.internal.compiler.v3_2.planner.logical.plans.{LogicalPlan, TreeBuilder}
-import org.neo4j.cypher.internal.ir.v3_2.IdName
-
-class LogicalPlan2Operator(idMap: Map[IdName, Slot]) extends TreeBuilder[Operator] {
-
-  override def create(plan: LogicalPlan): Operator = {
-    val result = super.create(plan)
-    result.becomeParent()
-    result
-  }
-
-  override protected def build(plan: LogicalPlan): Operator = plan match {
-    case plans.AllNodesScan(IdName(id), _) =>
-      new AllNodesScanOp(0)
-  }
-
-  override protected def build(plan: LogicalPlan, source: Operator): Operator = ???
-
-  override protected def build(plan: LogicalPlan, lhs: Operator, rhs: Operator): Operator = ???
-}
+//class LogicalPlan2Operator(pipeLines: Map[LogicalPlan, PipeLine], semanticTable: SemanticTable)
+//  extends TreeBuilder[PipeLineBuilder] {
+//
+//  implicit val s = semanticTable
+//
+//  override def create(plan: LogicalPlan): (Operator, Map[Operator, PipeLine]) = {
+//    val (operator, pipelines) = super.create(plan)
+//    operator.becomeParent()
+//    (operator, pipelines)
+//  }
+//
+//  override protected def build(plan: LogicalPlan): (Operator, Map[Operator, PipeLine]) = {
+//    implicit val pipeLine = pipeLines(plan)
+//    val operator = plan match {
+//      case plans.AllNodesScan(id, _) =>
+//        val slot = pipeLine.slots(id)
+//        assert(slot.isInstanceOf[LongSlot])
+//        new AllNodesScanOp(slot.asInstanceOf[LongSlot].getOffset)
+//
+//      case plans.NodeByLabelScan(id, labelName, _) =>
+//        val slot = pipeLine.slots(id)
+//        assert(slot.isInstanceOf[LongSlot])
+//        val tokenId = labelName.id.get.id
+//        new NodeByLabelScanOp(slot.asInstanceOf[LongSlot].getOffset, tokenId)
+//    }
+//
+//    (operator, Map(operator -> pipeLine))
+//  }
+//
+//  override protected def build(plan: LogicalPlan, in: (Operator, Map[Operator, PipeLine])): (Operator, Map[Operator, PipeLine]) = {
+//    implicit val pipeLine = pipeLines(plan)
+//    val (source, mapAcc) = in
+//    val operator = plan match {
+//      case plans.Selection(astPredicates, _) =>
+//        val predicates = astPredicates.map(p => ExpressionConverter.transform(p))
+//        new FilterOp(source, predicates.head) // TODO: .head here is cheating
+//
+//      case plans.ProduceResult(columns, _) =>
+//        val java: util.List[String] = columns.toList.asJava
+//
+//        val toMap = pipeLine.slots.map { case (IdName(k), v) => k -> v }
+//
+//        new ProduceResults(source, java, mapAsJavaMap(toMap))
+//    }
+//    (operator, mapAcc + (operator -> pipeLine))
+//  }
+//
+//
+//  override protected def build(plan: LogicalPlan, lhs: (Operator, Map[Operator, PipeLine]), rhs: (Operator, Map[Operator, PipeLine])): (Operator, Map[Operator, PipeLine]) = ???
+//}

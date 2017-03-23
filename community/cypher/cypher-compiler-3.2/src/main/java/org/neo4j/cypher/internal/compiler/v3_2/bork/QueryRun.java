@@ -7,26 +7,21 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
 
-/*
-A PipeLine connects operators through morsels. It is
- */
 public class QueryRun
 {
-    private final Operator operatorTree;
-    private final Map<Operator,RegisterInfo> registerInfo;
     private final Statement statement;
-    public final Map<Operator,Object> state = new HashMap<>();
+    private final InternalResultVisitor resultVisitor;
+    public final Map<Operator, Object> state;
 
-    public QueryRun( Operator operatorTree, Map<Operator,RegisterInfo> registerInfo, Statement statement )
-    {
-        this.operatorTree = operatorTree;
-        this.registerInfo = registerInfo;
+    public QueryRun(Statement statement, InternalResultVisitor resultVisitor, Map<Operator, Object> state) {
         this.statement = statement;
+        this.resultVisitor = resultVisitor;
+        this.state = state;
     }
 
-    public <E extends Exception> void execute( final InternalResultVisitor<E> visitor ) throws E
+    public QueryRun(Statement statement, InternalResultVisitor resultVisitor)
     {
-
+        this(statement, resultVisitor, new HashMap<>());
     }
 
     public <T> T getOrCreate( Operator op, Supplier<T> value )
@@ -38,5 +33,9 @@ public class QueryRun
     public Statement getStatement()
     {
         return statement;
+    }
+
+    public InternalResultVisitor getResultVisitor() {
+        return resultVisitor;
     }
 }

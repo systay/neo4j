@@ -1,9 +1,14 @@
 package org.neo4j.cypher.internal.compiler.v3_2.bork;
 
+import org.neo4j.kernel.api.exceptions.KernelException;
+
 import java.util.Optional;
 
+/*
+
+ */
 public abstract class Operator {
-    public abstract boolean execute(Morsel input, QueryRun query);
+    public abstract boolean execute(Morsel input, QueryRun query) throws KernelException;
 
     public Operator(Operator lhs, Operator rhs) {
         this.lhs = Optional.of(lhs);
@@ -33,6 +38,9 @@ public abstract class Operator {
         this.parent = Optional.of(parent);
         becomeParent();
     }
+
+    public abstract boolean isLeaf();
+
 }
 
 

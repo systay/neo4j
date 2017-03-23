@@ -1,5 +1,7 @@
 package org.neo4j.cypher.internal.compiler.v3_2.bork;
 
+import org.neo4j.cypher.internal.frontend.v3_2.InternalException;
+
 public class Morsel implements Register {
     private final RegisterInfo registerInfo;
     private final long[] longs;
@@ -44,7 +46,7 @@ public class Morsel implements Register {
         validFlag[position] = false;
     }
 
-    public void reset() {
+    public void resetReadPos() {
         position = -1;
     }
 
@@ -70,5 +72,21 @@ public class Morsel implements Register {
     public void set(int offset, Object value) {
         int i = position * registerInfo.objSize() + offset;
         objs[i] = value;
+    }
+
+    @Override
+    public Object get(Slot s) {
+        if (s instanceof Slot.LongSlot) {
+            Slot.LongSlot s1 = (Slot.LongSlot) s;
+            int offset = position * registerInfo.longSize() + s1.getOffset();
+            return longs[offset];
+        }
+        if (s instanceof Slot.RefSlot) {
+            Slot.RefSlot s1 = (Slot.RefSlot) s;
+            int offset = position * registerInfo.objSize() + s1.getOffset();
+            return objs[offset];
+        }
+
+        throw new InternalException("Unknown slot type found " + s.getClass(), null);
     }
 }

@@ -1,7 +1,7 @@
 package org.neo4j.cypher.internal.compiler.v3_2.bork;
 
 import org.junit.Test;
-import org.neo4j.cypher.internal.compiler.v3_2.bork.*;
+import org.neo4j.cypher.internal.compiler.v3_2.bork.operators.FilterOp;
 
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.Assert.assertThat;
@@ -16,11 +16,11 @@ public class FilterOpTest {
 
         FilterOp filterOp = new FilterOp(lhs, (input1, queryRun) -> true);
 
-        QueryRun query = new QueryRun(filterOp, null, null);
+        QueryRun query = new QueryRun(null, null);
         lhs.execute(input, query);
         filterOp.execute(input, query);
 
-        input.reset();
+        input.resetReadPos();
 
         int i = 0;
         while(input.next()) {
@@ -39,12 +39,12 @@ public class FilterOpTest {
 
         FilterOp filterOp = new FilterOp(lhs, (input1, queryRun) -> false);
 
-        QueryRun query = new QueryRun(filterOp, null, null);
+        QueryRun query = new QueryRun(null, null);
         lhs.execute(input, query);
-        input.reset();
+        input.resetReadPos();
         filterOp.execute(input, query);
 
-        input.reset();
+        input.resetReadPos();
 
         int i = 0;
         while(input.next()) {
@@ -67,7 +67,12 @@ public class FilterOpTest {
                     }
                     return false;
                 }
-            };
+
+            @Override
+            public boolean isLeaf() {
+                return true;
+            }
+        };
     }
 
 

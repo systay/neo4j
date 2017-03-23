@@ -23,6 +23,7 @@ import java.util.{Map => JavaMap}
 
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.compiler.v3_2._
+import org.neo4j.cypher.internal.compiler.v3_2.bork.BuildInterpreted2ExecutionPlan
 import org.neo4j.cypher.internal.compiler.v3_2.helpers.{RuntimeJavaValueConverter, RuntimeScalaValueConverter}
 import org.neo4j.cypher.internal.compiler.v3_2.prettifier.Prettifier
 import org.neo4j.cypher.internal.frontend.v3_2.phases.CompilationPhaseTracer
@@ -30,13 +31,13 @@ import org.neo4j.cypher.internal.spi.v3_2.TransactionalContextWrapper
 import org.neo4j.cypher.internal.tracing.{CompilationTracer, TimingCompilationTracer}
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.factory.GraphDatabaseSettings
-import org.neo4j.kernel.api.{KernelAPI, ReadOperations}
 import org.neo4j.kernel.api.security.AccessMode
+import org.neo4j.kernel.api.{KernelAPI, ReadOperations}
 import org.neo4j.kernel.configuration.Config
 import org.neo4j.kernel.impl.query.{QueryExecutionMonitor, TransactionalContext}
-import org.neo4j.kernel.{GraphDatabaseQueryService, api, monitoring}
-import org.neo4j.logging.{LogProvider, NullLogProvider}
 import org.neo4j.kernel.monitoring.{Monitors => KernelMonitors}
+import org.neo4j.kernel.{GraphDatabaseQueryService, api}
+import org.neo4j.logging.{LogProvider, NullLogProvider}
 trait StringCacheMonitor extends CypherCacheMonitor[String, api.Statement]
 
 /**
@@ -46,6 +47,13 @@ trait StringCacheMonitor extends CypherCacheMonitor[String, api.Statement]
 class ExecutionEngine(val queryService: GraphDatabaseQueryService,
                       logProvider: LogProvider = NullLogProvider.getInstance(),
                       compatibilityFactory: CompatibilityFactory) {
+
+  {
+    println("apa")
+
+    BuildInterpreted2ExecutionPlan.graphDatabase = queryService.asInstanceOf[GraphDatabaseQueryService]
+    println("w00t")
+  } // TODO: This is a major hack to cut through all the layers
 
   require(queryService != null, "Can't work with a null graph database")
 

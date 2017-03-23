@@ -123,8 +123,8 @@ case class PlannerQueryBuilder(private val q: PlannerQuery, semanticTable: Seman
         .amendQueryGraph(_.mapSelections {
           case Selections(predicates) =>
             val optPredicates = predicates.toNonEmptyListOption
-            val newPredicates = optPredicates.map { predicates =>
-              groupInequalityPredicates(predicates).toSet
+            val newPredicates = optPredicates.map { predicates => predicates.toSet
+//              groupInequalityPredicates(predicates).toSet
             }.getOrElse(predicates)
             Selections(newPredicates)
         })

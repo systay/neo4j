@@ -20,15 +20,15 @@
 package org.neo4j.cypher.internal.compatibility.v3_2
 
 import org.neo4j.cypher.internal.compiler.v3_2.spi.KernelStatisticProvider
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
+import org.neo4j.kernel.impl.query.statistic.StatisticProvider
 
-class ProfileKernelStatisticProvider(pageCursorTracer: PageCursorTracer) extends KernelStatisticProvider {
+class ProfileKernelStatisticProvider(statisticProvider: StatisticProvider) extends KernelStatisticProvider {
 
   override def getPageCacheHits: Long = {
-    pageCursorTracer.hits()
+    statisticProvider.getPageCacheHits
   }
 
   override def getPageCacheMisses: Long = {
-    pageCursorTracer.faults()
+    statisticProvider.getPageCacheMisses
   }
 }

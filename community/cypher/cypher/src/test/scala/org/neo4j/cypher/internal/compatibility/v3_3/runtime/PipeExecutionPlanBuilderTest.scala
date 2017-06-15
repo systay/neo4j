@@ -23,6 +23,7 @@ import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.{FakePipe, Pip
 import org.neo4j.cypher.internal.compiler.v3_3.planDescription.{FakeIdMap, Id}
 import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
+import org.neo4j.cypher.internal.frontend.v3_3.Rewriter
 import org.neo4j.cypher.internal.frontend.v3_3.phases.Monitors
 import org.neo4j.cypher.internal.frontend.v3_3.test_helpers.CypherFunSuite
 import org.neo4j.cypher.internal.ir.v3_3.{Cardinality, CardinalityEstimation, PlannerQuery}
@@ -66,8 +67,8 @@ class PipeExecutionPlanBuilderTest extends CypherFunSuite {
   case class TwoChildPipe(name: String, l: Pipe, r: Pipe) extends FakeRonjaPipe
 
 
-  val factory = new PipeBuilderFactory {
-    override def apply(monitors: Monitors, recurse: LogicalPlan => Pipe, readOnly: Boolean, idMap: Map[LogicalPlan, Id])
+  val factory = new ActualPipeBuilderFactory {
+    override def apply(monitors: Monitors, recurse: LogicalPlan => Pipe, readOnly: Boolean, idMap: Map[LogicalPlan, Id], rewriter: Rewriter)
                       (implicit context: PipeExecutionBuilderContext, planContext: PlanContext) = new PipeBuilder {
       def build(plan: LogicalPlan) = plan match {
         case LeafPlan(n) => LeafPipe(n)

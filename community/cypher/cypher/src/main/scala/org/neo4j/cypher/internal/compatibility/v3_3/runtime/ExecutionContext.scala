@@ -30,8 +30,16 @@ object ExecutionContext {
   def from(x: (String, Any)*) = new ExecutionContext().newWith(x)
 }
 
-case class ExecutionContext(m: MutableMap[String, Any] = MutableMaps.empty)
+case class ExecutionContext(m: MutableMap[String, Any] = MutableMaps.empty, sizeOfLongs: Int = 0, sizeOfRefs: Int = 0)
   extends MutableMap[String, Any] {
+
+  private val _longs = new Array[Long](sizeOfLongs)
+  private val _refs = new Array[AnyRef](sizeOfLongs)
+
+  def setLong(offset: Int, value: Long) = _longs(offset) = value
+  def getLong(offset: Int) = _longs(offset)
+  def setRef(offset: Int, value: AnyRef) = _refs(offset) = value
+  def getRef(offset: Int) = _refs(offset)
 
   def get(key: String): Option[Any] = m.get(key)
 

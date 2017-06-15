@@ -33,13 +33,13 @@ object CommunityRuntimeBuilder extends RuntimeBuilder[Transformer[CommunityRunti
   override def create(runtimeName: Option[RuntimeName], useErrorsOverWarnings: Boolean): Transformer[CommunityRuntimeContext, LogicalPlanState, CompilationState] =
     runtimeName match {
     case None | Some(InterpretedRuntimeName) =>
-      BuildInterpretedExecutionPlan
+      BuildInterpretedExecutionPlan(CommunityRegisters.buildPipes)
 
     case Some(x) if useErrorsOverWarnings =>
       throw new InvalidArgumentException(s"This version of Neo4j does not support requested runtime: $x")
 
     case _ =>
       Do((_: CompilerContext).notificationLogger.log(RuntimeUnsupportedNotification)) andThen
-        BuildInterpretedExecutionPlan
+        BuildInterpretedExecutionPlan(CommunityRegisters.buildPipes)
   }
 }

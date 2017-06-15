@@ -33,11 +33,11 @@ class CompiledRuntimeBuilder extends RuntimeBuilder[Transformer[EnterpriseRuntim
       case None =>
         BuildCompiledExecutionPlan andThen
           If[EnterpriseRuntimeContext, LogicalPlanState, CompilationState](_.maybeExecutionPlan.isEmpty)(
-            BuildInterpretedExecutionPlan
+            BuildInterpretedExecutionPlan(CommunityRegisters.buildPipes)
           )
 
       case Some(InterpretedRuntimeName) =>
-        BuildInterpretedExecutionPlan
+        BuildInterpretedExecutionPlan(CommunityRegisters.buildPipes)
 
       case Some(CompiledRuntimeName) if useErrorsOverWarnings =>
         BuildCompiledExecutionPlan andThen
@@ -49,7 +49,7 @@ class CompiledRuntimeBuilder extends RuntimeBuilder[Transformer[EnterpriseRuntim
         BuildCompiledExecutionPlan andThen
           If[EnterpriseRuntimeContext, LogicalPlanState, CompilationState](_.maybeExecutionPlan.isEmpty)(
             Do((ctx: EnterpriseRuntimeContext) => warnThatCompiledRuntimeDoesNotYetSupportQuery(ctx)) andThen
-              BuildInterpretedExecutionPlan
+              BuildInterpretedExecutionPlan(CommunityRegisters.buildPipes)
           )
     }
 

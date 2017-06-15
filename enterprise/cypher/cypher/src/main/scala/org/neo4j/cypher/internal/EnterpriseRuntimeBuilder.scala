@@ -20,9 +20,14 @@
 package org.neo4j.cypher.internal
 
 import org.neo4j.cypher.internal.compatibility.v3_3.compiled_runtime.{BuildCompiledExecutionPlan, EnterpriseRuntimeContext}
+import org.neo4j.cypher.internal.compatibility.v3_3.interpreted_runtime.{RegisterAllocation, RegisterAllocations, RegisterPipeBuilderFactory, RegisterPipeExecutionBuilderContext}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime._
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.executionplan.PipeInfo
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.phases.CompilationState
 import org.neo4j.cypher.internal.compiler.v3_3.phases.LogicalPlanState
+import org.neo4j.cypher.internal.compiler.v3_3.planDescription.Id
+import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.LogicalPlanIdentificationBuilder
+import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.frontend.v3_3.InvalidArgumentException
 import org.neo4j.cypher.internal.frontend.v3_3.notification.RuntimeUnsupportedNotification
 import org.neo4j.cypher.internal.frontend.v3_3.phases.{Do, If, Transformer}
@@ -31,26 +36,43 @@ object EnterpriseRuntimeBuilder extends RuntimeBuilder[Transformer[EnterpriseRun
   def create(runtimeName: Option[RuntimeName], useErrorsOverWarnings: Boolean): Transformer[EnterpriseRuntimeContext, LogicalPlanState, CompilationState] = runtimeName match {
     case None =>
       BuildCompiledExecutionPlan andThen
-      If[EnterpriseRuntimeContext, LogicalPlanState, CompilationState](_.maybeExecutionPlan.isEmpty) {
-        BuildInterpretedExecutionPlan
-      }
+        buildInterpretedRuntimeIfCompilationFailed()
 
     case Some(InterpretedRuntimeName) =>
-      BuildInterpretedExecutionPlan
+      BuildInterpretedExecutionPlan(buildPipesWithRegisterAllocation)
 
     case Some(CompiledRuntimeName) if useErrorsOverWarnings =>
       BuildCompiledExecutionPlan andThen
-      If[EnterpriseRuntimeContext, LogicalPlanState, CompilationState](_.maybeExecutionPlan.isEmpty)(
+        If((state: CompilationState) => state.maybeExecutionPlan.isEmpty)(
         Do((_,_) => throw new InvalidArgumentException("The given query is not currently supported in the selected runtime"))
       )
 
     case Some(CompiledRuntimeName) =>
       BuildCompiledExecutionPlan andThen
-      If[EnterpriseRuntimeContext, LogicalPlanState, CompilationState](_.maybeExecutionPlan.isEmpty)(
+        If((state: CompilationState) => state.maybeExecutionPlan.isEmpty)(
         Do((_: EnterpriseRuntimeContext).notificationLogger.log(RuntimeUnsupportedNotification)) andThen
-        BuildInterpretedExecutionPlan
+          buildInterpretedRuntimeIfCompilationFailed()
       )
 
     case Some(x) => throw new InvalidArgumentException(s"This version of Neo4j does not support requested runtime: $x")
+  }
+
+  private def buildInterpretedRuntimeIfCompilationFailed(): Transformer[CommunityRuntimeContext, CompilationState, CompilationState] =
+    If((state: CompilationState) => state.maybeExecutionPlan.isEmpty) {
+      BuildInterpretedExecutionPlan(buildPipesWithRegisterAllocation)
+    } andThen
+      If((state: CompilationState) => state.maybeExecutionPlan.isEmpty) {
+        BuildInterpretedExecutionPlan(CommunityRegisters.buildPipes)
+      }
+
+  private def buildPipesWithRegisterAllocation(from: LogicalPlanState, context: CommunityRuntimeContext):
+  (LogicalPlan, Map[LogicalPlan, Id], PipeInfo) = {
+    val logicalPlan = from.logicalPlan
+    val planToAllocations: Map[LogicalPlan, RegisterAllocations] = RegisterAllocation.allocateRegisters(logicalPlan)
+    val idMap = LogicalPlanIdentificationBuilder(logicalPlan)
+    val executionPlanBuilder = new PipeExecutionPlanBuilder(context.clock, context.monitors, pipeBuilderFactory = RegisterPipeBuilderFactory())
+    val pipeBuildContext = new RegisterPipeExecutionBuilderContext(context.metrics.cardinality, from.semanticTable(), from.plannerName, planToAllocations)
+    val pipeInfo = executionPlanBuilder.build(from.periodicCommit, logicalPlan, idMap)(pipeBuildContext, context.planContext)
+    (logicalPlan, idMap, pipeInfo)
   }
 }

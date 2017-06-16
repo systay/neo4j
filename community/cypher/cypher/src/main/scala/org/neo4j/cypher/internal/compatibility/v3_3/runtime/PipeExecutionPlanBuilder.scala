@@ -79,7 +79,7 @@ class PipeExecutionPlanBuilder(clock: Clock,
       monitors = monitors,
       recurse = recurse,
       readOnly = plan.solved.all(_.queryGraph.readOnly),
-      idMap, new NestedPipeExpressionBuilder(recurse))
+      idMap)
 
     val planStack = new mutable.Stack[LogicalPlan]()
     val pipeStack = new mutable.Stack[Pipe]()
@@ -148,8 +148,7 @@ class PipeExecutionPlanBuilder(clock: Clock,
 }
 
 trait PipeBuilderFactory {
-  def apply(monitors: Monitors, recurse: LogicalPlan => Pipe, readOnly: Boolean, idMap: Map[LogicalPlan, Id],
-            expressionRewriter: Rewriter)
+  def apply(monitors: Monitors, recurse: LogicalPlan => Pipe, readOnly: Boolean, idMap: Map[LogicalPlan, Id])
            (implicit context: PipeExecutionBuilderContext, planContext: PlanContext): PipeBuilder
 }
 

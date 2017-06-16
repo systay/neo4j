@@ -19,8 +19,8 @@
  */
 package org.neo4j.cypher.internal.compatibility.v3_3.interpreted_runtime
 
-import org.neo4j.cypher.internal.compatibility.v3_3.interpreted_runtime.RegisterPipeBuilder.turnVariableInRegisterRead
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.expressions.{Expression => CommandsExpression}
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.{expressions => commandsExpressions, predicates => commandsPredicates}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.{FilterPipe, Pipe}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.{ActualPipeBuilder, PipeBuilder, PipeBuilderFactory, PipeExecutionBuilderContext}
 import org.neo4j.cypher.internal.compiler.v3_3.planDescription.Id
@@ -30,45 +30,45 @@ import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
 import org.neo4j.cypher.internal.enterprise_interpreted_runtime.pipes.AllNodesScanRegisterPipe
 import org.neo4j.cypher.internal.frontend.v3_3.ast.{Property, PropertyKeyName, Variable, Expression => ASTExpression}
 import org.neo4j.cypher.internal.frontend.v3_3.phases.Monitors
-import org.neo4j.cypher.internal.frontend.v3_3.{PlannerName, Rewriter, SemanticTable, bottomUp, inSequence}
+import org.neo4j.cypher.internal.frontend.v3_3.{InputPosition, PlannerName, Rewriter, SemanticCheck, SemanticCheckResult, SemanticTable, bottomUp}
 import org.neo4j.cypher.internal.ir.v3_3.IdName
-import org.neo4j.cypher.internal.compatibility.v3_3.interpreted_runtime.RegisterPipeBuilder.turnVariableInRegisterRead
 
 case class RegisterPipeBuilderFactory() extends PipeBuilderFactory {
   override def apply(monitors: Monitors,
                      recurse: (LogicalPlan) => Pipe,
                      readOnly: Boolean,
-                     idMap: Map[LogicalPlan, Id],
-                     expressionRewriter: Rewriter)
+                     idMap: Map[LogicalPlan, Id])
                     (implicit context: PipeExecutionBuilderContext, planContext: PlanContext): PipeBuilder =
-    new RegisterPipeBuilder(monitors, recurse, readOnly, idMap, expressionRewriter)(context, planContext)
+    new RegisterPipeBuilder(monitors, recurse, readOnly, idMap)(context, planContext)
 }
 
-class NodeProperty(offset: Int, propertyKeyName: PropertyKeyName) {
-
+case class NodeProperty(offset: Int, propertyKeyName: PropertyKeyName)(val position: InputPosition) extends ASTExpression {
+  override def semanticCheck(ctx: ASTExpression.SemanticContext): SemanticCheck = SemanticCheckResult.success
 }
 
-object RegisterPipeBuilder {
-  def turnVariableInRegisterRead(in: Rewriter, semanticTable: SemanticTable): Rewriter = inSequence(in, RegisterRewriter)
+case class RelationshipProperty(offset: Int, propertyKeyName: PropertyKeyName)(val position: InputPosition) extends ASTExpression {
+  override def semanticCheck(ctx: ASTExpression.SemanticContext): SemanticCheck = SemanticCheckResult.success
+}
 
-  val RegisterRewriter = new Rewriter {
-    private val instance = bottomUp(Rewriter.lift {
-      case Property(Variable(ident), propertyKey) => ???
-    })
+class RegisterExpressionRewriter(semanticTable: SemanticTable, registerAllocations: RegisterAllocations)
+  extends Rewriter {
 
-    override def apply(that: AnyRef): AnyRef = instance.apply(that)
+  override def apply(that: AnyRef): AnyRef = instance.apply(that)
 
-  }
+  private val instance = bottomUp(Rewriter.lift {
+    case p@Property(Variable(ident), propertyKey) if semanticTable.isNode(ident) => NodeProperty(registerAllocations.getLongOffsetFor(ident), propertyKey)(p.position)
+    case p@Property(Variable(ident), propertyKey) if semanticTable.isRelationship(ident) => RelationshipProperty(registerAllocations.getLongOffsetFor(ident), propertyKey)(p.position)
+    case Property(Variable(_), _) => ???
+  })
 }
 
 class RegisterPipeBuilder(monitors: Monitors,
                           recurse: LogicalPlan => Pipe,
                           readOnly: Boolean,
-                          idMap: Map[LogicalPlan, Id],
-                          rewriteExpressions: Rewriter)
+                          idMap: Map[LogicalPlan, Id])
                          (implicit context: PipeExecutionBuilderContext,
                           planContext: PlanContext)
-  extends ActualPipeBuilder(monitors, recurse, readOnly, idMap, turnVariableInRegisterRead(rewriteExpressions, context.semanticTable))(context, planContext) {
+  extends ActualPipeBuilder(monitors, recurse, readOnly, idMap)(context, planContext) {
 
   private val ctx = context.asInstanceOf[RegisterPipeExecutionBuilderContext]
 
@@ -89,6 +89,15 @@ class RegisterPipeBuilder(monitors: Monitors,
 
     val registerAllocations = ctx.registerAllocation(plan)
     plan match {
+      case p@Selection(predicates, _) =>
+        val rewriter = new RegisterExpressionRewriter(ctx.semanticTable, ctx.registerAllocation(plan))
+        val commandPredicates: Seq[commandsPredicates.Predicate] = predicates.map(p => {
+          val rewrittenPredicate = p.endoRewrite(rewriter)
+          buildPredicate(rewrittenPredicate)
+        })
+        val singlePredicate = commandPredicates.reduce(_ andWith _)
+        FilterPipe(source, singlePredicate)(id)
+
       case _ => super.build(plan, source)
     }
   }

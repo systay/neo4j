@@ -49,8 +49,7 @@ import org.neo4j.graphdb.{Node, PropertyContainer, Relationship}
 class ActualPipeBuilder(monitors: Monitors,
                         recurse: LogicalPlan => Pipe,
                         readOnly: Boolean,
-                        idMap: Map[LogicalPlan, Id],
-                        rewriteExpressions: Rewriter)
+                        idMap: Map[LogicalPlan, Id])
                        (implicit context: PipeExecutionBuilderContext, planContext: PlanContext) extends PipeBuilder {
 
   def build(plan: LogicalPlan): Pipe = {
@@ -411,7 +410,7 @@ class ActualPipeBuilder(monitors: Monitors,
     toCommandExpression(rewrittenExpr).rewrite(resolver.resolveExpressions(_, planContext))
   }
 
-  private def buildPredicate(expr: ast.Expression)(implicit context: PipeExecutionBuilderContext, planContext: PlanContext): Predicate = {
+  protected def buildPredicate(expr: ast.Expression)(implicit context: PipeExecutionBuilderContext, planContext: PlanContext): Predicate = {
     val rewrittenExpr: Expression = expr.endoRewrite(buildPipeExpressions)
 
     toCommandPredicate(rewrittenExpr).rewrite(resolver.resolveExpressions(_, planContext)).asInstanceOf[Predicate]
@@ -427,8 +426,7 @@ case class ActualPipeBuilderFactory() extends PipeBuilderFactory {
   def apply(monitors: Monitors,
             recurse: LogicalPlan => Pipe,
             readOnly: Boolean,
-            idMap: Map[LogicalPlan, Id],
-            expressionRewriter: Rewriter)
+            idMap: Map[LogicalPlan, Id])
            (implicit context: PipeExecutionBuilderContext, planContext: PlanContext): PipeBuilder =
-    new ActualPipeBuilder(monitors, recurse, readOnly, idMap, expressionRewriter)
+    new ActualPipeBuilder(monitors, recurse, readOnly, idMap)
 }

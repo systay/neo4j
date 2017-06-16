@@ -33,7 +33,7 @@ trait AstConstructionTestSupport extends CypherTestSupport {
 
   def prop(variable: String, propKey: String) = Property(varFor(variable), PropertyKeyName(propKey)(pos))(pos)
 
-  def propEquality(variable: String, propKey: String, intValue: Int) =
+  def propEquality(variable: String, propKey: String, intValue: Int): Equals =
     Equals(prop(variable, propKey), literalInt(intValue))(pos)
 
   def literalInt(intValue: Int): SignedDecimalIntegerLiteral =

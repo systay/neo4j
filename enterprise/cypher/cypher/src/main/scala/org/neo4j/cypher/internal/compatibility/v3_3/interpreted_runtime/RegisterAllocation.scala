@@ -54,7 +54,7 @@ object RegisterAllocation {
         allocations.newLong(relName)
         result += (lp -> allocations)
 
-      case _ => throw new RegisterAllocationFailed
+      case p => throw new RegisterAllocationFailed(s"Don't know how to handle $p")
     }
 
     val allocations = RegisterAllocations.empty

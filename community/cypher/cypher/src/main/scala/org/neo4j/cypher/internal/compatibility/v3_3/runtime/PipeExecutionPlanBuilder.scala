@@ -21,6 +21,7 @@ package org.neo4j.cypher.internal.compatibility.v3_3.runtime
 
 import java.time.Clock
 
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.executionplan._
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes._
 import org.neo4j.cypher.internal.compiler.v3_3.planDescription.Id
@@ -34,7 +35,8 @@ import scala.collection.mutable
 
 class PipeExecutionPlanBuilder(clock: Clock,
                                monitors: Monitors,
-                               pipeBuilderFactory: PipeBuilderFactory = ActualPipeBuilderFactory()) {
+                               pipeBuilderFactory: PipeBuilderFactory = ActualPipeBuilderFactory(),
+                               expressionConverters: ExpressionConverters) {
   def build(periodicCommit: Option[PeriodicCommit], plan: LogicalPlan, idMap: Map[LogicalPlan, Id])
            (implicit context: PipeExecutionBuilderContext, planContext: PlanContext): PipeInfo = {
 
@@ -79,7 +81,8 @@ class PipeExecutionPlanBuilder(clock: Clock,
       monitors = monitors,
       recurse = recurse,
       readOnly = plan.solved.all(_.queryGraph.readOnly),
-      idMap)
+      idMap = idMap,
+      expressionConverters = expressionConverters)
 
     val planStack = new mutable.Stack[LogicalPlan]()
     val pipeStack = new mutable.Stack[Pipe]()
@@ -148,7 +151,7 @@ class PipeExecutionPlanBuilder(clock: Clock,
 }
 
 trait PipeBuilderFactory {
-  def apply(monitors: Monitors, recurse: LogicalPlan => Pipe, readOnly: Boolean, idMap: Map[LogicalPlan, Id])
+  def apply(monitors: Monitors, recurse: LogicalPlan => Pipe, readOnly: Boolean, idMap: Map[LogicalPlan, Id], expressionConverters: ExpressionConverters)
            (implicit context: PipeExecutionBuilderContext, planContext: PlanContext): PipeBuilder
 }
 

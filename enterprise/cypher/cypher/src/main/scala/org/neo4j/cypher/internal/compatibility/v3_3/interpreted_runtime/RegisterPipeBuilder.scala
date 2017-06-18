@@ -19,13 +19,14 @@
  */
 package org.neo4j.cypher.internal.compatibility.v3_3.interpreted_runtime
 
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime._
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.expressions.{Expression => CommandsExpression}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.{expressions => commandsExpressions, predicates => commandsPredicates}
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.{FilterPipe, Pipe}
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.{ActualPipeBuilder, PipeBuilder, PipeBuilderFactory, PipeExecutionBuilderContext}
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.Pipe
 import org.neo4j.cypher.internal.compiler.v3_3.planDescription.Id
 import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.Metrics
-import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans.{AllNodesScan, LogicalPlan, Selection}
+import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans.{AllNodesScan, FindShortestPaths, LogicalPlan}
 import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
 import org.neo4j.cypher.internal.enterprise_interpreted_runtime.pipes.AllNodesScanRegisterPipe
 import org.neo4j.cypher.internal.frontend.v3_3.ast.{Property, PropertyKeyName, Variable, Expression => ASTExpression}
@@ -37,9 +38,10 @@ case class RegisterPipeBuilderFactory() extends PipeBuilderFactory {
   override def apply(monitors: Monitors,
                      recurse: (LogicalPlan) => Pipe,
                      readOnly: Boolean,
-                     idMap: Map[LogicalPlan, Id])
+                     idMap: Map[LogicalPlan, Id],
+                     expressionConverters: ExpressionConverters)
                     (implicit context: PipeExecutionBuilderContext, planContext: PlanContext): PipeBuilder =
-    new RegisterPipeBuilder(monitors, recurse, readOnly, idMap)(context, planContext)
+    new RegisterPipeBuilder(monitors, recurse, readOnly, idMap, expressionConverters)(context, planContext)
 }
 
 case class NodeProperty(offset: Int, propertyKeyName: PropertyKeyName)(val position: InputPosition) extends ASTExpression {
@@ -65,10 +67,11 @@ class RegisterExpressionRewriter(semanticTable: SemanticTable, registerAllocatio
 class RegisterPipeBuilder(monitors: Monitors,
                           recurse: LogicalPlan => Pipe,
                           readOnly: Boolean,
-                          idMap: Map[LogicalPlan, Id])
+                          idMap: Map[LogicalPlan, Id],
+                          expressionConverters: ExpressionConverters)
                          (implicit context: PipeExecutionBuilderContext,
                           planContext: PlanContext)
-  extends ActualPipeBuilder(monitors, recurse, readOnly, idMap)(context, planContext) {
+  extends ActualPipeBuilder(monitors, recurse, readOnly, idMap, expressionConverters)(context, planContext) {
 
   private val ctx = context.asInstanceOf[RegisterPipeExecutionBuilderContext]
 
@@ -89,16 +92,15 @@ class RegisterPipeBuilder(monitors: Monitors,
 
     val registerAllocations = ctx.registerAllocation(plan)
     plan match {
-      case p@Selection(predicates, _) =>
-        val rewriter = new RegisterExpressionRewriter(ctx.semanticTable, ctx.registerAllocation(plan))
-        val commandPredicates: Seq[commandsPredicates.Predicate] = predicates.map(p => {
-          val rewrittenPredicate = p.endoRewrite(rewriter)
-          buildPredicate(rewrittenPredicate)
-        })
-        val singlePredicate = commandPredicates.reduce(_ andWith _)
-        FilterPipe(source, singlePredicate)(id)
 
-      case _ => super.build(plan, source)
+      case _: FindShortestPaths =>
+        throw new RegisterAllocationFailed("Shortest path not supported in the enterprise interpreted runtime")
+
+      case _ =>
+        val rewriter = new RegisterExpressionRewriter(ctx.semanticTable, ctx.registerAllocation(plan))
+        val registeredPlan = plan.endoRewrite(rewriter)
+        val result = super.build(registeredPlan, source)
+        result
     }
   }
 

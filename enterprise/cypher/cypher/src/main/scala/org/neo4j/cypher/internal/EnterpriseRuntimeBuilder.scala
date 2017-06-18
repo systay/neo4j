@@ -70,7 +70,8 @@ object EnterpriseRuntimeBuilder extends RuntimeBuilder[Transformer[EnterpriseRun
     val logicalPlan = from.logicalPlan
     val planToAllocations: Map[LogicalPlan, RegisterAllocations] = RegisterAllocation.allocateRegisters(logicalPlan)
     val idMap = LogicalPlanIdentificationBuilder(logicalPlan)
-    val executionPlanBuilder = new PipeExecutionPlanBuilder(context.clock, context.monitors, pipeBuilderFactory = RegisterPipeBuilderFactory())
+    val converter = new RegisteredExpressionConverter(from.semanticTable())
+    val executionPlanBuilder = new PipeExecutionPlanBuilder(context.clock, context.monitors, RegisterPipeBuilderFactory(), converter)
     val pipeBuildContext = new RegisterPipeExecutionBuilderContext(context.metrics.cardinality, from.semanticTable(), from.plannerName, planToAllocations)
     val pipeInfo = executionPlanBuilder.build(from.periodicCommit, logicalPlan, idMap)(pipeBuildContext, context.planContext)
     (logicalPlan, idMap, pipeInfo)

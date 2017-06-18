@@ -19,6 +19,7 @@
  */
 package org.neo4j.cypher.internal.compatibility.v3_3.runtime
 
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.CommunityExpressionConverters
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.executionplan._
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.phases.CompilationState
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.Pipe
@@ -40,7 +41,8 @@ object CommunityRegisters {
   def buildPipes(from: LogicalPlanState, context: CommunityRuntimeContext): (LogicalPlan, Map[LogicalPlan, Id], PipeInfo) = {
     val logicalPlan = from.logicalPlan
     val idMap = LogicalPlanIdentificationBuilder(logicalPlan)
-    val executionPlanBuilder = new PipeExecutionPlanBuilder(context.clock, context.monitors)
+    val executionPlanBuilder = new PipeExecutionPlanBuilder(context.clock, context.monitors,
+      expressionConverters = CommunityExpressionConverters)
     val pipeBuildContext = PipeExecutionBuilderContext(context.metrics.cardinality, from.semanticTable(), from.plannerName)
     val pipeInfo = executionPlanBuilder.build(from.periodicCommit, logicalPlan, idMap)(pipeBuildContext, context.planContext)
     (logicalPlan, idMap, pipeInfo)
@@ -123,4 +125,4 @@ case class BuildInterpretedExecutionPlan(buildPipes: (LogicalPlanState, Communit
     }
 }
 
-class RegisterAllocationFailed extends Exception
+class RegisterAllocationFailed(msg: String) extends Exception(msg)

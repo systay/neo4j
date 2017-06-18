@@ -23,8 +23,7 @@ import org.neo4j.cypher.internal.compatibility.v3_3.runtime.ExecutionContext
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.expressions.Expression
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.helpers.{CastSupport, IsMap}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.mutation.makeValueNeoSafe
-import org.neo4j.cypher.internal.frontend.v3_3.{CypherTypeException, InvalidArgumentException, SemanticTable}
-import org.neo4j.cypher.internal.ir.v3_3._
+import org.neo4j.cypher.internal.frontend.v3_3.{CypherTypeException, InvalidArgumentException}
 import org.neo4j.cypher.internal.spi.v3_3.{Operations, QueryContext}
 import org.neo4j.graphdb.{Node, PropertyContainer, Relationship}
 
@@ -37,24 +36,6 @@ sealed trait SetOperation {
 }
 
 object SetOperation {
-
-  import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.ExpressionConverters._
-
-  def toSetOperation(pattern: SetMutatingPattern)(implicit table: SemanticTable) = pattern match {
-    case SetLabelPattern(IdName(name), labels) =>
-      SetLabelsOperation(name, labels.map(LazyLabel(_)))
-    case SetNodePropertyPattern(IdName(name), propKey, expression) =>
-      SetNodePropertyOperation(name, LazyPropertyKey(propKey.name), toCommandExpression(expression))
-    case SetNodePropertiesFromMapPattern(IdName(name), expression, removeOtherProps) =>
-      SetNodePropertyFromMapOperation(name, toCommandExpression(expression), removeOtherProps)
-    case SetRelationshipPropertyPattern(IdName(name), propKey, expression) =>
-      SetRelationshipPropertyOperation(name, LazyPropertyKey(propKey.name), toCommandExpression(expression))
-    case SetRelationshipPropertiesFromMapPattern(IdName(name), expression, removeOtherProps) =>
-      SetRelationshipPropertyFromMapOperation(name, toCommandExpression(expression), removeOtherProps)
-    case SetPropertyPattern(entity, propKey, expression) =>
-      SetPropertyOperation(toCommandExpression(entity), LazyPropertyKey(propKey.name), toCommandExpression(expression))
-  }
-
   private[pipes] def toMap(executionContext: ExecutionContext, state: QueryState, expression: Expression) = {
     /* Make the map expression look like a map */
     val qtx = state.query
@@ -85,7 +66,7 @@ object SetOperation {
 
 abstract class AbstractSetPropertyOperation extends SetOperation {
   protected def setProperty[T <: PropertyContainer](context: ExecutionContext, state: QueryState, ops: Operations[T],
-                          itemId: Long, propertyKey: LazyPropertyKey, expression: Expression) = {
+                                                    itemId: Long, propertyKey: LazyPropertyKey, expression: Expression): Unit = {
     val queryContext = state.query
     val maybePropertyKey = propertyKey.id(queryContext).map(_.id) // if the key was already looked up
     val propertyId = maybePropertyKey
@@ -105,7 +86,7 @@ abstract class SetEntityPropertyOperation[T <: PropertyContainer](itemName: Stri
 
   private val needsExclusiveLock = Expression.hasPropertyReadDependency(itemName, expression, propertyKey.name)
 
-  override def set(executionContext: ExecutionContext, state: QueryState) = {
+  override def set(executionContext: ExecutionContext, state: QueryState): Unit = {
     val item = executionContext.get(itemName).get
     if (item != null) {
       val itemId = id(item)
@@ -128,9 +109,9 @@ case class SetNodePropertyOperation(nodeName: String, propertyKey: LazyPropertyK
 
   override def name = "SetNodeProperty"
 
-  override protected def id(item: Any) = CastSupport.castOrFail[Node](item).getId
+  override protected def id(item: Any): Long = CastSupport.castOrFail[Node](item).getId
 
-  override protected def operations(qtx: QueryContext) = qtx.nodeOps
+  override protected def operations(qtx: QueryContext): Operations[Node] = qtx.nodeOps
 }
 
 case class SetRelationshipPropertyOperation(relName: String, propertyKey: LazyPropertyKey,
@@ -139,9 +120,9 @@ case class SetRelationshipPropertyOperation(relName: String, propertyKey: LazyPr
 
   override def name = "SetRelationshipProperty"
 
-  override protected def id(item: Any) = CastSupport.castOrFail[Relationship](item).getId
+  override protected def id(item: Any): Long = CastSupport.castOrFail[Relationship](item).getId
 
-  override protected def operations(qtx: QueryContext) = qtx.relationshipOps
+  override protected def operations(qtx: QueryContext): Operations[Relationship] = qtx.relationshipOps
 }
 
 case class SetPropertyOperation(entityExpr: Expression, propertyKey: LazyPropertyKey, expression: Expression)
@@ -149,7 +130,7 @@ case class SetPropertyOperation(entityExpr: Expression, propertyKey: LazyPropert
 
   override def name: String = "SetProperty"
 
-  override def set(executionContext: ExecutionContext, state: QueryState) = {
+  override def set(executionContext: ExecutionContext, state: QueryState): Unit = {
     val resolvedEntity = entityExpr(executionContext)(state)
     if (resolvedEntity != null) {
       val (entityId, ops) = resolvedEntity match {
@@ -171,7 +152,7 @@ abstract class SetPropertyFromMapOperation[T <: PropertyContainer](itemName: Str
                                            removeOtherProps: Boolean) extends SetOperation {
   private val needsExclusiveLock = Expression.mapExpressionHasPropertyReadDependency(itemName, expression)
 
-  override def set(executionContext: ExecutionContext, state: QueryState) = {
+  override def set(executionContext: ExecutionContext, state: QueryState): Unit = {
     val item = executionContext.get(itemName).get
     if (item != null) {
       val ops = operations(state.query)
@@ -216,9 +197,9 @@ case class SetNodePropertyFromMapOperation(nodeName: String, expression: Express
 
   override def name = "SetNodePropertyFromMap"
 
-  override protected def id(item: Any) = CastSupport.castOrFail[Node](item).getId
+  override protected def id(item: Any): Long = CastSupport.castOrFail[Node](item).getId
 
-  override protected def operations(qtx: QueryContext) = qtx.nodeOps
+  override protected def operations(qtx: QueryContext): Operations[Node] = qtx.nodeOps
 }
 
 case class SetRelationshipPropertyFromMapOperation(relName: String, expression: Expression,
@@ -227,14 +208,14 @@ case class SetRelationshipPropertyFromMapOperation(relName: String, expression: 
 
   override def name = "SetRelationshipPropertyFromMap"
 
-  override protected def id(item: Any) = CastSupport.castOrFail[Relationship](item).getId
+  override protected def id(item: Any): Long = CastSupport.castOrFail[Relationship](item).getId
 
-  override protected def operations(qtx: QueryContext) = qtx.relationshipOps
+  override protected def operations(qtx: QueryContext): Operations[Relationship] = qtx.relationshipOps
 }
 
 case class SetLabelsOperation(nodeName: String, labels: Seq[LazyLabel]) extends SetOperation {
 
-  override def set(executionContext: ExecutionContext, state: QueryState) = {
+  override def set(executionContext: ExecutionContext, state: QueryState): Unit = {
     val value = executionContext.get(nodeName).get
     if (value != null) {
       val nodeId = CastSupport.castOrFail[Node](value).getId

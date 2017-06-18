@@ -17,25 +17,21 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.internal.enterprise_interpreted_runtime.pipes
+package org.neo4j.cypher.internal.compatibility.v3_3.interpreted_runtime.expressions
 
-
-import org.neo4j.cypher.internal.compatibility.v3_3.interpreted_runtime.RegisterAllocations
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.ExecutionContext
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.{PipeMonitor, QueryState}
-import org.neo4j.cypher.internal.compiler.v3_3.planDescription.Id
-import org.neo4j.graphdb.Node
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.expressions.Expression
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.QueryState
 
-case class AllNodesScanRegisterPipe(offset: Int, registers: RegisterAllocations)(val id: Id = new Id)
-                                   (implicit pipeMonitor: PipeMonitor) extends RegisterPipe {
+case class NodeFromRegister(offset: Int) extends Expression {
+  override def rewrite(f: (Expression) => Expression): Expression = f(this)
 
-  protected def internalCreateResults(state: QueryState): Iterator[ExecutionContext] = {
-    state.query.nodeOps.all.map { (n: Node) =>
-      val ctx = ExecutionContext(sizeOfLongs = registers.numberOfLongs, sizeOfRefs = registers.numberOfObjects)
-      ctx.setLong(offset, n.getId)
-      ctx
-    }
+  override def arguments: Seq[Expression] = Seq.empty
+
+  override def apply(ctx: ExecutionContext)(implicit state: QueryState): Any = {
+    val nodeId = ctx.getLong(offset)
+    state.query.nodeOps.getById(nodeId)
   }
 
-  override def monitor: PipeMonitor = pipeMonitor
+  override def symbolTableDependencies: Set[String] = Set.empty
 }

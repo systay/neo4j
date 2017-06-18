@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.internal.enterprise_interpreted_runtime.pipes
+package org.neo4j.cypher.internal.compatibility.v3_3.interpreted_runtime.pipes
 
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.Pipe
 

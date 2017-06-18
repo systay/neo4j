@@ -19,7 +19,7 @@
  */
 package org.neo4j.cypher.internal
 
-import org.neo4j.cypher.internal.compatibility.v3_3.interpreted_runtime.NodeProperty
+import org.neo4j.cypher.internal.compatibility.v3_3.interpreted_runtime.{NodeProperty, expressions => commandExpressions}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.RegisterAllocationFailed
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.{CommunityExpressionConverters, ExpressionConverters}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.expressions.{ProjectedPath, Expression => CommandExpression}
@@ -28,7 +28,7 @@ import org.neo4j.cypher.internal.frontend.v3_3.{SemanticTable, ast}
 class RegisteredExpressionConverter(semanticTable: SemanticTable) extends ExpressionConverters {
   override def toCommandExpression(expression: ast.Expression, self: ExpressionConverters): CommandExpression = expression match {
     case NodeProperty(offset, propertyKeyName) if propertyKeyName.id(semanticTable).nonEmpty =>
-      enterprise_interpreted_runtime.expressions.NodeProperty(offset, propertyKeyName.id(semanticTable))
+      commandExpressions.NodeProperty(offset, propertyKeyName.id(semanticTable))
     case x => CommunityExpressionConverters.toCommandExpression(expression, self)
   }
 

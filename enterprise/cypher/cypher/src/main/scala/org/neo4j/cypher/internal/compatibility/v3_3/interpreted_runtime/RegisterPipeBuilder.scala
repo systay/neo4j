@@ -19,16 +19,16 @@
  */
 package org.neo4j.cypher.internal.compatibility.v3_3.interpreted_runtime
 
+import org.neo4j.cypher.internal.compatibility.v3_3.interpreted_runtime.expressions.{NodeFromRegister, ValueFromRegister}
+import org.neo4j.cypher.internal.compatibility.v3_3.interpreted_runtime.pipes.{AllNodesScanRegisterPipe, ProduceResultsRegisterPipe}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime._
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.ExpressionConverters
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.expressions.{Expression => CommandsExpression}
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.{expressions => commandsExpressions, predicates => commandsPredicates}
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.{expressions => commandsExpressions}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.Pipe
 import org.neo4j.cypher.internal.compiler.v3_3.planDescription.Id
 import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.Metrics
-import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans.{AllNodesScan, FindShortestPaths, LogicalPlan}
+import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans.{AllNodesScan, FindShortestPaths, LogicalPlan, ProduceResult}
 import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
-import org.neo4j.cypher.internal.enterprise_interpreted_runtime.pipes.AllNodesScanRegisterPipe
 import org.neo4j.cypher.internal.frontend.v3_3.ast.{Property, PropertyKeyName, Variable, Expression => ASTExpression}
 import org.neo4j.cypher.internal.frontend.v3_3.phases.Monitors
 import org.neo4j.cypher.internal.frontend.v3_3.{InputPosition, PlannerName, Rewriter, SemanticCheck, SemanticCheckResult, SemanticTable, bottomUp}
@@ -85,7 +85,11 @@ class RegisterPipeBuilder(monitors: Monitors,
     }
   }
 
-  private def rewriteExpressions(in: ASTExpression): ASTExpression = in
+  private def expressionForSlot(key: String, slot: Slot, table: SemanticTable): commandsExpressions.Expression =
+    slot match {
+      case LongSlot(offset) if table.isNode(key) => NodeFromRegister(offset)
+      case RefSlot(offset) => ValueFromRegister(offset)
+    }
 
   override def build(plan: LogicalPlan, source: Pipe): Pipe = {
     val id = idMap.getOrElse(plan, new Id)
@@ -95,6 +99,12 @@ class RegisterPipeBuilder(monitors: Monitors,
 
       case _: FindShortestPaths =>
         throw new RegisterAllocationFailed("Shortest path not supported in the enterprise interpreted runtime")
+
+      case ProduceResult(columns, _) =>
+        val expressions = columns map {
+          key => key -> expressionForSlot(key, registerAllocations.slots(key), context.semanticTable)
+        }
+        ProduceResultsRegisterPipe(source, expressions)(id)
 
       case _ =>
         val rewriter = new RegisterExpressionRewriter(ctx.semanticTable, ctx.registerAllocation(plan))

@@ -50,8 +50,7 @@ class PipeExecutionPlanBuilder(clock: Clock,
     }
 
     val periodicCommitInfo = periodicCommit.map(x => PeriodicCommitInfo(x.batchSize))
-    PipeInfo(topLevelPipe, !plan.solved.readOnly,
-             periodicCommitInfo, fingerprint, context.plannerName)
+    PipeInfo(topLevelPipe, !plan.solved.readOnly, periodicCommitInfo, fingerprint, context.plannerName)
   }
 
   /*

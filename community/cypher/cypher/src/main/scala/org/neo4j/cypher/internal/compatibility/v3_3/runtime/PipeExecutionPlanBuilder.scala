@@ -107,18 +107,17 @@ class PipeExecutionPlanBuilder(clock: Clock,
 
     while (planStack.nonEmpty) {
       val current = planStack.pop()
+      val id = idMap.getOrElse(current, new Id)
 
       (current.lhs, current.rhs) match {
         case (None, None) =>
-          val newPipe = pipeBuilder
-            .build(current)
+          val newPipe = pipeBuilder.build(current, id)
 
           pipeStack.push(newPipe)
 
         case (Some(_), None) =>
           val source = pipeStack.pop()
-          val newPipe = pipeBuilder
-            .build(current, source)
+          val newPipe = pipeBuilder.build(current, source, id)
 
           pipeStack.push(newPipe)
 
@@ -128,8 +127,7 @@ class PipeExecutionPlanBuilder(clock: Clock,
         case (Some(left), Some(_)) if comingFrom == left =>
           val arg1 = pipeStack.pop()
           val arg2 = pipeStack.pop()
-          val newPipe = pipeBuilder
-            .build(current, arg1, arg2)
+          val newPipe = pipeBuilder.build(current, arg1, arg2, id)
 
           pipeStack.push(newPipe)
 
@@ -156,7 +154,7 @@ trait PipeBuilderFactory {
 
 
 trait PipeBuilder {
-  def build(plan: LogicalPlan): Pipe
-  def build(plan: LogicalPlan, source: Pipe): Pipe
-  def build(plan: LogicalPlan, lhs: Pipe, rhs: Pipe): Pipe
+  def build(plan: LogicalPlan, id: Id): Pipe
+  def build(plan: LogicalPlan, source: Pipe, id: Id): Pipe
+  def build(plan: LogicalPlan, lhs: Pipe, rhs: Pipe, id: Id): Pipe
 }

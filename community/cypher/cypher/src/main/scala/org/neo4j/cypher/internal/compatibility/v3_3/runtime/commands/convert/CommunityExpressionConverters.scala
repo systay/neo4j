@@ -50,60 +50,60 @@ object CommunityExpressionConverters extends ExpressionConverters {
       case e: ast.Ands => predicates.Ands(NonEmptyList.from(e.exprs.map(self.toCommandPredicate)))
       case e: ast.Ors => predicates.Ors(NonEmptyList.from(e.exprs.map(self.toCommandPredicate)))
       case e: ast.Not => predicates.Not(self.toCommandPredicate(e.rhs))
-      case e: ast.Equals => predicates.Equals(toCommandExpression(e.lhs), toCommandExpression(e.rhs))
-      case e: ast.NotEquals => predicates.Not(predicates.Equals(toCommandExpression(e.lhs), toCommandExpression(e.rhs)))
-      case e: ast.RegexMatch => regexMatch(e)
-      case e: ast.In => in(e)
-      case e: ast.StartsWith => predicates.StartsWith(toCommandExpression(e.lhs), toCommandExpression(e.rhs))
-      case e: ast.EndsWith => predicates.EndsWith(toCommandExpression(e.lhs), toCommandExpression(e.rhs))
+      case e: ast.Equals => predicates.Equals(self.toCommandExpression(e.lhs), self.toCommandExpression(e.rhs))
+      case e: ast.NotEquals => predicates.Not(predicates.Equals(self.toCommandExpression(e.lhs), self.toCommandExpression(e.rhs)))
+      case e: ast.RegexMatch => regexMatch(e, self)
+      case e: ast.In => in(e, self)
+      case e: ast.StartsWith => predicates.StartsWith(self.toCommandExpression(e.lhs), self.toCommandExpression(e.rhs))
+      case e: ast.EndsWith => predicates.EndsWith(self.toCommandExpression(e.lhs), self.toCommandExpression(e.rhs))
       case e: ast.CoerceTo => commandexpressions.CoerceTo(toCommandExpression(e.expr), e.typ)
-      case e: ast.Contains => predicates.Contains(toCommandExpression(e.lhs), toCommandExpression(e.rhs))
-      case e: ast.IsNull => predicates.IsNull(toCommandExpression(e.lhs))
-      case e: ast.IsNotNull => predicates.Not(predicates.IsNull(toCommandExpression(e.lhs)))
+      case e: ast.Contains => predicates.Contains(self.toCommandExpression(e.lhs), self.toCommandExpression(e.rhs))
+      case e: ast.IsNull => predicates.IsNull(self.toCommandExpression(e.lhs))
+      case e: ast.IsNotNull => predicates.Not(predicates.IsNull(self.toCommandExpression(e.lhs)))
       case e: ast.InequalityExpression => inequalityExpression(e, self)
-      case e: ast.Add => commandexpressions.Add(toCommandExpression(e.lhs), toCommandExpression(e.rhs))
-      case e: ast.UnaryAdd => toCommandExpression(e.rhs)
-      case e: ast.Subtract => commandexpressions.Subtract(toCommandExpression(e.lhs), toCommandExpression(e.rhs))
-      case e: ast.UnarySubtract => commandexpressions.Subtract(commandexpressions.Literal(0), toCommandExpression(e.rhs))
-      case e: ast.Multiply => commandexpressions.Multiply(toCommandExpression(e.lhs), toCommandExpression(e.rhs))
-      case e: ast.Divide => commandexpressions.Divide(toCommandExpression(e.lhs), toCommandExpression(e.rhs))
-      case e: ast.Modulo => commandexpressions.Modulo(toCommandExpression(e.lhs), toCommandExpression(e.rhs))
-      case e: ast.Pow => commandexpressions.Pow(toCommandExpression(e.lhs), toCommandExpression(e.rhs))
+      case e: ast.Add => commandexpressions.Add(self.toCommandExpression(e.lhs), self.toCommandExpression(e.rhs))
+      case e: ast.UnaryAdd => self.toCommandExpression(e.rhs)
+      case e: ast.Subtract => commandexpressions.Subtract(self.toCommandExpression(e.lhs), self.toCommandExpression(e.rhs))
+      case e: ast.UnarySubtract => commandexpressions.Subtract(commandexpressions.Literal(0), self.toCommandExpression(e.rhs))
+      case e: ast.Multiply => commandexpressions.Multiply(self.toCommandExpression(e.lhs), self.toCommandExpression(e.rhs))
+      case e: ast.Divide => commandexpressions.Divide(self.toCommandExpression(e.lhs), self.toCommandExpression(e.rhs))
+      case e: ast.Modulo => commandexpressions.Modulo(self.toCommandExpression(e.lhs), self.toCommandExpression(e.rhs))
+      case e: ast.Pow => commandexpressions.Pow(self.toCommandExpression(e.lhs), self.toCommandExpression(e.rhs))
       case e: ast.FunctionInvocation => toCommandExpression(e.function, e, self)
       case e: ast.CountStar => commandexpressions.CountStar()
-      case e: ast.Property => toCommandProperty(e)
+      case e: ast.Property => toCommandProperty(e, self)
       case e: ast.Parameter => toCommandParameter(e)
       case e: ast.CaseExpression => caseExpression(e, self)
       case e: ast.PatternExpression =>
         val legacyPatterns = e.pattern.asLegacyPatterns
         commands.PathExpression(legacyPatterns, predicates.True(), PathExtractorExpression(legacyPatterns), false)
-      case e: ast.PatternComprehension => commands.PathExpression(e.pattern.asLegacyPatterns, toCommandPredicate(e.predicate, self), toCommandExpression(e.projection), true)
+      case e: ast.PatternComprehension => commands.PathExpression(e.pattern.asLegacyPatterns, toCommandPredicate(e.predicate, self), self.toCommandExpression(e.projection), true)
       case e: ast.ShortestPathExpression => commandexpressions.ShortestPathExpression(e.pattern.asLegacyPatterns(None).head)
-      case e: ast.HasLabels => hasLabels(e)
-      case e: ast.ListLiteral => commandexpressions.ListLiteral(toCommandExpression(e.expressions): _*)
-      case e: ast.MapExpression => commandexpressions.LiteralMap(mapItems(e.items))
-      case e: ast.ListSlice => commandexpressions.ListSlice(toCommandExpression(e.list), toCommandExpression(e.from), toCommandExpression(e.to))
-      case e: ast.ContainerIndex => commandexpressions.ContainerIndex(toCommandExpression(e.expr), toCommandExpression(e.idx))
-      case e: ast.FilterExpression => commandexpressions.FilterFunction(toCommandExpression(e.expression), e.variable.name, e.innerPredicate.map(self.toCommandPredicate).getOrElse(predicates.True()))
-      case e: ast.ExtractExpression => commandexpressions.ExtractFunction(toCommandExpression(e.expression), e.variable.name, toCommandExpression(e.scope.extractExpression.get))
+      case e: ast.HasLabels => hasLabels(e, self)
+      case e: ast.ListLiteral => commandexpressions.ListLiteral(toCommandExpression(e.expressions, self): _*)
+      case e: ast.MapExpression => commandexpressions.LiteralMap(mapItems(e.items, self))
+      case e: ast.ListSlice => commandexpressions.ListSlice(self.toCommandExpression(e.list), toCommandExpression(e.from, self), toCommandExpression(e.to, self))
+      case e: ast.ContainerIndex => commandexpressions.ContainerIndex(self.toCommandExpression(e.expr), self.toCommandExpression(e.idx))
+      case e: ast.FilterExpression => commandexpressions.FilterFunction(self.toCommandExpression(e.expression), e.variable.name, e.innerPredicate.map(self.toCommandPredicate).getOrElse(predicates.True()))
+      case e: ast.ExtractExpression => commandexpressions.ExtractFunction(self.toCommandExpression(e.expression), e.variable.name, self.toCommandExpression(e.scope.extractExpression.get))
       case e: ast.ListComprehension => listComprehension(e, self)
-      case e: ast.AllIterablePredicate => commands.AllInList(toCommandExpression(e.expression), e.variable.name, e.innerPredicate.map(self.toCommandPredicate).getOrElse(predicates.True()))
-      case e: ast.AnyIterablePredicate => commands.AnyInList(toCommandExpression(e.expression), e.variable.name, e.innerPredicate.map(self.toCommandPredicate).getOrElse(predicates.True()))
-      case e: ast.NoneIterablePredicate => commands.NoneInList(toCommandExpression(e.expression), e.variable.name, e.innerPredicate.map(self.toCommandPredicate).getOrElse(predicates.True()))
-      case e: ast.SingleIterablePredicate => commands.SingleInList(toCommandExpression(e.expression), e.variable.name, e.innerPredicate.map(self.toCommandPredicate).getOrElse(predicates.True()))
-      case e: ast.ReduceExpression => commandexpressions.ReduceFunction(toCommandExpression(e.list), e.variable.name, toCommandExpression(e.expression), e.accumulator.name, toCommandExpression(e.init))
+      case e: ast.AllIterablePredicate => commands.AllInList(self.toCommandExpression(e.expression), e.variable.name, e.innerPredicate.map(self.toCommandPredicate).getOrElse(predicates.True()))
+      case e: ast.AnyIterablePredicate => commands.AnyInList(self.toCommandExpression(e.expression), e.variable.name, e.innerPredicate.map(self.toCommandPredicate).getOrElse(predicates.True()))
+      case e: ast.NoneIterablePredicate => commands.NoneInList(self.toCommandExpression(e.expression), e.variable.name, e.innerPredicate.map(self.toCommandPredicate).getOrElse(predicates.True()))
+      case e: ast.SingleIterablePredicate => commands.SingleInList(self.toCommandExpression(e.expression), e.variable.name, e.innerPredicate.map(self.toCommandPredicate).getOrElse(predicates.True()))
+      case e: ast.ReduceExpression => commandexpressions.ReduceFunction(self.toCommandExpression(e.list), e.variable.name, self.toCommandExpression(e.expression), e.accumulator.name, self.toCommandExpression(e.init))
       case e: ast.PathExpression => toCommandProjectedPath(e)
-      case e: pipes.NestedPipeExpression => commandexpressions.NestedPipeExpression(e.pipe, toCommandExpression(e.projection))
-      case e: ast.GetDegree => getDegree(e)
-      case e: PrefixSeekRangeWrapper => commandexpressions.PrefixSeekRangeExpression(e.range.map(toCommandExpression))
-      case e: InequalitySeekRangeWrapper => InequalitySeekRangeExpression(e.range.mapBounds(toCommandExpression))
+      case e: pipes.NestedPipeExpression => commandexpressions.NestedPipeExpression(e.pipe, self.toCommandExpression(e.projection))
+      case e: ast.GetDegree => getDegree(e, self)
+      case e: PrefixSeekRangeWrapper => commandexpressions.PrefixSeekRangeExpression(e.range.map(self.toCommandExpression))
+      case e: InequalitySeekRangeWrapper => InequalitySeekRangeExpression(e.range.mapBounds(self.toCommandExpression))
       case e: ast.AndedPropertyInequalities =>
         val inequalities = e.inequalities.map(inequalityExpression(_, self))
-        predicates.AndedPropertyComparablePredicates(variable(e.variable), toCommandProperty(e.property), inequalities)
-      case e: DesugaredMapProjection => commandexpressions.DesugaredMapProjection(e.name.name, e.includeAllProps, mapProjectionItems(e.items))
+        predicates.AndedPropertyComparablePredicates(variable(e.variable), toCommandProperty(e.property, self), inequalities)
+      case e: DesugaredMapProjection => commandexpressions.DesugaredMapProjection(e.name.name, e.includeAllProps, mapProjectionItems(e.items, self))
       case e: ResolvedFunctionInvocation =>
         val callArgumentCommands = e.callArguments.map(Some(_)).zipAll(e.fcnSignature.get.inputSignature.map(_.default.map(_.value)), None, None).map {
-          case (given, default) => given.map(toCommandExpression).getOrElse(commandexpressions.Literal(default.get))
+          case (given, default) => given.map(self.toCommandExpression).getOrElse(commandexpressions.Literal(default.get))
         }
         val signature = e.fcnSignature.get
         if (signature.isAggregate) commandexpressions.AggregationFunctionInvocation(signature, callArgumentCommands)
@@ -153,98 +153,98 @@ object CommunityExpressionConverters extends ExpressionConverters {
 
   private def toCommandExpression(expression: ast.Function, invocation: ast.FunctionInvocation, self: ExpressionConverters): CommandExpression =
     expression match {
-      case Abs => commandexpressions.AbsFunction(toCommandExpression(invocation.arguments.head))
-      case Acos => commandexpressions.AcosFunction(toCommandExpression(invocation.arguments.head))
-      case Asin => commandexpressions.AsinFunction(toCommandExpression(invocation.arguments.head))
-      case Atan => commandexpressions.AtanFunction(toCommandExpression(invocation.arguments.head))
+      case Abs => commandexpressions.AbsFunction(self.toCommandExpression(invocation.arguments.head))
+      case Acos => commandexpressions.AcosFunction(self.toCommandExpression(invocation.arguments.head))
+      case Asin => commandexpressions.AsinFunction(self.toCommandExpression(invocation.arguments.head))
+      case Atan => commandexpressions.AtanFunction(self.toCommandExpression(invocation.arguments.head))
       case Atan2 =>
         commandexpressions.Atan2Function(
-          toCommandExpression(invocation.arguments.head),
-          toCommandExpression(invocation.arguments(1)))
+          self.toCommandExpression(invocation.arguments.head),
+          self.toCommandExpression(invocation.arguments(1)))
       case Avg =>
-        val inner = toCommandExpression(invocation.arguments.head)
+        val inner = self.toCommandExpression(invocation.arguments.head)
         val command = commandexpressions.Avg(inner)
         if (invocation.distinct)
           commandexpressions.Distinct(command, inner)
         else
           command
-      case Ceil => commandexpressions.CeilFunction(toCommandExpression(invocation.arguments.head))
-      case Coalesce => commandexpressions.CoalesceFunction(toCommandExpression(invocation.arguments): _*)
+      case Ceil => commandexpressions.CeilFunction(self.toCommandExpression(invocation.arguments.head))
+      case Coalesce => commandexpressions.CoalesceFunction(toCommandExpression(invocation.arguments, self): _*)
       case Collect =>
-        val inner = toCommandExpression(invocation.arguments.head)
+        val inner = self.toCommandExpression(invocation.arguments.head)
         val command = commandexpressions.Collect(inner)
         if (invocation.distinct)
           commandexpressions.Distinct(command, inner)
         else
           command
-      case Cos => commandexpressions.CosFunction(toCommandExpression(invocation.arguments.head))
-      case Cot => commandexpressions.CotFunction(toCommandExpression(invocation.arguments.head))
+      case Cos => commandexpressions.CosFunction(self.toCommandExpression(invocation.arguments.head))
+      case Cot => commandexpressions.CotFunction(self.toCommandExpression(invocation.arguments.head))
       case Count =>
-        val inner = toCommandExpression(invocation.arguments.head)
+        val inner = self.toCommandExpression(invocation.arguments.head)
         val command = commandexpressions.Count(inner)
         if (invocation.distinct)
           commandexpressions.Distinct(command, inner)
         else
           command
-      case Degrees => commandexpressions.DegreesFunction(toCommandExpression(invocation.arguments.head))
+      case Degrees => commandexpressions.DegreesFunction(self.toCommandExpression(invocation.arguments.head))
       case E => commandexpressions.EFunction()
-      case EndNode => commandexpressions.RelationshipEndPoints(toCommandExpression(invocation.arguments.head), start = false)
+      case EndNode => commandexpressions.RelationshipEndPoints(self.toCommandExpression(invocation.arguments.head), start = false)
       case Exists =>
         invocation.arguments.head match {
           case property: ast.Property =>
-            commands.predicates.PropertyExists(toCommandExpression(property.map), PropertyKey(property.propertyKey.name))
+            commands.predicates.PropertyExists(self.toCommandExpression(property.map), PropertyKey(property.propertyKey.name))
           case expression: ast.PatternExpression =>
             self.toCommandPredicate(expression)
           case expression: pipes.NestedPipeExpression =>
             self.toCommandPredicate(expression)
           case e: ast.ContainerIndex =>
-            commandexpressions.ContainerIndex(toCommandExpression(e.expr), toCommandExpression(e.idx))
+            commandexpressions.ContainerIndex(self.toCommandExpression(e.expr), self.toCommandExpression(e.idx))
           case e: NestedPlanExpression =>
             commands.expressions.NestedPlanExpression(e.plan)
         }
-      case Exp => commandexpressions.ExpFunction(toCommandExpression(invocation.arguments.head))
-      case Floor => commandexpressions.FloorFunction(toCommandExpression(invocation.arguments.head))
-      case Haversin => commandexpressions.HaversinFunction(toCommandExpression(invocation.arguments.head))
+      case Exp => commandexpressions.ExpFunction(self.toCommandExpression(invocation.arguments.head))
+      case Floor => commandexpressions.FloorFunction(self.toCommandExpression(invocation.arguments.head))
+      case Haversin => commandexpressions.HaversinFunction(self.toCommandExpression(invocation.arguments.head))
       case Head =>
         commandexpressions.ContainerIndex(
-          toCommandExpression(invocation.arguments.head),
+          self.toCommandExpression(invocation.arguments.head),
           commandexpressions.Literal(0)
         )
-      case Id => commandexpressions.IdFunction(toCommandExpression(invocation.arguments.head))
-      case Keys => commandexpressions.KeysFunction(toCommandExpression(invocation.arguments.head))
-      case Labels => commandexpressions.LabelsFunction(toCommandExpression(invocation.arguments.head))
+      case Id => commandexpressions.IdFunction(self.toCommandExpression(invocation.arguments.head))
+      case Keys => commandexpressions.KeysFunction(self.toCommandExpression(invocation.arguments.head))
+      case Labels => commandexpressions.LabelsFunction(self.toCommandExpression(invocation.arguments.head))
       case Last =>
         commandexpressions.ContainerIndex(
-          toCommandExpression(invocation.arguments.head),
+          self.toCommandExpression(invocation.arguments.head),
           commandexpressions.Literal(-1)
         )
       case Left =>
         commandexpressions.LeftFunction(
-          toCommandExpression(invocation.arguments.head),
-          toCommandExpression(invocation.arguments(1))
+          self.toCommandExpression(invocation.arguments.head),
+          self.toCommandExpression(invocation.arguments(1))
         )
-      case Length => commandexpressions.LengthFunction(toCommandExpression(invocation.arguments.head))
-      case Log => commandexpressions.LogFunction(toCommandExpression(invocation.arguments.head))
-      case Log10 => commandexpressions.Log10Function(toCommandExpression(invocation.arguments.head))
-      case LTrim => commandexpressions.LTrimFunction(toCommandExpression(invocation.arguments.head))
+      case Length => commandexpressions.LengthFunction(self.toCommandExpression(invocation.arguments.head))
+      case Log => commandexpressions.LogFunction(self.toCommandExpression(invocation.arguments.head))
+      case Log10 => commandexpressions.Log10Function(self.toCommandExpression(invocation.arguments.head))
+      case LTrim => commandexpressions.LTrimFunction(self.toCommandExpression(invocation.arguments.head))
       case Max =>
-        val inner = toCommandExpression(invocation.arguments.head)
+        val inner = self.toCommandExpression(invocation.arguments.head)
         val command = commandexpressions.Max(inner)
         if (invocation.distinct)
           commandexpressions.Distinct(command, inner)
         else
           command
       case Min =>
-        val inner = toCommandExpression(invocation.arguments.head)
+        val inner = self.toCommandExpression(invocation.arguments.head)
         val command = commandexpressions.Min(inner)
         if (invocation.distinct)
           commandexpressions.Distinct(command, inner)
         else
           command
-      case Nodes => commandexpressions.NodesFunction(toCommandExpression(invocation.arguments.head))
+      case Nodes => commandexpressions.NodesFunction(self.toCommandExpression(invocation.arguments.head))
       case PercentileCont =>
-        val firstArg = toCommandExpression(invocation.arguments.head)
-        val secondArg = toCommandExpression(invocation.arguments(1))
+        val firstArg = self.toCommandExpression(invocation.arguments.head)
+        val secondArg = self.toCommandExpression(invocation.arguments(1))
 
         val command = commandexpressions.PercentileCont(firstArg, secondArg)
         if (invocation.distinct)
@@ -252,8 +252,8 @@ object CommunityExpressionConverters extends ExpressionConverters {
         else
           command
       case PercentileDisc =>
-        val firstArg = toCommandExpression(invocation.arguments.head)
-        val secondArg = toCommandExpression(invocation.arguments(1))
+        val firstArg = self.toCommandExpression(invocation.arguments.head)
+        val secondArg = self.toCommandExpression(invocation.arguments(1))
 
         val command = commandexpressions.PercentileDisc(firstArg, secondArg)
         if (invocation.distinct)
@@ -262,52 +262,52 @@ object CommunityExpressionConverters extends ExpressionConverters {
           command
       case Pi => commandexpressions.PiFunction()
       case Distance =>
-        val firstArg = toCommandExpression(invocation.arguments.head)
-        val secondArg = toCommandExpression(invocation.arguments(1))
+        val firstArg = self.toCommandExpression(invocation.arguments.head)
+        val secondArg = self.toCommandExpression(invocation.arguments(1))
         commandexpressions.DistanceFunction(firstArg, secondArg)
-      case Point => commandexpressions.PointFunction(toCommandExpression(invocation.arguments.head))
-      case Radians => commandexpressions.RadiansFunction(toCommandExpression(invocation.arguments.head))
+      case Point => commandexpressions.PointFunction(self.toCommandExpression(invocation.arguments.head))
+      case Radians => commandexpressions.RadiansFunction(self.toCommandExpression(invocation.arguments.head))
       case Rand => commandexpressions.RandFunction()
       case functions.Range =>
         commandexpressions.RangeFunction(
-          toCommandExpression(invocation.arguments.head),
-          toCommandExpression(invocation.arguments(1)),
-          toCommandExpression(invocation.arguments.lift(2)).getOrElse(commandexpressions.Literal(1))
+          self.toCommandExpression(invocation.arguments.head),
+          self.toCommandExpression(invocation.arguments(1)),
+          toCommandExpression(invocation.arguments.lift(2), self).getOrElse(commandexpressions.Literal(1))
         )
-      case Relationships => commandexpressions.RelationshipFunction(toCommandExpression(invocation.arguments.head))
+      case Relationships => commandexpressions.RelationshipFunction(self.toCommandExpression(invocation.arguments.head))
       case Replace =>
         commandexpressions.ReplaceFunction(
-          toCommandExpression(invocation.arguments.head),
-          toCommandExpression(invocation.arguments(1)),
-          toCommandExpression(invocation.arguments(2))
+          self.toCommandExpression(invocation.arguments.head),
+          self.toCommandExpression(invocation.arguments(1)),
+          self.toCommandExpression(invocation.arguments(2))
         )
-      case Reverse => commandexpressions.ReverseFunction(toCommandExpression(invocation.arguments.head))
+      case Reverse => commandexpressions.ReverseFunction(self.toCommandExpression(invocation.arguments.head))
       case Right =>
         commandexpressions.RightFunction(
-          toCommandExpression(invocation.arguments.head),
-          toCommandExpression(invocation.arguments(1))
+          self.toCommandExpression(invocation.arguments.head),
+          self.toCommandExpression(invocation.arguments(1))
         )
-      case Round => commandexpressions.RoundFunction(toCommandExpression(invocation.arguments.head))
-      case RTrim => commandexpressions.RTrimFunction(toCommandExpression(invocation.arguments.head))
-      case Sign => commandexpressions.SignFunction(toCommandExpression(invocation.arguments.head))
-      case Sin => commandexpressions.SinFunction(toCommandExpression(invocation.arguments.head))
-      case Size => commandexpressions.SizeFunction(toCommandExpression(invocation.arguments.head))
+      case Round => commandexpressions.RoundFunction(self.toCommandExpression(invocation.arguments.head))
+      case RTrim => commandexpressions.RTrimFunction(self.toCommandExpression(invocation.arguments.head))
+      case Sign => commandexpressions.SignFunction(self.toCommandExpression(invocation.arguments.head))
+      case Sin => commandexpressions.SinFunction(self.toCommandExpression(invocation.arguments.head))
+      case Size => commandexpressions.SizeFunction(self.toCommandExpression(invocation.arguments.head))
       case Split =>
         commandexpressions.SplitFunction(
-          toCommandExpression(invocation.arguments.head),
-          toCommandExpression(invocation.arguments(1))
+          self.toCommandExpression(invocation.arguments.head),
+          self.toCommandExpression(invocation.arguments(1))
         )
-      case Sqrt => commandexpressions.SqrtFunction(toCommandExpression(invocation.arguments.head))
-      case StartNode => commandexpressions.RelationshipEndPoints(toCommandExpression(invocation.arguments.head), start = true)
+      case Sqrt => commandexpressions.SqrtFunction(self.toCommandExpression(invocation.arguments.head))
+      case StartNode => commandexpressions.RelationshipEndPoints(self.toCommandExpression(invocation.arguments.head), start = true)
       case StdDev =>
-        val inner = toCommandExpression(invocation.arguments.head)
+        val inner = self.toCommandExpression(invocation.arguments.head)
         val command = commandexpressions.Stdev(inner)
         if (invocation.distinct)
           commandexpressions.Distinct(command, inner)
         else
           command
       case StdDevP =>
-        val inner = toCommandExpression(invocation.arguments.head)
+        val inner = self.toCommandExpression(invocation.arguments.head)
         val command = commandexpressions.StdevP(inner)
         if (invocation.distinct)
           commandexpressions.Distinct(command, inner)
@@ -315,12 +315,12 @@ object CommunityExpressionConverters extends ExpressionConverters {
           command
       case Substring =>
         commandexpressions.SubstringFunction(
-          toCommandExpression(invocation.arguments.head),
-          toCommandExpression(invocation.arguments(1)),
-          toCommandExpression(invocation.arguments.lift(2))
+          self.toCommandExpression(invocation.arguments.head),
+          self.toCommandExpression(invocation.arguments(1)),
+          toCommandExpression(invocation.arguments.lift(2), self)
         )
       case Sum =>
-        val inner = toCommandExpression(invocation.arguments.head)
+        val inner = self.toCommandExpression(invocation.arguments.head)
         val command = commandexpressions.Sum(inner)
         if (invocation.distinct)
           commandexpressions.Distinct(command, inner)
@@ -328,108 +328,105 @@ object CommunityExpressionConverters extends ExpressionConverters {
           command
       case Tail =>
         commandexpressions.ListSlice(
-          toCommandExpression(invocation.arguments.head),
+          self.toCommandExpression(invocation.arguments.head),
           Some(commandexpressions.Literal(1)),
           None
         )
-      case Tan => commandexpressions.TanFunction(toCommandExpression(invocation.arguments.head))
+      case Tan => commandexpressions.TanFunction(self.toCommandExpression(invocation.arguments.head))
       case Timestamp => commandexpressions.TimestampFunction()
-      case ToBoolean => commandexpressions.ToBooleanFunction(toCommandExpression(invocation.arguments.head))
-      case ToFloat => commandexpressions.ToFloatFunction(toCommandExpression(invocation.arguments.head))
-      case ToInteger => commandexpressions.ToIntegerFunction(toCommandExpression(invocation.arguments.head))
-      case ToLower => commandexpressions.ToLowerFunction(toCommandExpression(invocation.arguments.head))
-      case ToString => commandexpressions.ToStringFunction(toCommandExpression(invocation.arguments.head))
-      case ToUpper => commandexpressions.ToUpperFunction(toCommandExpression(invocation.arguments.head))
-      case Properties => commandexpressions.PropertiesFunction(toCommandExpression(invocation.arguments.head))
-      case Trim => commandexpressions.TrimFunction(toCommandExpression(invocation.arguments.head))
-      case Type => commandexpressions.RelationshipTypeFunction(toCommandExpression(invocation.arguments.head))
+      case ToBoolean => commandexpressions.ToBooleanFunction(self.toCommandExpression(invocation.arguments.head))
+      case ToFloat => commandexpressions.ToFloatFunction(self.toCommandExpression(invocation.arguments.head))
+      case ToInteger => commandexpressions.ToIntegerFunction(self.toCommandExpression(invocation.arguments.head))
+      case ToLower => commandexpressions.ToLowerFunction(self.toCommandExpression(invocation.arguments.head))
+      case ToString => commandexpressions.ToStringFunction(self.toCommandExpression(invocation.arguments.head))
+      case ToUpper => commandexpressions.ToUpperFunction(self.toCommandExpression(invocation.arguments.head))
+      case Properties => commandexpressions.PropertiesFunction(self.toCommandExpression(invocation.arguments.head))
+      case Trim => commandexpressions.TrimFunction(self.toCommandExpression(invocation.arguments.head))
+      case Type => commandexpressions.RelationshipTypeFunction(self.toCommandExpression(invocation.arguments.head))
     }
 
   private def toCommandPredicate(e: Option[ast.Expression], self: ExpressionConverters): Predicate =
     e.map(self.toCommandPredicate).getOrElse(predicates.True())
 
-  private def toCommandProperty(e: ast.Property): commandexpressions.Property =
-    commandexpressions.Property(toCommandExpression(e.map), PropertyKey(e.propertyKey.name))
+  private def toCommandProperty(e: ast.Property, self: ExpressionConverters): commandexpressions.Property =
+    commandexpressions.Property(self.toCommandExpression(e.map), PropertyKey(e.propertyKey.name))
 
-  private def toCommandExpression(expression: Option[ast.Expression]): Option[CommandExpression] =
-    expression.map(toCommandExpression)
+  private def toCommandExpression(expression: Option[ast.Expression], self: ExpressionConverters): Option[CommandExpression] =
+    expression.map(self.toCommandExpression)
 
-  private def toCommandExpression(expressions: Seq[ast.Expression]): Seq[CommandExpression] =
-    expressions.map(toCommandExpression)
+  private def toCommandExpression(expressions: Seq[ast.Expression], self: ExpressionConverters): Seq[CommandExpression] =
+    expressions.map(self.toCommandExpression)
 
   private def variable(e: ast.Variable) = commands.expressions.Variable(e.name)
 
   private def inequalityExpression(original: ast.InequalityExpression, self: ExpressionConverters): predicates.ComparablePredicate = original match {
-    case e: ast.LessThan =>
-      val lexp = self.toCommandExpression(e.lhs)
-      val rexp = self.toCommandExpression(e.rhs)
-      predicates.LessThan(lexp, rexp)
-    case e: ast.LessThanOrEqual => predicates.LessThanOrEqual(toCommandExpression(e.lhs), toCommandExpression(e.rhs))
-    case e: ast.GreaterThan => predicates.GreaterThan(toCommandExpression(e.lhs), toCommandExpression(e.rhs))
-    case e: ast.GreaterThanOrEqual => predicates.GreaterThanOrEqual(toCommandExpression(e.lhs), toCommandExpression(e.rhs))
+    case e: ast.LessThan => predicates.LessThan(self.toCommandExpression(e.lhs), self.toCommandExpression(e.rhs))
+    case e: ast.LessThanOrEqual => predicates.LessThanOrEqual(self.toCommandExpression(e.lhs), self.toCommandExpression(e.rhs))
+    case e: ast.GreaterThan => predicates.GreaterThan(self.toCommandExpression(e.lhs), self.toCommandExpression(e.rhs))
+    case e: ast.GreaterThanOrEqual => predicates.GreaterThanOrEqual(self.toCommandExpression(e.lhs), self.toCommandExpression(e.rhs))
   }
 
-  private def getDegree(original: ast.GetDegree) = {
+  private def getDegree(original: ast.GetDegree, self: ExpressionConverters) = {
     val typ = original.relType.map(relType => UnresolvedRelType(relType.name))
-    commandexpressions.GetDegree(toCommandExpression(original.node), typ, original.dir)
+    commandexpressions.GetDegree(self.toCommandExpression(original.node), typ, original.dir)
   }
 
-  private def regexMatch(e: ast.RegexMatch) = toCommandExpression(e.rhs) match {
+  private def regexMatch(e: ast.RegexMatch, self: ExpressionConverters) = self.toCommandExpression(e.rhs) match {
     case literal: commandexpressions.Literal =>
-      predicates.LiteralRegularExpression(toCommandExpression(e.lhs), literal)
+      predicates.LiteralRegularExpression(self.toCommandExpression(e.lhs), literal)
     case command =>
-      predicates.RegularExpression(toCommandExpression(e.lhs), command)
+      predicates.RegularExpression(self.toCommandExpression(e.lhs), command)
   }
 
-  private def in(e: ast.In) = e.rhs match {
+  private def in(e: ast.In, self: ExpressionConverters) = e.rhs match {
     case value: Parameter =>
-      predicates.ConstantCachedIn(toCommandExpression(e.lhs), toCommandExpression(value))
+      predicates.ConstantCachedIn(self.toCommandExpression(e.lhs), self.toCommandExpression(value))
 
     case value@ListLiteral(expressions) if expressions.isEmpty =>
       predicates.Not(predicates.True())
 
     case value@ListLiteral(expressions) if expressions.forall(_.isInstanceOf[Literal]) =>
-      predicates.ConstantCachedIn(toCommandExpression(e.lhs), toCommandExpression(value))
+      predicates.ConstantCachedIn(self.toCommandExpression(e.lhs), self.toCommandExpression(value))
 
     case _ =>
-      predicates.DynamicCachedIn(toCommandExpression(e.lhs), toCommandExpression(e.rhs))
+      predicates.DynamicCachedIn(self.toCommandExpression(e.lhs), self.toCommandExpression(e.rhs))
   }
 
   private def caseExpression(e: ast.CaseExpression, self: ExpressionConverters) = e.expression match {
     case Some(innerExpression) =>
-      val legacyAlternatives = e.alternatives.map { a => (toCommandExpression(a._1), toCommandExpression(a._2)) }
-      commandexpressions.SimpleCase(toCommandExpression(innerExpression), legacyAlternatives, toCommandExpression(e.default))
+      val legacyAlternatives = e.alternatives.map { a => (self.toCommandExpression(a._1), self.toCommandExpression(a._2)) }
+      commandexpressions.SimpleCase(self.toCommandExpression(innerExpression), legacyAlternatives, toCommandExpression(e.default, self))
     case None =>
-      val predicateAlternatives = e.alternatives.map { a => (self.toCommandPredicate(a._1), toCommandExpression(a._2)) }
-      commandexpressions.GenericCase(predicateAlternatives, toCommandExpression(e.default))
+      val predicateAlternatives = e.alternatives.map { a => (self.toCommandPredicate(a._1), self.toCommandExpression(a._2)) }
+      commandexpressions.GenericCase(predicateAlternatives, toCommandExpression(e.default, self))
   }
 
-  private def hasLabels(e: ast.HasLabels) = e.labels.map {
-    l => predicates.HasLabel(toCommandExpression(e.expression), commandvalues.KeyToken.Unresolved(l.name, commandvalues.TokenType.Label)): Predicate
+  private def hasLabels(e: ast.HasLabels, self: ExpressionConverters) = e.labels.map {
+    l => predicates.HasLabel(self.toCommandExpression(e.expression), commandvalues.KeyToken.Unresolved(l.name, commandvalues.TokenType.Label)): Predicate
   } reduceLeft {
     predicates.And(_, _)
   }
 
-  private def mapItems(items: Seq[(PropertyKeyName, Expression)]): Map[String, CommandExpression] =
+  private def mapItems(items: Seq[(PropertyKeyName, Expression)], self: ExpressionConverters): Map[String, CommandExpression] =
     items.map {
-      case (id, ex) => id.name -> toCommandExpression(ex)
+      case (id, ex) => id.name -> self.toCommandExpression(ex)
     }.toMap
 
-  private def mapProjectionItems(items: Seq[LiteralEntry]): Map[String, CommandExpression] =
+  private def mapProjectionItems(items: Seq[LiteralEntry], self: ExpressionConverters): Map[String, CommandExpression] =
     items.map {
-      case LiteralEntry(id, ex) => id.name -> toCommandExpression(ex)
+      case LiteralEntry(id, ex) => id.name -> self.toCommandExpression(ex)
     }.toMap
 
   private def listComprehension(e: ast.ListComprehension, self: ExpressionConverters): CommandExpression = {
     val filter = e.innerPredicate match {
       case Some(_: ast.True) | None =>
-        toCommandExpression(e.expression)
+        self.toCommandExpression(e.expression)
       case Some(inner) =>
-        commandexpressions.FilterFunction(toCommandExpression(e.expression), e.variable.name, self.toCommandPredicate(inner))
+        commandexpressions.FilterFunction(self.toCommandExpression(e.expression), e.variable.name, self.toCommandPredicate(inner))
     }
     e.extractExpression match {
       case Some(extractExpression) =>
-        commandexpressions.ExtractFunction(filter, e.variable.name, toCommandExpression(extractExpression))
+        commandexpressions.ExtractFunction(filter, e.variable.name, self.toCommandExpression(extractExpression))
       case None =>
         filter
     }

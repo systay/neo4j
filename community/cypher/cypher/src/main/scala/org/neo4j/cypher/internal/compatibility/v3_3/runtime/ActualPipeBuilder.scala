@@ -51,8 +51,7 @@ class ActualPipeBuilder(monitors: Monitors,
                         expressionConverters: ExpressionConverters)
                        (implicit context: PipeExecutionBuilderContext, planContext: PlanContext) extends PipeBuilder {
 
-  def build(plan: LogicalPlan): Pipe = {
-    val id = idMap.getOrElse(plan, new Id)
+  override def build(plan: LogicalPlan, id: Id): Pipe = {
     plan match {
       case SingleRow() =>
         SingleRowPipe()(id)
@@ -100,8 +99,7 @@ class ActualPipeBuilder(monitors: Monitors,
     }
   }
 
-  def build(plan: LogicalPlan, source: Pipe): Pipe = {
-    val id = idMap.getOrElse(plan, new Id)
+  override def build(plan: LogicalPlan, source: Pipe, id: Id): Pipe = {
     plan match {
       case Projection(_, expressions) =>
         ProjectionPipe(source, Eagerly.immutableMapValues(expressions, buildExpression))(id = id)
@@ -326,8 +324,7 @@ class ActualPipeBuilder(monitors: Monitors,
     }
   }
 
-  def build(plan: LogicalPlan, lhs: Pipe, rhs: Pipe): Pipe = {
-    val id = idMap.getOrElse(plan, new Id)
+  override def build(plan: LogicalPlan, lhs: Pipe, rhs: Pipe, id: Id): Pipe = {
     plan match {
       case CartesianProduct(_, _) =>
         CartesianProductPipe(lhs, rhs)(id = id)

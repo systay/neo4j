@@ -71,15 +71,15 @@ class PipeExecutionPlanBuilderTest extends CypherFunSuite {
   val factory = new ActualPipeBuilderFactory {
     override def apply(monitors: Monitors, recurse: LogicalPlan => Pipe, readOnly: Boolean, idMap: Map[LogicalPlan, Id], expressionConverters: ExpressionConverters)
                       (implicit context: PipeExecutionBuilderContext, planContext: PlanContext) = new PipeBuilder {
-      def build(plan: LogicalPlan) = plan match {
+      override def build(plan: LogicalPlan, id: Id) = plan match {
         case LeafPlan(n) => LeafPipe(n)
       }
 
-      def build(plan: LogicalPlan, source: Pipe) = plan match {
+      override def build(plan: LogicalPlan, source: Pipe, id: Id) = plan match {
         case OneChildPlan(name, _) => OneChildPipe(name, source)
       }
 
-      def build(plan: LogicalPlan, lhs: Pipe, rhs: Pipe) = plan match {
+      override def build(plan: LogicalPlan, lhs: Pipe, rhs: Pipe, id: Id) = plan match {
         case TwoChildPlan(name, _, _) => TwoChildPipe(name, lhs, rhs)
       }
     }

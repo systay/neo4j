@@ -54,6 +54,11 @@ class SemanticTable(
     case _ => false
   }
 
+  def containsRelationship(expr: String): Boolean = types.exists {
+    case (v@Variable(name), _) => name == expr && isRelationship(v) // NOTE: Profiling showed that checking node type last is better
+    case _ => false
+  }
+
   def seen(expression: Expression) = types.contains(expression)
 
   def isNode(expr: String) = getTypeFor(expr) == symbols.CTNode.invariant

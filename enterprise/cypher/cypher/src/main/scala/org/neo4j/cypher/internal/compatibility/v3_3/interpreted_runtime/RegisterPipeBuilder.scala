@@ -19,50 +19,19 @@
  */
 package org.neo4j.cypher.internal.compatibility.v3_3.interpreted_runtime
 
-import org.neo4j.cypher.internal.compatibility.v3_3.interpreted_runtime.expressions.{NodeFromRegister, ValueFromRegister}
 import org.neo4j.cypher.internal.compatibility.v3_3.interpreted_runtime.pipes.{AllNodesScanRegisterPipe, ProduceResultsRegisterPipe}
+import org.neo4j.cypher.internal.compatibility.v3_3.interpreted_runtime.{expressions => runtimeExpressions}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime._
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.{expressions => commandsExpressions}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.Pipe
 import org.neo4j.cypher.internal.compiler.v3_3.planDescription.Id
 import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.Metrics
-import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans.{AllNodesScan, FindShortestPaths, LogicalPlan, ProduceResult}
+import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans._
 import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
-import org.neo4j.cypher.internal.frontend.v3_3.ast.{Property, PropertyKeyName, Variable, Expression => ASTExpression}
 import org.neo4j.cypher.internal.frontend.v3_3.phases.Monitors
-import org.neo4j.cypher.internal.frontend.v3_3.{InputPosition, PlannerName, Rewriter, SemanticCheck, SemanticCheckResult, SemanticTable, bottomUp}
+import org.neo4j.cypher.internal.frontend.v3_3.{PlannerName, SemanticTable}
 import org.neo4j.cypher.internal.ir.v3_3.IdName
-
-case class RegisterPipeBuilderFactory() extends PipeBuilderFactory {
-  override def apply(monitors: Monitors,
-                     recurse: (LogicalPlan) => Pipe,
-                     readOnly: Boolean,
-                     idMap: Map[LogicalPlan, Id],
-                     expressionConverters: ExpressionConverters)
-                    (implicit context: PipeExecutionBuilderContext, planContext: PlanContext): PipeBuilder =
-    new RegisterPipeBuilder(monitors, recurse, readOnly, idMap, expressionConverters)(context, planContext)
-}
-
-case class NodeProperty(offset: Int, propertyKeyName: PropertyKeyName)(val position: InputPosition) extends ASTExpression {
-  override def semanticCheck(ctx: ASTExpression.SemanticContext): SemanticCheck = SemanticCheckResult.success
-}
-
-case class RelationshipProperty(offset: Int, propertyKeyName: PropertyKeyName)(val position: InputPosition) extends ASTExpression {
-  override def semanticCheck(ctx: ASTExpression.SemanticContext): SemanticCheck = SemanticCheckResult.success
-}
-
-class RegisterExpressionRewriter(semanticTable: SemanticTable, registerAllocations: RegisterAllocations)
-  extends Rewriter {
-
-  override def apply(that: AnyRef): AnyRef = instance.apply(that)
-
-  private val instance = bottomUp(Rewriter.lift {
-    case p@Property(Variable(ident), propertyKey) if semanticTable.isNode(ident) => NodeProperty(registerAllocations.getLongOffsetFor(ident), propertyKey)(p.position)
-    case p@Property(Variable(ident), propertyKey) if semanticTable.isRelationship(ident) => RelationshipProperty(registerAllocations.getLongOffsetFor(ident), propertyKey)(p.position)
-    case Property(Variable(_), _) => ???
-  })
-}
 
 class RegisterPipeBuilder(monitors: Monitors,
                           recurse: LogicalPlan => Pipe,
@@ -75,30 +44,27 @@ class RegisterPipeBuilder(monitors: Monitors,
 
   private val ctx = context.asInstanceOf[RegisterPipeExecutionBuilderContext]
 
-  override def build(plan: LogicalPlan): Pipe = {
-    val id = idMap.getOrElse(plan, new Id)
+  override def build(plan: LogicalPlan, id: Id): Pipe = {
     val registerAllocations = ctx.registerAllocation(plan)
     plan match {
       case AllNodesScan(IdName(ident), _) =>
         AllNodesScanRegisterPipe(registerAllocations.getLongOffsetFor(ident), registerAllocations)(id)
-      case _ => super.build(plan)
+      case _ => super.build(plan, id)
     }
   }
 
   private def expressionForSlot(key: String, slot: Slot, table: SemanticTable): commandsExpressions.Expression =
     slot match {
-      case LongSlot(offset) if table.isNode(key) => NodeFromRegister(offset)
-      case RefSlot(offset) => ValueFromRegister(offset)
+      case LongSlot(offset) if table.isNode(key) => runtimeExpressions.NodeFromRegister(offset)
+      case RefSlot(offset) => runtimeExpressions.ValueFromRegister(offset)
     }
 
-  override def build(plan: LogicalPlan, source: Pipe): Pipe = {
-    val id = idMap.getOrElse(plan, new Id)
-
+  override def build(plan: LogicalPlan, source: Pipe, id: Id): Pipe = {
     val registerAllocations = ctx.registerAllocation(plan)
     plan match {
 
-      case _: FindShortestPaths =>
-        throw new RegisterAllocationFailed("Shortest path not supported in the enterprise interpreted runtime")
+      case _: FindShortestPaths | _: Expand =>
+        throw new RegisterAllocationFailed(s"${plan.productPrefix} not supported in the enterprise interpreted runtime")
 
       case ProduceResult(columns, _) =>
         val expressions = columns map {
@@ -109,15 +75,25 @@ class RegisterPipeBuilder(monitors: Monitors,
       case _ =>
         val rewriter = new RegisterExpressionRewriter(ctx.semanticTable, ctx.registerAllocation(plan))
         val registeredPlan = plan.endoRewrite(rewriter)
-        val result = super.build(registeredPlan, source)
-        result
+        super.build(registeredPlan, source, id)
     }
   }
 
-  override def build(plan: LogicalPlan, lhs: Pipe, rhs: Pipe): Pipe = super.build(plan, lhs, rhs)
+  override def build(plan: LogicalPlan, lhs: Pipe, rhs: Pipe, id: Id): Pipe =
+    super.build(plan, lhs, rhs, id)
 
 }
 
 class RegisterPipeExecutionBuilderContext(cardinality: Metrics.CardinalityModel, semanticTable: SemanticTable,
                                           plannerName: PlannerName, val registerAllocation: Map[LogicalPlan, RegisterAllocations])
   extends PipeExecutionBuilderContext(cardinality, semanticTable, plannerName)
+
+case class RegisterPipeBuilderFactory() extends PipeBuilderFactory {
+  override def apply(monitors: Monitors,
+                     recurse: (LogicalPlan) => Pipe,
+                     readOnly: Boolean,
+                     idMap: Map[LogicalPlan, Id],
+                     expressionConverters: ExpressionConverters)
+                    (implicit context: PipeExecutionBuilderContext, planContext: PlanContext): PipeBuilder =
+    new RegisterPipeBuilder(monitors, recurse, readOnly, idMap, expressionConverters)(context, planContext)
+}

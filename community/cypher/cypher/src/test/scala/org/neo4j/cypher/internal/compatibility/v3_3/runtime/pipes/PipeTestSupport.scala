@@ -62,7 +62,7 @@ trait PipeTestSupport extends CypherTestSupport with MockitoSugar {
   def setUpRelLookupMocking(direction: SemanticDirection, relsByNode: Map[Node, Seq[Relationship]]) {
     relsByNode.foreach {
       case (node, rels) =>
-        when(query.getRelationshipsForIds(node, direction, None)).thenAnswer(
+        when(query.getRelationshipsForIds(node.getId, direction, None)).thenAnswer(
           new Answer[Iterator[Relationship]] {
             def answer(invocation: InvocationOnMock) = rels.iterator
           })

@@ -25,11 +25,24 @@ object RegisterAllocations {
   def empty = new RegisterAllocations(Map.empty, 0, 0)
 }
 
-class RegisterAllocations(var slots: Map[String, Slot], var numberOfLongs: Int = 0, var numberOfObjects: Int = 0) {
+class RegisterAllocations(var slots: Map[String, Slot], var numberOfLongs: Int = 0, var numberOfReferences: Int = 0) {
+
+  private def checkNotAlreadyTaken(key: String) =
+    if (slots.contains(key))
+      throw new InternalException("Tried overwriting already taken variable name")
+
   def newLong(name: String): Unit = {
+    checkNotAlreadyTaken(name)
     val slot = LongSlot(numberOfLongs)
     slots = slots + (name -> slot)
     numberOfLongs = numberOfLongs + 1
+  }
+
+  def newReference(name: String): Unit = {
+    checkNotAlreadyTaken(name)
+    val slot = RefSlot(numberOfReferences)
+    slots = slots + (name -> slot)
+    numberOfReferences = numberOfReferences + 1
   }
 
   def canEqual(other: Any): Boolean = other.isInstanceOf[RegisterAllocations]
@@ -39,20 +52,26 @@ class RegisterAllocations(var slots: Map[String, Slot], var numberOfLongs: Int =
       (that canEqual this) &&
         slots == that.slots &&
         numberOfLongs == that.numberOfLongs &&
-        numberOfObjects == that.numberOfObjects
+        numberOfReferences == that.numberOfReferences
     case _ => false
   }
 
   override def hashCode(): Int = {
-    val state = Seq(slots, numberOfLongs, numberOfObjects)
+    val state = Seq(slots, numberOfLongs, numberOfReferences)
     state.map(_.hashCode()).foldLeft(0)((a, b) => 31 * a + b)
   }
 
-  override def toString = s"RegisterAllocations(slots=$slots, longs=$numberOfLongs, objs=$numberOfObjects)"
+  override def toString = s"RegisterAllocations(slots=$slots, longs=$numberOfLongs, objs=$numberOfReferences)"
 
   def getLongOffsetFor(name: String): Int = slots.get(name) match {
     case Some(s:LongSlot) => s.offset
     case Some(s) => throw new InternalException(s"Uh oh... There was no long slot for `$name`. It was a $s")
+    case _ => throw new InternalException("Uh oh... There was no slot for `$name`")
+  }
+
+  def getReferenceOffsetFor(name: String): Int = slots.get(name) match {
+    case Some(s: RefSlot) => s.offset
+    case Some(s) => throw new InternalException(s"Uh oh... There was no reference slot for `$name`. It was a $s")
     case _ => throw new InternalException("Uh oh... There was no slot for `$name`")
   }
 }

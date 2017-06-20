@@ -24,13 +24,14 @@ import org.neo4j.cypher.internal.compatibility.v3_3.interpreted_runtime.{express
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.RegisterAllocationFailed
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.{CommunityExpressionConverters, ExpressionConverters}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.expressions.{ProjectedPath, Expression => CommandExpression}
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.values.{KeyToken, TokenType, UnresolvedRelType}
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.values.{UnresolvedLabel, UnresolvedRelType}
 import org.neo4j.cypher.internal.compiler.v3_3.ast.NestedPlanExpression
+import org.neo4j.cypher.internal.compiler.v3_3.spi.TokenContext
 import org.neo4j.cypher.internal.frontend.v3_3.ast.functions.Exists
 import org.neo4j.cypher.internal.frontend.v3_3.ast.{Expression => ASTExpression}
 import org.neo4j.cypher.internal.frontend.v3_3.{SemanticTable, ast => frontEndAst}
 
-class RegisteredExpressionConverter(semanticTable: SemanticTable) extends ExpressionConverters {
+class RegisteredExpressionConverter(semanticTable: SemanticTable, resolver: TokenContext) extends ExpressionConverters {
   override def toCommandExpression(expression: ASTExpression, self: ExpressionConverters): CommandExpression = expression match {
     case ast.NodeProperty(offset, propertyKeyName) if propertyKeyName.id(semanticTable).nonEmpty =>
       commandExpressions.NodeProperty(offset, propertyKeyName.id(semanticTable))
@@ -43,11 +44,14 @@ class RegisteredExpressionConverter(semanticTable: SemanticTable) extends Expres
 
     case ast.GetDegree(offset, relType, dir) =>
       val maybeToken = relType map { relType =>
-        val maybeTypeId = semanticTable.resolvedRelTypeNames.get(relType.name)
-        val maybeKeyToken = maybeTypeId.map(typId => KeyToken.Resolved(relType.name, typId.id, TokenType.RelType))
-        maybeKeyToken getOrElse UnresolvedRelType(relType.name)
+        UnresolvedRelType(relType.name).resolve(resolver)
       }
+
       commandExpressions.GetDegree(offset, maybeToken, dir)
+
+    case ast.HasLabels(offset, labelName) =>
+      val labelToken = UnresolvedLabel(labelName.name).resolve(resolver)
+      commandExpressions.HasLabels(offset, labelToken)
 
     case f: frontEndAst.FunctionInvocation if f.function == Exists =>
       throw new RegisterAllocationFailed(s"${f.function} not supported with register allocation yet")

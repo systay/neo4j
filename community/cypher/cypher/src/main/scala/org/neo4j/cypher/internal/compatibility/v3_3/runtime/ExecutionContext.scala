@@ -103,7 +103,12 @@ case class ExecutionContext(m: MutableMap[String, Any] = MutableMaps.empty, size
     createWithNewMap(newMap)
   }
 
-  override def clone(): ExecutionContext = createWithNewMap(m.clone())
+  override def clone(): ExecutionContext = {
+    val miniMe = createWithNewMap(m.clone())
+    Array.copy(_longs, 0, miniMe._longs, 0, sizeOfLongs)
+    Array.copy(_refs, 0, miniMe._refs, 0, sizeOfRefs)
+    miniMe
+  }
 
   protected def createWithNewMap(newMap: MutableMap[String, Any]) = {
     copy(m = newMap)

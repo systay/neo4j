@@ -19,23 +19,30 @@
  */
 package org.neo4j.cypher.internal.compatibility.v3_3.interpreted_runtime.pipes
 
-
-import org.neo4j.cypher.internal.compatibility.v3_3.interpreted_runtime.RegisterAllocations
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.ExecutionContext
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.{PipeMonitor, QueryState}
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes._
 import org.neo4j.cypher.internal.compiler.v3_3.planDescription.Id
-import org.neo4j.graphdb.Node
+import org.neo4j.cypher.internal.frontend.v3_3.SemanticDirection
 
-case class AllNodesScanRegisterPipe(offset: Int, registers: RegisterAllocations)(val id: Id = new Id)
-                                   (implicit pipeMonitor: PipeMonitor) extends RegisterPipe {
-
-  protected def internalCreateResults(state: QueryState): Iterator[ExecutionContext] = {
-    state.query.nodeOps.all.map { (n: Node) =>
-      val ctx = ExecutionContext(sizeOfLongs = registers.numberOfLongs, sizeOfRefs = registers.numberOfReferences)
-      ctx.setLong(offset, n.getId)
-      ctx
+case class ExpandAllRegisterPipe(source: Pipe, from: Int, to: Int, rel: Int, dir: SemanticDirection, types: LazyTypes)
+                                (val id: Id = new Id)
+                                (implicit pipeMonitor: PipeMonitor)
+  extends PipeWithSource(source, pipeMonitor) with RegisterPipe {
+  protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
+    input flatMap {
+      row =>
+        val nodeId = row.getLong(from)
+        if (nodeId == -1)
+          None
+        else {
+          val rels = state.query.getRelationshipsForIds(nodeId, dir, types.types(state.query))
+          rels map { r =>
+            val newRow = row.clone()
+            newRow.setLong(rel, r.getId)
+            newRow.setLong(to, r.getOtherNodeId(nodeId))
+            newRow
+          }
+        }
     }
   }
-
-  override def monitor: PipeMonitor = pipeMonitor
 }

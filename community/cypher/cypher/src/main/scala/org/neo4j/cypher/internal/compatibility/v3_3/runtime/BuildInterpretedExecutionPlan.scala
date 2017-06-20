@@ -125,4 +125,6 @@ case class BuildInterpretedExecutionPlan(buildPipes: (LogicalPlanState, Communit
     }
 }
 
-class RegisterAllocationFailed(msg: String) extends Exception(msg)
+class RegisterAllocationFailed(msg: String) extends Exception(msg) {
+  println(s"oh noes - $msg")
+}

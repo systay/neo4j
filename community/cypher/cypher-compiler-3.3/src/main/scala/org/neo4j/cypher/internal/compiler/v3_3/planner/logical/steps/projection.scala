@@ -41,7 +41,11 @@ object projection {
 
     if (projections.subsetOf(projectAllCoveredIds) || projections == projectAllCoveredIds)
       context.logicalPlanProducer.planStarProjection(plan, projectionsMap, projs)
-    else
-      context.logicalPlanProducer.planRegularProjection(plan, projectionsMap, projs)
+    else {
+      val onlyProjectThis = projectionsMap filter {
+        case (k,e) => !e.isInstanceOf[ast.Variable]
+      }
+      context.logicalPlanProducer.planRegularProjection(plan, onlyProjectThis, projs)
+    }
   }
 }

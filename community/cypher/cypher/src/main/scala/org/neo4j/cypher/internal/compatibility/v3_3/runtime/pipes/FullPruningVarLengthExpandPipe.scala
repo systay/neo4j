@@ -245,7 +245,7 @@ case class FullPruningVarLengthExpandPipe(source: Pipe,
       */
     def ensureExpanded(queryState: QueryState, row: ExecutionContext, node: Node) = {
       if ( rels == null ) {
-        val allRels = queryState.query.getRelationshipsForIds(node, dir, types.types(queryState.query))
+        val allRels = queryState.query.getRelationshipsForIds(node.getId, dir, types.types(queryState.query))
         rels = allRels.filter(r => {
           filteringStep.filterRelationship(row, queryState)(r) &&
             filteringStep.filterNode(row, queryState)(r.getOtherNode(node))

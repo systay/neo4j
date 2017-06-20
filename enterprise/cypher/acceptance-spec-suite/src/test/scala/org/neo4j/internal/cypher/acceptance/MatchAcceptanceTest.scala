@@ -28,6 +28,31 @@ import scala.collection.JavaConverters._
 
 class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with NewPlannerTestSupport {
 
+  test("apapapapap") {
+    val n1 = createLabeledNode(Map("x" -> 50), "X")
+    val n2 = createLabeledNode(Map("x" -> 50l), "X")
+    val n3 = createLabeledNode(Map("x" -> 50f), "X")
+    val n4 = createLabeledNode(Map("x" -> 50d), "X")
+    val n5 = createLabeledNode(Map("x" -> 50.toByte), "X")
+    relate(n1, createNode())
+    relate(n2, createNode())
+    relate(n3, createNode())
+    relate(n4, createNode())
+
+    val result = executeWithAllPlannersAndCompatibilityMode(
+      s"match (n)-[r1]->(m) where n.x < 100 return n, id(m)"
+    )
+
+    result.toList should equal(List(
+      Map("n" -> n1, "id(m)" -> 5),
+      Map("n" -> n2, "id(m)" -> 6),
+      Map("n" -> n3, "id(m)" -> 7),
+      Map("n" -> n4, "id(m)" -> 8)
+    ))
+  }
+
+
+
   // Not TCK material -- only one integer type
   test("comparing numbers should work nicely") {
     val n1 = createNode(Map("x" -> 50))

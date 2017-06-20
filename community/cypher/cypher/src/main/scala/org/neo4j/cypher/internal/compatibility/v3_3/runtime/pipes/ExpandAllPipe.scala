@@ -39,7 +39,7 @@ case class ExpandAllPipe(source: Pipe,
       row =>
         getFromNode(row) match {
           case n: Node =>
-            val relationships: Iterator[Relationship] = state.query.getRelationshipsForIds(n, dir, types.types(state.query))
+            val relationships: Iterator[Relationship] = state.query.getRelationshipsForIds(n.getId, dir, types.types(state.query))
             relationships.map {
               case r =>
                 row.newWith2(relName, r, toName, r.getOtherNode(n))

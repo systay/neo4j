@@ -127,12 +127,12 @@ final class TransactionBoundQueryContext(val transactionalContext: Transactional
   override def getOrCreateLabelId(labelName: String) =
     transactionalContext.statement.tokenWriteOperations().labelGetOrCreateForName(labelName)
 
-  def getRelationshipsForIds(node: Node, dir: SemanticDirection, types: Option[Seq[Int]]): Iterator[Relationship] = {
+  def getRelationshipsForIds(node: Long, dir: SemanticDirection, types: Option[Seq[Int]]): Iterator[Relationship] = {
     val relationships = types match {
       case None =>
-        transactionalContext.statement.readOperations().nodeGetRelationships(node.getId, toGraphDb(dir))
+        transactionalContext.statement.readOperations().nodeGetRelationships(node, toGraphDb(dir))
       case Some(typeIds) =>
-        transactionalContext.statement.readOperations().nodeGetRelationships(node.getId, toGraphDb(dir), typeIds.toArray)
+        transactionalContext.statement.readOperations().nodeGetRelationships(node, toGraphDb(dir), typeIds.toArray)
     }
     new BeansAPIRelationshipIterator(relationships, entityAccessor)
   }

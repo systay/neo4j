@@ -54,6 +54,14 @@ object RegisterAllocation {
         allocations.newLong(relName)
         result += (lp -> allocations)
 
+      case Projection(source, expressions) =>
+        allocate(source, allocations)
+        expressions.keys.foreach {
+          case k if allocations.slots.contains(k) => {} // if already known, no need to create a slot for this variable
+          case k => allocations.newReference(k)
+        }
+        result += (lp -> allocations)
+
       case p => throw new RegisterAllocationFailed(s"Don't know how to handle $p")
     }
 

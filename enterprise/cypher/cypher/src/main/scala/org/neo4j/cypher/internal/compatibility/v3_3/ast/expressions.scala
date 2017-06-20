@@ -19,7 +19,7 @@
  */
 package org.neo4j.cypher.internal.compatibility.v3_3.ast
 
-import org.neo4j.cypher.internal.frontend.v3_3.ast.{PropertyKeyName, RelTypeName, Expression => ASTExpression}
+import org.neo4j.cypher.internal.frontend.v3_3.ast.{LabelName, PropertyKeyName, RelTypeName, Expression => ASTExpression}
 import org.neo4j.cypher.internal.frontend.v3_3.{InputPosition, SemanticCheck, SemanticCheckResult, SemanticDirection}
 
 case class NodeProperty(offset: Int, propertyKeyName: PropertyKeyName)(val position: InputPosition)
@@ -45,3 +45,7 @@ case class GetDegree(offset: Int, relType: Option[RelTypeName], dir: SemanticDir
   override def semanticCheck(ctx: ASTExpression.SemanticContext): SemanticCheck = SemanticCheckResult.success
 }
 
+case class HasLabels(offset: Int, labels: LabelName)(val position: InputPosition)
+  extends ASTExpression {
+  override def semanticCheck(ctx: ASTExpression.SemanticContext): SemanticCheck = SemanticCheckResult.success
+}

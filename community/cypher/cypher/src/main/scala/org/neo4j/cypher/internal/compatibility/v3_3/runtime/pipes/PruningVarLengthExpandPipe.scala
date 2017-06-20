@@ -297,7 +297,7 @@ case class PruningVarLengthExpandPipe(source: Pipe,
       * List all relationships of a node, given the predicates of this pipe.
       */
     def expand(row: ExecutionContext, node: Node) = {
-      val relationships = state.query.getRelationshipsForIds(node, dir, types.types(state.query))
+      val relationships = state.query.getRelationshipsForIds(node.getId, dir, types.types(state.query))
       relationships.filter(r => {
         filteringStep.filterRelationship(row, state)(r) &&
           filteringStep.filterNode(row, state)(r.getOtherNode(node))

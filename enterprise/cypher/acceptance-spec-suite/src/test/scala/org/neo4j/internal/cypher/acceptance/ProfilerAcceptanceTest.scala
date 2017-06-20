@@ -151,7 +151,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
 
     //THEN
     assertRows(1)(result)("Filter")
-    assertDbHits(2)(result)("Filter")
+    assertDbHits(2 )(result)("Filter")
 
     assertRows(2)(result)("AllNodesScan")
     assertDbHits(3)(result)("AllNodesScan")

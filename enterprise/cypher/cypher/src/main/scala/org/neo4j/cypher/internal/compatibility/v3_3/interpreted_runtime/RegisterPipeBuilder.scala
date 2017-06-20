@@ -19,18 +19,18 @@
  */
 package org.neo4j.cypher.internal.compatibility.v3_3.interpreted_runtime
 
-import org.neo4j.cypher.internal.compatibility.v3_3.interpreted_runtime.pipes.{AllNodesScanRegisterPipe, ProduceResultsRegisterPipe}
+import org.neo4j.cypher.internal.compatibility.v3_3.interpreted_runtime.pipes.{AllNodesScanRegisterPipe, ExpandAllRegisterPipe, ProduceResultsRegisterPipe, ProjectionRegisterPipe}
 import org.neo4j.cypher.internal.compatibility.v3_3.interpreted_runtime.{expressions => runtimeExpressions}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime._
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.{expressions => commandsExpressions}
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.Pipe
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.{LazyTypes, Pipe}
 import org.neo4j.cypher.internal.compiler.v3_3.planDescription.Id
 import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.Metrics
 import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans._
 import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
 import org.neo4j.cypher.internal.frontend.v3_3.phases.Monitors
-import org.neo4j.cypher.internal.frontend.v3_3.{PlannerName, SemanticTable}
+import org.neo4j.cypher.internal.frontend.v3_3.{PlannerName, SemanticTable, ast => frontEndAst}
 import org.neo4j.cypher.internal.ir.v3_3.IdName
 
 class RegisterPipeBuilder(monitors: Monitors,
@@ -63,14 +63,31 @@ class RegisterPipeBuilder(monitors: Monitors,
     val registerAllocations = ctx.registerAllocation(plan)
     plan match {
 
-      case _: FindShortestPaths | _: Expand =>
+      case _: FindShortestPaths =>
         throw new RegisterAllocationFailed(s"${plan.productPrefix} not supported in the enterprise interpreted runtime")
+
+      case Expand(_, from, dir, types, to, relName, ExpandAll) =>
+        val fromOffset = registerAllocations.getLongOffsetFor(from.name)
+        val toOffset = registerAllocations.getLongOffsetFor(to.name)
+        val relOffset = registerAllocations.getLongOffsetFor(relName.name)
+        val lazyTypes = LazyTypes(types)
+        ExpandAllRegisterPipe(source, fromOffset, toOffset, relOffset, dir, lazyTypes)(id)
 
       case ProduceResult(columns, _) =>
         val expressions = columns map {
           key => key -> expressionForSlot(key, registerAllocations.slots(key), context.semanticTable)
         }
         ProduceResultsRegisterPipe(source, expressions)(id)
+
+      case Projection(_, expressions) =>
+        val rewriter = new RegisterExpressionRewriter(ctx.semanticTable, ctx.registerAllocation(plan))
+        val columnsToProject =
+          expressions collect {
+            case (k, expression)  =>
+              val offset = registerAllocations.getReferenceOffsetFor(k)
+              offset -> expressionConverters.toCommandExpression(expression.endoRewrite(rewriter))
+          }
+        ProjectionRegisterPipe(source, columnsToProject.toSeq)(id)
 
       case _ =>
         val rewriter = new RegisterExpressionRewriter(ctx.semanticTable, ctx.registerAllocation(plan))

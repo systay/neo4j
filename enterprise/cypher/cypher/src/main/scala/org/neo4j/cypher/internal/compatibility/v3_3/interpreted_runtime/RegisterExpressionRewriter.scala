@@ -51,6 +51,9 @@ class RegisterExpressionRewriter(semanticTable: SemanticTable, registerAllocatio
     case v@frontEndAst.GetDegree(Variable(key), relType, dir) if semanticTable.containsNode(key) =>
       registerExpressions.GetDegree(registerAllocations.getLongOffsetFor(key), relType, dir)(v.position)
 
+    case v@frontEndAst.HasLabels(Variable(key), label :: nil) if semanticTable.containsNode(key) =>
+      registerExpressions.HasLabels(registerAllocations.getLongOffsetFor(key), label)(v.position)
+
     case f: frontEndAst.FunctionInvocation if f.function == frontEndAst.functions.Exists =>
       throw new RegisterAllocationFailed(s"${f.function} not supported with register allocation yet")
 
@@ -58,6 +61,9 @@ class RegisterExpressionRewriter(semanticTable: SemanticTable, registerAllocatio
          _: frontEndAst.AndedPropertyInequalities |
          _: NestedPlanExpression
     =>
+      throw new RegisterAllocationFailed(s"An expression was not supported with register allocation yet")
+
+    case v: Variable =>
       throw new RegisterAllocationFailed(s"An expression was not supported with register allocation yet")
 
   })

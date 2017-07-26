@@ -20,6 +20,7 @@
 package org.neo4j.cypher.internal.compatibility.v3_3.runtime.interpreted.pipes
 
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.helpers.PrimitiveLongHelper
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.interpreted.PrimitiveExecutionContext
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.{Pipe, QueryState}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.{ExecutionContext, PipelineInformation}
 import org.neo4j.cypher.internal.compiler.v3_3.planDescription.Id
@@ -33,7 +34,7 @@ case class AllNodesScanRegisterPipe(ident: String, pipelineInformation: Pipeline
     // TODO   val baseContext = state.createOrGetInitialContext()
 
     PrimitiveLongHelper.map(state.query.nodeOps.allPrimitive, { nodeId =>
-      val context = ExecutionContext(pipelineInformation.numberOfLongs)
+      val context = PrimitiveExecutionContext(pipelineInformation)
       context.setLongAt(offset, nodeId)
       context
     })

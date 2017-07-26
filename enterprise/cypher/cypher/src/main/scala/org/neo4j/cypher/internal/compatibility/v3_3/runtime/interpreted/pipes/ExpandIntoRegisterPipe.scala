@@ -21,6 +21,7 @@ package org.neo4j.cypher.internal.compatibility.v3_3.runtime.interpreted.pipes
 
 import org.neo4j.collection.primitive.PrimitiveLongIterator
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.helpers.PrimitiveLongHelper
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.interpreted.PrimitiveExecutionContext
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes._
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.{ExecutionContext, PipelineInformation, Slot}
 import org.neo4j.cypher.internal.compiler.v3_3.planDescription.Id
@@ -68,7 +69,7 @@ case class ExpandIntoRegisterPipe(source: Pipe,
               Iterator.empty
             else {
               PrimitiveLongHelper.map(relationships, (relId: Long) => {
-                val outputRow = ExecutionContext(pipelineInformation.numberOfLongs)
+                val outputRow = PrimitiveExecutionContext(pipelineInformation)
                 outputRow.copyFrom(inputRow)
                 outputRow.setLongAt(relSlot.offset, relId)
                 outputRow

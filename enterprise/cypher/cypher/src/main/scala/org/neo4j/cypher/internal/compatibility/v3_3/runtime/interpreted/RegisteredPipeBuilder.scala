@@ -67,17 +67,20 @@ class RegisteredPipeBuilder(fallback: PipeBuilder,
         val runtimeColumns = createProjectionsForResult(columns, pipelineInformation)
         ProduceResultRegisterPipe(source, runtimeColumns)(id)
 
-      case e@Expand(s, IdName(from), dir, types, IdName(to), IdName(relName), ExpandAll) =>
+      case Expand(s, IdName(from), dir, types, IdName(to), IdName(relName), ExpandAll) =>
         val fromOffset = pipelineInformation.getLongOffsetFor(from)
         val relOffset = pipelineInformation.getLongOffsetFor(relName)
         val toOffset = pipelineInformation.getLongOffsetFor(to)
         ExpandAllRegisterPipe(source, fromOffset, relOffset, toOffset, dir, LazyTypes(types), pipelineInformation)(id)
 
-      case e@Expand(s, IdName(from), dir, types, IdName(to), IdName(relName), ExpandInto) =>
+      case Expand(s, IdName(from), dir, types, IdName(to), IdName(relName), ExpandInto) =>
         val fromSlot = pipelineInformation.get(from).get
         val relSlot = pipelineInformation.get(relName).get
         val toSlot = pipelineInformation.get(to).get
         ExpandIntoRegisterPipe(source, fromSlot, relSlot, toSlot, dir, LazyTypes(types), pipelineInformation)(id)
+
+      case Eager(_) =>
+        EagerRegisterPipe(source, pipelineInformation)(id)
 
       case _ => fallback.build(plan, source)
     }

@@ -37,9 +37,12 @@ class PipelineInformation(private var slots: Map[String, Slot], var numberOfLong
 
   def get(key: String): Option[Slot] = slots.get(key)
 
-  def add(key: String, slotInformation: Slot): Unit = slotInformation match {
-    case LongSlot(_, nullable, typ, key) => newLong(key, nullable, typ)
-    case RefSlot(_, nullable, typ, key) => newReference(key, nullable, typ)
+  def add(key: String, slotInformation: Slot): PipelineInformation = {
+    slotInformation match {
+      case LongSlot(_, nullable, typ, key) => newLong(key, nullable, typ)
+      case RefSlot(_, nullable, typ, key) => newReference(key, nullable, typ)
+    }
+    this
   }
 
   def deepClone(): PipelineInformation = {

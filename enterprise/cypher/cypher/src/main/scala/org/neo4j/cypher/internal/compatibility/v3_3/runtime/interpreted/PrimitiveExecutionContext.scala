@@ -33,7 +33,7 @@ case class PrimitiveExecutionContext(pipeline: PipelineInformation) extends Exec
     case _ => fail()
   }
 
-  private val longs = new Array[Long](pipeline.numberOfLongs)
+  val longs = new Array[Long](pipeline.numberOfLongs)
 
   def setLongAt(offset: Int, value: Long): Unit = longs(offset) = value
 

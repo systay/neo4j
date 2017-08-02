@@ -87,7 +87,7 @@ trait LernaeanTestSupport extends CypherTestSupport {
   val newRuntimeMonitor = new NewRuntimeMonitor
 
   private def extractFirstScenario(config: TestConfiguration): TestScenario = {
-    val preferredScenario = Scenarios.CommunityInterpreted
+    val preferredScenario = Scenarios.CommunityInterpreted3_3
     if (config.scenarios.contains(preferredScenario))
       preferredScenario
     else
@@ -171,8 +171,7 @@ trait LernaeanTestSupport extends CypherTestSupport {
     }
   }
 
-
-  private def innerExecute(queryText: String, params: Map[String, Any]): InternalExecutionResult = {
+  def innerExecute(queryText: String, params: Map[String, Any]): InternalExecutionResult = {
     val innerResult = eengine.execute(queryText, params, graph.transactionalContext(query = queryText -> params))
     rewindableResult(innerResult)
   }
@@ -215,7 +214,7 @@ trait LernaeanTestSupport extends CypherTestSupport {
 
     def Version3_2: TestConfiguration = Compiled3_2 + Scenarios.Compatibility3_2
 
-    def Version3_3: TestConfiguration = Compiled + Scenarios.CommunityInterpreted + Scenarios.RulePlannerOnLatestVersion +
+    def Version3_3: TestConfiguration = Compiled + Scenarios.CommunityInterpreted3_3 + Scenarios.RulePlannerOnLatestVersion +
       EnterpriseInterpreted
 
     def AllRulePlanners: TestConfiguration = Scenarios.Compatibility3_1Rule + Scenarios.Compatibility2_3Rule + Scenarios
@@ -354,7 +353,7 @@ trait LernaeanTestSupport extends CypherTestSupport {
       override def name: String = "enterprise interpreted"
     }
 
-    object CommunityInterpreted extends RuntimeScenario {
+    object CommunityInterpreted3_3 extends RuntimeScenario {
 
       override protected def argumentName: String = "INTERPRETED"
 

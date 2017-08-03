@@ -54,7 +54,8 @@ class RegisteredPipeBuilder(fallback: PipeBuilder,
     plan match {
       case AllNodesScan(IdName(column), _) =>
         AllNodesScanRegisterPipe(column, pipelineInformation)(id)
-      case p@NodeIndexScan(IdName(column), label, propertyKeys, _ /*TODO*/) =>
+
+      case NodeIndexScan(IdName(column), label, propertyKeys, _) =>
         NodeIndexScanRegisterPipe(column, label, propertyKeys, pipelineInformation)(id)
 
       case NodeIndexSeek(IdName(column),label,propertyKeys,valueExpr, _) =>
@@ -95,7 +96,7 @@ class RegisteredPipeBuilder(fallback: PipeBuilder,
         val toSlot = pipeline(to)
         ExpandIntoRegisterPipe(source, fromSlot.offset, relSlot.offset, toSlot.offset, dir, LazyTypes(types), pipeline)(id)
 
-      case VarExpand(_, IdName(fromName), dir, projectedDir, types, IdName(toName), IdName(relName), VarPatternLength(min, max), expansionMode, predicates) =>
+      case VarExpand(_, IdName(fromName), dir, projectedDir, types, IdName(toName), IdName(relName), VarPatternLength(min, max), expansionMode, _, _, _, _, predicates) =>
         // TODO: This is not right!
         if(predicates.nonEmpty)
           throw new CantCompileQueryException("does not handle varexpand with predicates")

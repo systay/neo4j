@@ -19,10 +19,14 @@
  */
 package org.neo4j.cypher.internal.compiler.v3_3.planner.logical.idp
 
+import java.util.Random
+
 import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.LogicalPlanningContext
 import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans._
 import org.neo4j.cypher.internal.frontend.v3_3.ast._
+import org.neo4j.cypher.internal.frontend.v3_3.{Rewriter, bottomUp}
 import org.neo4j.cypher.internal.ir.v3_3._
+
 
 case class expandSolverStep(qg: QueryGraph) extends IDPSolverStep[PatternRelationship, LogicalPlan, LogicalPlanningContext] {
 
@@ -53,6 +57,8 @@ case class expandSolverStep(qg: QueryGraph) extends IDPSolverStep[PatternRelatio
 
 object expandSolverStep {
 
+  private val r = new Random()
+
   def planSingleProjectEndpoints(patternRel: PatternRelationship, plan: LogicalPlan)
                                 (implicit context: LogicalPlanningContext): LogicalPlan = {
     val (start, end) = patternRel.inOrder
@@ -76,6 +82,22 @@ object expandSolverStep {
 
         case length: VarPatternLength =>
           val availablePredicates = qg.selections.predicatesGiven(availableSymbols + patternRel.name)
+          val tempNode = IdName(patternRel.name.name + "_NODE")
+          val tempEdge = IdName(patternRel.name.name + "_EDGE")
+
+          val seed: (List[Expression], List[Expression]) = (List.empty, List.empty)
+
+          val ((nodePredicates, edgePredicates)) = availablePredicates.foldLeft(seed) {
+            //MATCH ()-[r* {prop:1337}]->()
+            case ((n, e), all@AllIterablePredicate(FilterScope(variable, Some(innerPredicate)), relId@Variable(patternRel.name.name)))
+              if variable == relId || !innerPredicate.dependencies(relId) =>
+              (n, e :+ innerPredicate.endoRewrite(replaceVariable(variable, tempEdge.name)))
+            //MATCH p = ... WHERE all(n in nodes(p)... or all(r in relationships(p)
+            case ((n, e), all@AllIterablePredicate(FilterScope(variable, Some(innerPredicate)), FunctionInvocation(_, FunctionName(fname), false, Seq(PathExpression(NodePathStep(startNode, MultiRelationshipPathStep(rel, _, NilPathStep)))))))
+              if fname == "nodes" && startNode.name == nodeId.name && rel.name == patternRel.name.name =>
+              (n :+ innerPredicate.endoRewrite(replaceVariable(variable, tempNode.name)), e)
+          }
+
           val (predicates, allPredicates) = availablePredicates.collect {
             //MATCH ()-[r* {prop:1337}]->()
             case all@AllIterablePredicate(FilterScope(variable, Some(innerPredicate)), relId@Variable(patternRel.name.name))
@@ -97,10 +119,17 @@ object expandSolverStep {
               if (fname  == "nodes" || fname == "relationships") && startNode.name == nodeId.name && rel.name == patternRel.name.name =>
               (variable, Not(innerPredicate)(innerPredicate.position)) -> none
           }.unzip
-          Some(context.logicalPlanProducer.planVarExpand(plan, nodeId, dir, otherSide, patternRel, predicates, allPredicates, mode))
+
+
+          val resultPlan = context.logicalPlanProducer.planVarExpand(plan, nodeId, dir, otherSide, patternRel, tempNode, tempEdge, nodePredicate, edgePredicate, predicates, allPredicates, mode)
+          Some(resultPlan)
       }
     } else {
       None
     }
   }
+
+  private def replaceVariable(from: Variable, to: String): Rewriter = bottomUp(Rewriter.lift {
+    case v: Variable if v == from => Variable(to)(v.position)
+  })
 }

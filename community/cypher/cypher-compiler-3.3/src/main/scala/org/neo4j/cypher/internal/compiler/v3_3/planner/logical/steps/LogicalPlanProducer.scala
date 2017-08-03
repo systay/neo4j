@@ -124,6 +124,10 @@ case class LogicalPlanProducer(cardinalityModel: CardinalityModel) extends ListS
                     dir: SemanticDirection,
                     to: IdName,
                     pattern: PatternRelationship,
+                    tempNode: IdName,
+                    tempEdge: IdName,
+                    nodePredicate: Expression,
+                    edgePredicate: Expression,
                     predicates: Seq[(Variable, Expression)],
                     allPredicates: Seq[Expression],
                     mode: ExpansionMode)(implicit context: LogicalPlanningContext): LogicalPlan = pattern.length match {
@@ -134,7 +138,7 @@ case class LogicalPlanProducer(cardinalityModel: CardinalityModel) extends ListS
         .addPatternRelationship(pattern)
         .addPredicates(allPredicates: _*)
       )
-      VarExpand(left, from, dir, projectedDir, pattern.types, to, pattern.name, l, mode, predicates)(solved)
+      VarExpand(left, from, dir, projectedDir, pattern.types, to, pattern.name, l, mode, tempNode, tempEdge, nodePredicate, edgePredicate)(solved)
 
     case _ => throw new InternalException("Expected a varlength path to be here")
   }

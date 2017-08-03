@@ -53,7 +53,10 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     relate(n2,n3)
     relate(n3,n4)
 
-    testWith(Configs.Interpreted,  "MATCH (n:Start)-[r*1..2]->(x) RETURN r")
+    testWith(Configs.Interpreted,
+      """MATCH p = (n:Start)-[r*1..2 {d: 42}]->(x)
+        |WHERE ALL(n in nodes(p) WHERE n.prop = 42)
+        |RETURN r""".stripMargin)
   }
 
   test("Do not count null elements in nodes with labels") {

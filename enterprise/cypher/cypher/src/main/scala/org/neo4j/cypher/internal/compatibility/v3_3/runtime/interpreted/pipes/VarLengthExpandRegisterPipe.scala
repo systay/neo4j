@@ -19,12 +19,12 @@
  */
 package org.neo4j.cypher.internal.compatibility.v3_3.runtime.interpreted.pipes
 
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.predicates.Predicate
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.interpreted.PrimitiveExecutionContext
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.{LazyTypes, Pipe, PipeWithSource, QueryState}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.{ExecutionContext, PipelineInformation}
 import org.neo4j.cypher.internal.compiler.v3_3.planDescription.Id
 import org.neo4j.cypher.internal.frontend.v3_3.{InternalException, SemanticDirection}
-import org.neo4j.graphdb.Relationship
 import org.neo4j.kernel.impl.api.RelationshipVisitor
 import org.neo4j.kernel.impl.api.store.RelationshipIterator
 
@@ -40,24 +40,31 @@ case class VarLengthExpandRegisterPipe(source: Pipe,
                                        min: Int,
                                        maxDepth: Option[Int],
                                        shouldExpandAll: Boolean,
-                                       filteringStep: VarLengthRegisterPredicate,
-                                       pipeline: PipelineInformation)
+                                       pipeline: PipelineInformation,
+                                       tempNodeOffset: Int,
+                                       tempEdgeOffset: Int,
+                                       nodePredicate: Predicate,
+                                       edgePredicate: Predicate)
                                       (val id: Id = new Id) extends PipeWithSource(source) {
-  /*  Since Long is used for both edges and nodes, the "why" of these aliases is to make the code a easier to read.*/
 
+  /*  The "why" of these aliases is to make the code a easier to read. */
   type LNode = Long
   type LRelationship = Long
+
+  nodePredicate.registerOwningPipe(this)
+  edgePredicate.registerOwningPipe(this)
 
   private def varLengthExpand(node: LNode,
                               state: QueryState,
                               row: ExecutionContext): Iterator[(LNode, Seq[LRelationship])] = {
+    implicit val _ = state
     val stack = new mutable.Stack[(LNode, Seq[LRelationship])]
     stack.push((node, Seq.empty))
 
     new Iterator[(LNode, Seq[LRelationship])] {
       override def next(): (LNode, Seq[LRelationship]) = {
         val (fromNode, rels) = stack.pop()
-        if (rels.length < maxDepth.getOrElse(Int.MaxValue) && filteringStep.filterNode(row, state)(fromNode)) {
+        if (rels.length < maxDepth.getOrElse(Int.MaxValue)) {
           val relationships: RelationshipIterator = state.query.getRelationshipsForIdsPrimitive(fromNode, dir, types.types(state.query))
 
           var otherSide = 0l
@@ -70,14 +77,19 @@ case class VarLengthExpandRegisterPipe(source: Pipe,
                 otherSide = startNodeId
           }
 
-
           while (relationships.hasNext) {
             val relId = relationships.next()
             relationships.relationshipVisit(relId, relVisitor)
 
             val relationshipIsUniqueInPath = !rels.contains(relId)
             if (relationshipIsUniqueInPath) {
-              stack.push((otherSide, rels :+ relId))
+              row.setLongAt(tempEdgeOffset, relId)
+              row.setLongAt(tempNodeOffset, otherSide)
+              val a = edgePredicate.isTrue(row)(state)
+              val b = nodePredicate.isTrue(row)(state)
+              if (a && b) {
+                stack.push((otherSide, rels :+ relId))
+              }
             }
           }
         }
@@ -109,7 +121,7 @@ case class VarLengthExpandRegisterPipe(source: Pipe,
             val resultRow = PrimitiveExecutionContext(pipeline)
             resultRow.copyFrom(inputRowWithFromNode)
             resultRow.setLongAt(toOffset, toNode)
-            val rels = relIds.map(state.query.relationshipOps.getById)
+              val rels = relIds.map(state.query.relationshipOps.getById)
             resultRow.setRefAt(relOffset, rels)
             resultRow
         }

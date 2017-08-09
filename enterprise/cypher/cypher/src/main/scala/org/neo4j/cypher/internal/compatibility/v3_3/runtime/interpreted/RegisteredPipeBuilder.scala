@@ -21,12 +21,12 @@ package org.neo4j.cypher.internal.compatibility.v3_3.runtime.interpreted
 
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime._
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.ExpressionConverters
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.predicates.Predicate
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.{expressions => commandExpressions}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.interpreted.pipes.{AllNodesScanRegisterPipe, ExpandAllRegisterPipe, NodeIndexSeekRegisterPipe, ProduceResultRegisterPipe, _}
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.interpreted.{expressions => runtimeExpressions}
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.interpreted.{expressions => registerExpressions}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes._
 import org.neo4j.cypher.internal.compiler.v3_3.planDescription.Id
-import org.neo4j.cypher.internal.compiler.v3_3.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans._
 import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
 import org.neo4j.cypher.internal.frontend.v3_3.phases.Monitors
@@ -43,7 +43,11 @@ class RegisteredPipeBuilder(fallback: PipeBuilder,
                             buildExpression: (frontEndAst.Expression) => frontEndAst.Expression)
                            (implicit context: PipeExecutionBuilderContext, planContext: PlanContext) extends PipeBuilder {
 
-  private val convertExpressions = buildExpression andThen expressionConverter.toCommandExpression
+  private val convertExpressions: (frontEndAst.Expression) => commandExpressions.Expression =
+    buildExpression andThen expressionConverter.toCommandExpression
+
+  private val convertPredicate: (frontEndAst.Expression) => Predicate =
+    buildExpression andThen expressionConverter.toCommandPredicate
 
   override def build(plan: LogicalPlan): Pipe = {
     implicit val table: SemanticTable = context.semanticTable
@@ -54,7 +58,8 @@ class RegisteredPipeBuilder(fallback: PipeBuilder,
     plan match {
       case AllNodesScan(IdName(column), _) =>
         AllNodesScanRegisterPipe(column, pipelineInformation)(id)
-      case p@NodeIndexScan(IdName(column), label, propertyKeys, _ /*TODO*/) =>
+
+      case NodeIndexScan(IdName(column), label, propertyKeys, _) =>
         NodeIndexScanRegisterPipe(column, label, propertyKeys, pipelineInformation)(id)
 
       case NodeIndexSeek(IdName(column),label,propertyKeys,valueExpr, _) =>
@@ -95,10 +100,9 @@ class RegisteredPipeBuilder(fallback: PipeBuilder,
         val toSlot = pipeline(to)
         ExpandIntoRegisterPipe(source, fromSlot.offset, relSlot.offset, toSlot.offset, dir, LazyTypes(types), pipeline)(id)
 
-      case VarExpand(_, IdName(fromName), dir, projectedDir, types, IdName(toName), IdName(relName), VarPatternLength(min, max), expansionMode, predicates) =>
-        // TODO: This is not right!
-        if(predicates.nonEmpty)
-          throw new CantCompileQueryException("does not handle varexpand with predicates")
+      case VarExpand(_, IdName(fromName), dir, projectedDir, types, IdName(toName), IdName(relName),
+      VarPatternLength(min, max), expansionMode, IdName(tempNode), IdName(tempEdge), nodePredicate,
+      edgePredicate, _) =>
         val predicate = VarLengthRegisterPredicate.NONE
 
         val shouldExpandAll = expansionMode match {
@@ -108,8 +112,12 @@ class RegisteredPipeBuilder(fallback: PipeBuilder,
         val fromOffset = pipeline.getLongOffsetFor(fromName)
         val toOffset = pipeline.getLongOffsetFor(toName)
         val relOffset = pipeline.getReferenceOffsetFor(relName)
-        VarLengthExpandRegisterPipe(source, fromOffset, relOffset, toOffset, dir, projectedDir,
-          LazyTypes(types), min, max, shouldExpandAll, predicate, pipeline)(id = id)
+        val tempNodeOffset = pipeline.getLongOffsetFor(tempNode)
+        val tempEdgeOffset = pipeline.getLongOffsetFor(tempEdge)
+        val predicate1 = convertPredicate(edgePredicate)
+        VarLengthExpandRegisterPipe(source, fromOffset, relOffset, toOffset, dir, projectedDir, LazyTypes(types), min,
+          max, shouldExpandAll, predicate, pipeline, tempNodeOffset, tempEdgeOffset, convertPredicate(nodePredicate),
+          predicate1)(id = id)
 
       case Optional(inner, symbols) =>
         val nullableKeys = inner.availableSymbols -- symbols
@@ -133,16 +141,16 @@ class RegisteredPipeBuilder(fallback: PipeBuilder,
       k =>
         pipelineInformation1(k) match {
           case LongSlot(offset, false, CTNode, _) =>
-            k -> runtimeExpressions.NodeFromRegister(offset)
+            k -> registerExpressions.NodeFromRegister(offset)
           case LongSlot(offset, true, CTNode, _) =>
-            k -> runtimeExpressions.NullCheck(offset, runtimeExpressions.NodeFromRegister(offset))
+            k -> registerExpressions.NullCheck(offset, registerExpressions.NodeFromRegister(offset))
           case LongSlot(offset, false, CTRelationship, _) =>
-            k -> runtimeExpressions.RelationshipFromRegister(offset)
+            k -> registerExpressions.RelationshipFromRegister(offset)
           case LongSlot(offset, true, CTRelationship, _) =>
-            k -> runtimeExpressions.NullCheck(offset, runtimeExpressions.RelationshipFromRegister(offset))
+            k -> registerExpressions.NullCheck(offset, registerExpressions.RelationshipFromRegister(offset))
 
           case RefSlot(offset, _, _, _) =>
-            k -> runtimeExpressions.ReferenceFromRegister(offset)
+            k -> registerExpressions.ReferenceFromRegister(offset)
 
           case _ =>
             throw new InternalException("Did not find `" + k + "` in the pipeline information1")

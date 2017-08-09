@@ -131,18 +131,3 @@ case class VarLengthExpandRegisterPipe(source: Pipe,
   private def isToNodeValid(row: ExecutionContext, node: LNode): Boolean =
     shouldExpandAll || row.getLongAt(toOffset) == node
 }
-
-trait VarLengthRegisterPredicate {
-  def filterNode(row: ExecutionContext, state: QueryState)(node: Long): Boolean
-
-  def filterRelationship(row: ExecutionContext, state: QueryState)(rel: Long): Boolean
-}
-
-object VarLengthRegisterPredicate {
-  val NONE: VarLengthRegisterPredicate = new VarLengthRegisterPredicate {
-
-    override def filterNode(row: ExecutionContext, state: QueryState)(node: Long): Boolean = true
-
-    override def filterRelationship(row: ExecutionContext, state: QueryState)(rel: Long): Boolean = true
-  }
-}

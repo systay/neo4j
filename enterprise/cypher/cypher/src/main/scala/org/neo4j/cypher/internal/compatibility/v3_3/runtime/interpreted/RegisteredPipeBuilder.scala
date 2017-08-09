@@ -103,8 +103,6 @@ class RegisteredPipeBuilder(fallback: PipeBuilder,
       case VarExpand(_, IdName(fromName), dir, projectedDir, types, IdName(toName), IdName(relName),
       VarPatternLength(min, max), expansionMode, IdName(tempNode), IdName(tempEdge), nodePredicate,
       edgePredicate, _) =>
-        val predicate = VarLengthRegisterPredicate.NONE
-
         val shouldExpandAll = expansionMode match {
           case ExpandAll => true
           case ExpandInto => false
@@ -114,10 +112,9 @@ class RegisteredPipeBuilder(fallback: PipeBuilder,
         val relOffset = pipeline.getReferenceOffsetFor(relName)
         val tempNodeOffset = pipeline.getLongOffsetFor(tempNode)
         val tempEdgeOffset = pipeline.getLongOffsetFor(tempEdge)
-        val predicate1 = convertPredicate(edgePredicate)
         VarLengthExpandRegisterPipe(source, fromOffset, relOffset, toOffset, dir, projectedDir, LazyTypes(types), min,
-          max, shouldExpandAll, predicate, pipeline, tempNodeOffset, tempEdgeOffset, convertPredicate(nodePredicate),
-          predicate1)(id = id)
+          max, shouldExpandAll, pipeline, tempNodeOffset, tempEdgeOffset, convertPredicate(nodePredicate),
+          convertPredicate(edgePredicate))(id = id)
 
       case Optional(inner, symbols) =>
         val nullableKeys = inner.availableSymbols -- symbols

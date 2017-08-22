@@ -206,7 +206,7 @@ case class CommunityPipeBuilder(monitors: Monitors, recurse: LogicalPlan => Pipe
       case Aggregation(_, groupingExpressions, aggregatingExpressions) =>
         EagerAggregationPipe(
           source,
-          groupingExpressions.keySet,
+          Eagerly.immutableMapValues(groupingExpressions, buildExpression),
           Eagerly.immutableMapValues[String, frontEndAst.Expression, AggregationExpression](aggregatingExpressions, buildExpression(_).asInstanceOf[AggregationExpression])
         )(id = id)
 

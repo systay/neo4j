@@ -17,37 +17,38 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.internal.javacompat;
+package org.neo4j.cypher.result;
 
-import org.neo4j.cypher.result.QueryResult;
+import org.neo4j.graphdb.ExecutionPlanDescription;
+import org.neo4j.graphdb.Notification;
+import org.neo4j.graphdb.QueryExecutionType;
+import org.neo4j.graphdb.QueryStatistics;
 import org.neo4j.values.AnyValue;
 
-public class ResultRecord implements QueryResult.Record
+public interface QueryResult
 {
-    private final AnyValue[] fields;
+    String[] fieldNames();
 
-    //NOTE do not remove, used from generated code
-    public ResultRecord( int size )
+    <E extends Exception> void accept( QueryResultVisitor<E> visitor )
+            throws E;
+
+    interface QueryResultVisitor<E extends Exception>
     {
-        this.fields = new AnyValue[size];
+        boolean visit( Record row ) throws E;
     }
 
-    public ResultRecord( AnyValue[] fields )
+    interface Record
     {
-        this.fields = fields;
+        AnyValue[] fields();
     }
 
-    public void set( int i, AnyValue value )
-    {
-        assert value != null;
-        assert i >= 0 && i < fields.length;
+    QueryExecutionType executionType();
 
-        fields[i] = value;
-    }
+    QueryStatistics queryStatistics();
 
-    @Override
-    public AnyValue[] fields()
-    {
-        return fields;
-    }
+    ExecutionPlanDescription executionPlanDescription();
+
+    Iterable<Notification> getNotifications();
+
+    void close();
 }

@@ -19,50 +19,45 @@
  */
 package org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes
 
+import java.util.Comparator
+
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription.Id
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.{Comparer, ExecutionContext}
 import org.neo4j.values.{AnyValue, AnyValues}
 
-case class SortPipe(source: Pipe, orderBy: Seq[SortDescription])
+case class SortPipe(source: Pipe, orderBy: Seq[ColumnOrder])
                    (val id: Id = new Id)
   extends PipeWithSource(source) {
+  assert(orderBy.nonEmpty)
+
   protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
+    val orderings = orderBy.map(new ExecutionContextOrdering(_)(state))
+    val comparator = orderings.reduceLeft[Comparator[ExecutionContext]]((a, b) => a.thenComparing(b))
     val array = input.toArray
-    java.util.Arrays.sort(array, new InnerOrdering(orderBy)(state))
+    java.util.Arrays.sort(array, comparator)
     array.toIterator
   }
 }
 
-private class InnerOrdering(order: Seq[SortDescription])(implicit qtx: QueryState) extends scala.Ordering[ExecutionContext] {
-  assert(order.nonEmpty)
-  private var cmp = -1
-
+private class ExecutionContextOrdering(order: ColumnOrder)(implicit qtx: QueryState) extends scala.Ordering[ExecutionContext] {
   override def compare(a: ExecutionContext, b: ExecutionContext): Int = {
-    val iterator: Iterator[SortDescription] = order.iterator
-    //we know iterator contains at least one value
-    do nextCmp(iterator, a, b)
-    while (iterator.hasNext && cmp == 0)
-    cmp
-  }
-
-  private def nextCmp(it: Iterator[SortDescription], a: ExecutionContext, b: ExecutionContext) = {
-    val sort = it.next()
-    val column = sort.id
+    val column = order.id
     val aVal = a(column)
     val bVal = b(column)
-    cmp = sort.compareAny(aVal, bVal)
+    order.compareValues(aVal, bVal)
   }
 }
 
-sealed trait SortDescription {
+sealed trait ColumnOrder {
   def id: String
-  def compareAny(a: AnyValue, b: AnyValue)(implicit qtx: QueryState): Int
+
+  def compareValues(a: AnyValue, b: AnyValue)(implicit qtx: QueryState): Int
 }
 
-case class Ascending(id: String) extends SortDescription with Comparer {
-  override def compareAny(a: AnyValue, b: AnyValue)(implicit qtx: QueryState): Int = AnyValues.COMPARATOR.compare(a, b)
+case class Ascending(id: String) extends ColumnOrder {
+  override def compareValues(a: AnyValue, b: AnyValue)(implicit qtx: QueryState): Int = AnyValues.COMPARATOR.compare(a, b)
 }
 
-case class Descending(id: String) extends SortDescription with Comparer {
-  override def compareAny(a: AnyValue, b: AnyValue)(implicit qtx: QueryState): Int = AnyValues.COMPARATOR.compare(b, a)
+case class Descending(id: String) extends ColumnOrder {
+  override def compareValues(a: AnyValue, b: AnyValue)(implicit qtx: QueryState): Int = AnyValues.COMPARATOR.compare(b, a)
 }

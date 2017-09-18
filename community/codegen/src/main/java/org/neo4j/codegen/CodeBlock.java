@@ -119,10 +119,11 @@ public class CodeBlock implements AutoCloseable
         assign( typeReference( type ), name, value );
     }
 
-    public void assign( TypeReference type, String name, Expression value )
+    public LocalVariable assign(TypeReference type, String name, Expression value )
     {
         LocalVariable variable = localVariables.createNew( type, name );
         emitter.assign( variable, value );
+        return variable;
     }
 
     public void put( Expression target, FieldReference field, Expression value )

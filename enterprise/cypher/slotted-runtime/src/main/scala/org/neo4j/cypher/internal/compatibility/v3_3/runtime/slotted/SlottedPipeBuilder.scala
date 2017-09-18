@@ -19,7 +19,7 @@
  */
 package org.neo4j.cypher.internal.compatibility.v3_3.runtime.slotted
 
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.ExpressionConverters
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.{CompositeExpressionConverter, ExpressionConverter}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.expressions.AggregationExpression
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.predicates.{Predicate, True}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.{expressions => commandExpressions}
@@ -39,7 +39,7 @@ import org.neo4j.cypher.internal.frontend.v3_3.{InternalException, SemanticTable
 import org.neo4j.cypher.internal.ir.v3_3.{IdName, VarPatternLength}
 
 class SlottedPipeBuilder(fallback: PipeBuilder,
-                         expressionConverters: ExpressionConverters,
+                         expressionConverters: ExpressionConverter,
                          idMap: Map[LogicalPlan, Id],
                          monitors: Monitors,
                          pipelines: Map[LogicalPlanId, PipelineInformation],

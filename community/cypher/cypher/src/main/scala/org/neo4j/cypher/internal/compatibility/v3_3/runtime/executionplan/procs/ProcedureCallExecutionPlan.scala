@@ -22,7 +22,7 @@ package org.neo4j.cypher.internal.compatibility.v3_3.runtime.executionplan.procs
 import org.neo4j.cypher.CypherVersion
 import org.neo4j.cypher.internal.InternalExecutionResult
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime._
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.ExpressionConverters
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.{CompositeExpressionConverter, ExpressionConverter}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.expressions
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.expressions.Literal
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.executionplan.{ExecutionPlan, ProcedureCallMode}
@@ -54,7 +54,7 @@ case class ProcedureCallExecutionPlan(signature: ProcedureSignature,
                                       resultSymbols: Seq[(String, CypherType)],
                                       resultIndices: Seq[(Int, String)],
                                       notifications: Set[Notification],
-                                      converter: ExpressionConverters)
+                                      converter: ExpressionConverter)
   extends ExecutionPlan {
 
   assert(resultSymbols.size == resultIndices.size)
@@ -102,10 +102,11 @@ case class ProcedureCallExecutionPlan(signature: ProcedureSignature,
     val rowCounter = Counter()
     val descriptionGenerator = createProfilePlanGenerator(rowCounter)
     val callMode = ProcedureCallMode.fromAccessMode(signature.accessMode)
-    new ProcedureExecutionResult(ctx, taskCloser, signature.name, callMode, input,
-                                 resultMappings, descriptionGenerator, planType) {
-      override protected def executeCall: Iterator[Array[AnyRef]] = rowCounter.track(super.executeCall)
-    }
+//    new ProcedureExecutionResult(ctx, taskCloser, signature.name, callMode, input,
+//                                 resultMappings, descriptionGenerator, planType) {
+//      override protected def executeCall: Iterator[Array[AnyRef]] = rowCounter.track(super.executeCall)
+//    }
+    ???
   }
 
   private def evaluateArguments(ctx: QueryContext, params: MapValue): Seq[Any] = {

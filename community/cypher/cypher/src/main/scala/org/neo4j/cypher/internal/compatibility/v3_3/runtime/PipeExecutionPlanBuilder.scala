@@ -21,7 +21,7 @@ package org.neo4j.cypher.internal.compatibility.v3_3.runtime
 
 import java.time.Clock
 
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.ExpressionConverters
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.ExpressionConverter
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.executionplan._
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes._
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription.Id
@@ -36,7 +36,7 @@ import scala.collection.mutable
 class PipeExecutionPlanBuilder(clock: Clock,
                                monitors: Monitors,
                                pipeBuilderFactory: PipeBuilderFactory,
-                               expressionConverters: ExpressionConverters) {
+                               expressionConverters: ExpressionConverter) {
   def build(periodicCommit: Option[PeriodicCommit], plan: LogicalPlan, idMap: Map[LogicalPlan, Id])
            (implicit context: PipeExecutionBuilderContext, planContext: PlanContext): PipeInfo = {
 
@@ -150,7 +150,7 @@ class PipeExecutionPlanBuilder(clock: Clock,
 object CommunityPipeBuilderFactory extends PipeBuilderFactory {
   def apply(monitors: Monitors, recurse: LogicalPlan => Pipe,
             readOnly: Boolean, idMap: Map[LogicalPlan, Id],
-            expressionConverters: ExpressionConverters)
+            expressionConverters: ExpressionConverter)
            (implicit context: PipeExecutionBuilderContext, planContext: PlanContext): CommunityPipeBuilder = {
     CommunityPipeBuilder(monitors, recurse, readOnly, idMap, expressionConverters, recursePipes(recurse, planContext))
   }

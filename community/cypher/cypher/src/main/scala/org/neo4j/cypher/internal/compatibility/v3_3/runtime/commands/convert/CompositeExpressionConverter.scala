@@ -31,26 +31,26 @@ import org.neo4j.cypher.internal.frontend.v3_3.{InternalException, SemanticDirec
 import org.neo4j.graphdb.Direction
 
 
-trait ExpressionConverter {
-  def toCommandExpression(expression: ast.Expression, self: ExpressionConverters): Option[CommandExpression]
+trait MaybeExpressionConverter {
+  def toCommandExpression(expression: ast.Expression, self: ExpressionConverter): Option[CommandExpression]
 }
 
-class ExpressionConverters(converters: ExpressionConverter*) {
+class CompositeExpressionConverter(converters: MaybeExpressionConverter*) extends ExpressionConverter {
 
   self =>
 
-  def toCommandExpression(expression: ast.Expression): CommandExpression = {
-    converters foreach { c: ExpressionConverter =>
-        c.toCommandExpression(expression, this) match {
-          case Some(x) => return x
-          case None =>
-        }
+  override def toCommandExpression(expression: ast.Expression): CommandExpression = {
+    converters foreach { c: MaybeExpressionConverter =>
+      c.toCommandExpression(expression, this) match {
+        case Some(x) => return x
+        case None =>
+      }
     }
 
     throw new InternalException(s"Unknown expression type during transformation (${expression.getClass})")
   }
 
-  def toCommandPredicate(in: ast.Expression): Predicate = in match {
+  override def toCommandPredicate(in: ast.Expression): Predicate = in match {
     case e: ast.PatternExpression => predicates.NonEmpty(toCommandExpression(e))
     case e: ast.FilterExpression => predicates.NonEmpty(toCommandExpression(e))
     case e: ast.ExtractExpression => predicates.NonEmpty(toCommandExpression(e))
@@ -61,10 +61,10 @@ class ExpressionConverters(converters: ExpressionConverter*) {
     }
   }
 
-  def toCommandPredicate(e: Option[ast.Expression]): Predicate =
+  override def toCommandPredicate(e: Option[ast.Expression]): Predicate =
     e.map(self.toCommandPredicate).getOrElse(predicates.True())
 
-  def toCommandSeekArgs(seek: SeekableArgs): SeekArgs = seek match {
+  override def toCommandSeekArgs(seek: SeekableArgs): SeekArgs = seek match {
     case SingleSeekableArg(expr) => SingleSeekArg(toCommandExpression(expr))
     case ManySeekableArgs(expr) => expr match {
       case coll: ListLiteral =>
@@ -79,7 +79,7 @@ class ExpressionConverters(converters: ExpressionConverter*) {
     }
   }
 
-  def toCommandProjectedPath(e: ast.PathExpression): ProjectedPath = {
+  override def toCommandProjectedPath(e: ast.PathExpression): ProjectedPath = {
     def project(pathStep: PathStep): Projector = pathStep match {
 
       case NodePathStep(Variable(node), next) =>

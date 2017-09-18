@@ -22,7 +22,7 @@ package org.neo4j.cypher.internal.compatibility.v3_3.runtime.slotted
 import org.mockito.Mockito._
 import org.neo4j.cypher.internal.BuildEnterpriseInterpretedExecutionPlan.EnterprisePipeBuilderFactory
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime._
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.{CommunityMaybeExpressionConverter, CompositeExpressionConverter}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.expressions.{Literal, Property, Variable}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.predicates
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.values.KeyToken
@@ -59,7 +59,7 @@ class SlottedPipeBuilderTest extends CypherFunSuite with LogicalPlanningTestSupp
     val slottedRewriter = new SlottedRewriter(context.planContext)
     val logicalPlan = slottedRewriter(beforeRewrite, pipelines)
     val idMap = LogicalPlanIdentificationBuilder(logicalPlan)
-    val converters = new ExpressionConverters(CommunityExpressionConverter, SlottedExpressionConverters)
+    val converters = new CompositeExpressionConverter(CommunityMaybeExpressionConverter, SlottedMaybeExpressionConverters)
     val executionPlanBuilder = new PipeExecutionPlanBuilder(context.clock, context.monitors,
       expressionConverters = converters, pipeBuilderFactory = EnterprisePipeBuilderFactory(pipelines))
     val pipeBuildContext = PipeExecutionBuilderContext(context.metrics.cardinality, table, IDPPlannerName)

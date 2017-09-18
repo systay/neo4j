@@ -19,9 +19,8 @@
  */
 package org.neo4j.cypher.internal.compatibility.v3_3.runtime
 
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.ExpressionConverters
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.{CompositeExpressionConverter, ExpressionConverter}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.{NestedPipeExpression, Pipe}
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.Pipe
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription.Id
 import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
@@ -35,7 +34,7 @@ trait PipeBuilderFactory {
             recurse: LogicalPlan => Pipe,
             readOnly: Boolean,
             idMap: Map[LogicalPlan, Id],
-            expressionConverters: ExpressionConverters)
+            expressionConverters: ExpressionConverter)
            (implicit context: PipeExecutionBuilderContext, planContext: PlanContext): PipeBuilder
 
   protected def recursePipes(recurse: LogicalPlan => Pipe, planContext: PlanContext)

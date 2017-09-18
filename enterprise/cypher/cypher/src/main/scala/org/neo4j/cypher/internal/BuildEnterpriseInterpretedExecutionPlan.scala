@@ -20,14 +20,15 @@
 package org.neo4j.cypher.internal
 
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime._
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.{CommunityMaybeExpressionConverter, CompositeExpressionConverter, ExpressionConverter}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.compiled.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.executionplan._
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.phases.CompilationState
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.Pipe
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription.{Id, LogicalPlanIdentificationBuilder}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.slotted.SlottedPipeBuilder
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.slotted.expressions.SlottedExpressionConverters
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.slotted.expressions.SlottedMaybeExpressionConverters
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.slotted.expressions.compiled.CompiledExpressionConverters
 import org.neo4j.cypher.internal.compiler.v3_3.CypherCompilerConfiguration
 import org.neo4j.cypher.internal.compiler.v3_3.phases.{CompilationContains, LogicalPlanState}
 import org.neo4j.cypher.internal.compiler.v3_3.planner.CantCompileQueryException
@@ -56,7 +57,11 @@ object BuildEnterpriseInterpretedExecutionPlan extends Phase[EnterpriseRuntimeCo
     try {
       val (logicalPlan, pipelines) = rewritePlan(context, from.logicalPlan)
       val idMap = LogicalPlanIdentificationBuilder(logicalPlan)
-      val converters = new ExpressionConverters(SlottedExpressionConverters, CommunityExpressionConverter)
+      val converters = if(context.debugOptions.contains("compiledexpressions"))
+        CompiledExpressionConverters
+      else
+        new CompositeExpressionConverter(SlottedMaybeExpressionConverters, CommunityMaybeExpressionConverter)
+//      val converters = new CompositeExpressionConverter(SlottedMaybeExpressionConverters, CommunityMaybeExpressionConverter)
       val pipeBuilderFactory = EnterprisePipeBuilderFactory(pipelines)
       val executionPlanBuilder = new PipeExecutionPlanBuilder(context.clock, context.monitors,
                                                               expressionConverters = converters,
@@ -116,7 +121,7 @@ object BuildEnterpriseInterpretedExecutionPlan extends Phase[EnterpriseRuntimeCo
   case class EnterprisePipeBuilderFactory(pipelineInformation: Map[LogicalPlanId, PipelineInformation])
     extends PipeBuilderFactory {
     def apply(monitors: Monitors, recurse: LogicalPlan => Pipe, readOnly: Boolean, idMap: Map[LogicalPlan, Id],
-              expressionConverters: ExpressionConverters)
+              expressionConverters: ExpressionConverter)
              (implicit context: PipeExecutionBuilderContext, planContext: PlanContext): PipeBuilder = {
 
       val expressionToExpression = recursePipes(recurse, planContext) _

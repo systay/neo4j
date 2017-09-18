@@ -164,11 +164,9 @@ object GeneratedQueryStructure extends CodeStructure[GeneratedQuery] {
           val invoke1 = invoke(target, reference, constant1)
           block.expression(invoke1)
         }))
-      codeBlock.assign(typeRef[ResultRecord], "row",
-                       invoke(newInstance(typeRef[ResultRecord]),
-                              MethodReference.constructorReference(typeRef[ResultRecord], typeRef[Int]),
-                              constant(codeGenContext.numberOfColumns()))
-                      )
+      codeBlock.assign(typeRef[ResultRecord], "row", invoke(newInstance(typeRef[ResultRecord]),
+                                    MethodReference.constructorReference(typeRef[ResultRecord], typeRef[Int]),
+                                    constant(codeGenContext.numberOfColumns())))
       methodStructure(structure)
       structure.finalizers.foreach(_ (true)(codeBlock))
     }

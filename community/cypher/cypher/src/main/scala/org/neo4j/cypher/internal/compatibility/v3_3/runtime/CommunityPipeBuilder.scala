@@ -19,7 +19,7 @@
  */
 package org.neo4j.cypher.internal.compatibility.v3_3.runtime
 
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.ExpressionConverters
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.{CompositeExpressionConverter, ExpressionConverter}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.PatternConverters._
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.expressions.{AggregationExpression, Literal, Expression => CommandExpression}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.predicates.{Predicate, True}
@@ -44,7 +44,7 @@ import org.neo4j.values.virtual.{EdgeValue, NodeValue}
  * When adding new Pipes and LogicalPlans, this is where you should be looking.
  */
 case class CommunityPipeBuilder(monitors: Monitors, recurse: LogicalPlan => Pipe, readOnly: Boolean,
-                                idMap: Map[LogicalPlan, Id], expressionConverters: ExpressionConverters,
+                                idMap: Map[LogicalPlan, Id], expressionConverters: ExpressionConverter,
                                 rewriteAstExpression: (frontEndAst.Expression) => frontEndAst.Expression)
                                (implicit context: PipeExecutionBuilderContext, planContext: PlanContext) extends PipeBuilder {
 

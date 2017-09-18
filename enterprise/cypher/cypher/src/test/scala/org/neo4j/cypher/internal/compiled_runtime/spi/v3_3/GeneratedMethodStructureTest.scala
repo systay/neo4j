@@ -53,8 +53,7 @@ class GeneratedMethodStructureTest extends CypherFunSuite {
         Operation("create rel extractor", _.createRelExtractor("foo")),
         Operation("nullable object", m => {
           m.declareAndInitialize("foo", CodeGenType.Any)
-          m.generator.assign(typeRef[Object], "bar",
-                             m.nullablePrimitive("foo", CodeGenType.Any, Expression.constant("hello")))
+          m.generator.assign(typeRef[Object], "bar", m.nullablePrimitive("foo", CodeGenType.Any, Expression.constant("hello")))
 
         }),
         Operation("load node from parameters", m => {
@@ -63,8 +62,7 @@ class GeneratedMethodStructureTest extends CypherFunSuite {
         }),
         Operation("nullable node", m => {
           m.declareAndInitialize("foo", CodeGenType.primitiveNode)
-          m.generator.assign(typeRef[Long], "bar",
-                             m.nullablePrimitive("foo", CodeGenType.primitiveNode, m.loadVariable("foo")))
+          m.generator.assign(typeRef[Long], "bar", m.nullablePrimitive("foo", CodeGenType.primitiveNode, m.loadVariable("foo")))
 
         }),
         Operation("mark variables as null", m => {

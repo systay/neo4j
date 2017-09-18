@@ -32,11 +32,11 @@ import org.neo4j.cypher.internal.frontend.v3_3.ast.rewriters.DesugaredMapProject
 import org.neo4j.cypher.internal.frontend.v3_3.helpers.NonEmptyList
 import org.neo4j.cypher.internal.frontend.v3_3.{InternalException, ast}
 
-object CommunityExpressionConverter extends ExpressionConverter {
+object CommunityMaybeExpressionConverter extends MaybeExpressionConverter {
 
   import PatternConverters._
 
-  override def toCommandExpression(expression: ast.Expression, self: ExpressionConverters): Option[CommandExpression] = {
+  override def toCommandExpression(expression: ast.Expression, self: ExpressionConverter): Option[CommandExpression] = {
       val result = expression match {
         case e: ast.Null => commandexpressions.Null()
         case e: ast.True => predicates.True()
@@ -113,7 +113,7 @@ object CommunityExpressionConverter extends ExpressionConverter {
       Option(result)
     }
 
-  private def toCommandExpression(expression: ast.Function, invocation: ast.FunctionInvocation, self: ExpressionConverters): CommandExpression =
+  private def toCommandExpression(expression: ast.Function, invocation: ast.FunctionInvocation, self: ExpressionConverter): CommandExpression =
     expression match {
       case Abs => commandexpressions.AbsFunction(self.toCommandExpression(invocation.arguments.head))
       case Acos => commandexpressions.AcosFunction(self.toCommandExpression(invocation.arguments.head))
@@ -309,37 +309,37 @@ object CommunityExpressionConverter extends ExpressionConverter {
 
   private def toCommandParameter(e: ast.Parameter) = commandexpressions.ParameterExpression(e.name)
 
-  private def toCommandProperty(e: ast.Property, self: ExpressionConverters): commandexpressions.Property =
+  private def toCommandProperty(e: ast.Property, self: ExpressionConverter): commandexpressions.Property =
     commandexpressions.Property(self.toCommandExpression(e.map), PropertyKey(e.propertyKey.name))
 
-  private def toCommandExpression(expression: Option[ast.Expression], self: ExpressionConverters): Option[CommandExpression] =
+  private def toCommandExpression(expression: Option[ast.Expression], self: ExpressionConverter): Option[CommandExpression] =
     expression.map(self.toCommandExpression)
 
-  private def toCommandExpression(expressions: Seq[ast.Expression], self: ExpressionConverters): Seq[CommandExpression] =
+  private def toCommandExpression(expressions: Seq[ast.Expression], self: ExpressionConverter): Seq[CommandExpression] =
     expressions.map(self.toCommandExpression)
 
   private def variable(e: ast.Variable) = commands.expressions.Variable(e.name)
 
-  private def inequalityExpression(original: ast.InequalityExpression, self: ExpressionConverters): predicates.ComparablePredicate = original match {
+  private def inequalityExpression(original: ast.InequalityExpression, self: ExpressionConverter): predicates.ComparablePredicate = original match {
     case e: ast.LessThan => predicates.LessThan(self.toCommandExpression(e.lhs), self.toCommandExpression(e.rhs))
     case e: ast.LessThanOrEqual => predicates.LessThanOrEqual(self.toCommandExpression(e.lhs), self.toCommandExpression(e.rhs))
     case e: ast.GreaterThan => predicates.GreaterThan(self.toCommandExpression(e.lhs), self.toCommandExpression(e.rhs))
     case e: ast.GreaterThanOrEqual => predicates.GreaterThanOrEqual(self.toCommandExpression(e.lhs), self.toCommandExpression(e.rhs))
   }
 
-  private def getDegree(original: ast.GetDegree, self: ExpressionConverters) = {
+  private def getDegree(original: ast.GetDegree, self: ExpressionConverter) = {
     val typ = original.relType.map(relType => UnresolvedRelType(relType.name))
     commandexpressions.GetDegree(self.toCommandExpression(original.node), typ, original.dir)
   }
 
-  private def regexMatch(e: ast.RegexMatch, self: ExpressionConverters) = self.toCommandExpression(e.rhs) match {
+  private def regexMatch(e: ast.RegexMatch, self: ExpressionConverter) = self.toCommandExpression(e.rhs) match {
     case literal: commandexpressions.Literal =>
       predicates.LiteralRegularExpression(self.toCommandExpression(e.lhs), literal)
     case command =>
       predicates.RegularExpression(self.toCommandExpression(e.lhs), command)
   }
 
-  private def in(e: ast.In, self: ExpressionConverters) = e.rhs match {
+  private def in(e: ast.In, self: ExpressionConverter) = e.rhs match {
     case value: Parameter =>
       predicates.ConstantCachedIn(self.toCommandExpression(e.lhs), self.toCommandExpression(value))
 
@@ -353,7 +353,7 @@ object CommunityExpressionConverter extends ExpressionConverter {
       predicates.DynamicCachedIn(self.toCommandExpression(e.lhs), self.toCommandExpression(e.rhs))
   }
 
-  private def caseExpression(e: ast.CaseExpression, self: ExpressionConverters) = e.expression match {
+  private def caseExpression(e: ast.CaseExpression, self: ExpressionConverter) = e.expression match {
     case Some(innerExpression) =>
       val legacyAlternatives = e.alternatives.map { a => (self.toCommandExpression(a._1), self.toCommandExpression(a._2)) }
       commandexpressions.SimpleCase(self.toCommandExpression(innerExpression), legacyAlternatives, toCommandExpression(e.default, self))
@@ -362,23 +362,23 @@ object CommunityExpressionConverter extends ExpressionConverter {
       commandexpressions.GenericCase(predicateAlternatives, toCommandExpression(e.default, self))
   }
 
-  private def hasLabels(e: ast.HasLabels, self: ExpressionConverters) = e.labels.map {
+  private def hasLabels(e: ast.HasLabels, self: ExpressionConverter) = e.labels.map {
     l => predicates.HasLabel(self.toCommandExpression(e.expression), commandvalues.KeyToken.Unresolved(l.name, commandvalues.TokenType.Label)): Predicate
   } reduceLeft {
     predicates.And(_, _)
   }
 
-  private def mapItems(items: Seq[(PropertyKeyName, Expression)], self: ExpressionConverters): Map[String, CommandExpression] =
+  private def mapItems(items: Seq[(PropertyKeyName, Expression)], self: ExpressionConverter): Map[String, CommandExpression] =
     items.map {
       case (id, ex) => id.name -> self.toCommandExpression(ex)
     }.toMap
 
-  private def mapProjectionItems(items: Seq[LiteralEntry], self: ExpressionConverters): Map[String, CommandExpression] =
+  private def mapProjectionItems(items: Seq[LiteralEntry], self: ExpressionConverter): Map[String, CommandExpression] =
     items.map {
       case LiteralEntry(id, ex) => id.name -> self.toCommandExpression(ex)
     }.toMap
 
-  private def listComprehension(e: ast.ListComprehension, self: ExpressionConverters): CommandExpression = {
+  private def listComprehension(e: ast.ListComprehension, self: ExpressionConverter): CommandExpression = {
     val filter = e.innerPredicate match {
       case Some(_: ast.True) | None =>
         self.toCommandExpression(e.expression)

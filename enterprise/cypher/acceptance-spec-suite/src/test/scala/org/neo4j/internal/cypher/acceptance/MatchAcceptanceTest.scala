@@ -29,6 +29,15 @@ import scala.collection.mutable.ArrayBuffer
 
 class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
+  test("apa") {
+    createNode()
+    createNode()
+    createNode()
+    createNode()
+    val result = graph.execute("cypher runtime=slotted debug=compiledExpressions match (n) return 1 = null")
+    println(result.resultAsString())
+  }
+
   test("Do not count null elements in nodes without labels") {
 
     createNode("name" -> "a")

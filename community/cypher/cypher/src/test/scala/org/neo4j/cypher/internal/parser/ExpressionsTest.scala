@@ -19,7 +19,7 @@
  */
 package org.neo4j.cypher.internal.parser
 
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.{CommunityMaybeExpressionConverter, CompositeExpressionConverter}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.predicates.{Equals, True}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.values.TokenType.PropertyKey
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.{predicates, expressions => legacy}
@@ -138,6 +138,6 @@ class ExpressionsTest extends ParserTest[ast.Expression, legacy.Expression] with
 
   }
 
-  private val converters = new ExpressionConverters(CommunityExpressionConverter)
+  private val converters = new CompositeExpressionConverter(CommunityMaybeExpressionConverter)
   def convert(astNode: ast.Expression): legacy.Expression = converters.toCommandExpression(astNode)
 }

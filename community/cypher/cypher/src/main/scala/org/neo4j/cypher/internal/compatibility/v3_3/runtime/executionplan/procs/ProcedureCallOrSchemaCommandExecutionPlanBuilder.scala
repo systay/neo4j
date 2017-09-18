@@ -20,9 +20,8 @@
 package org.neo4j.cypher.internal.compatibility.v3_3.runtime.executionplan.procs
 
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.CommunityRuntimeContext
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.{CommunityMaybeExpressionConverter, CompositeExpressionConverter}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.executionplan.{ExecutionPlan, SCHEMA_WRITE}
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.helpers.InternalWrapping
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.helpers.InternalWrapping._
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.phases.CompilationState
 import org.neo4j.cypher.internal.compiler.v3_3.IndexDescriptor
@@ -52,7 +51,7 @@ case object ProcedureCallOrSchemaCommandExecutionPlanBuilder extends Phase[Commu
       case Some(plan) => plan match {
         // Global call: CALL foo.bar.baz("arg1", 2)
         case StandAloneProcedureCall(signature, args, types, indices) =>
-          val converters = new ExpressionConverters(CommunityExpressionConverter)
+          val converters = new CompositeExpressionConverter(CommunityMaybeExpressionConverter)
           val logger = context.notificationLogger
           Some(ProcedureCallExecutionPlan(signature, args, types, indices,
                                           logger.notifications.map(asKernelNotification(logger.offset)), converters))

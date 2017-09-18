@@ -27,7 +27,7 @@ import org.neo4j.cypher.internal.frontend.v3_3.{DummyPosition, InputPosition, Se
 
 class PathExpressionConversionTest extends CypherFunSuite {
 
-  val converters = new ExpressionConverters(CommunityExpressionConverter)
+  val converters = new CompositeExpressionConverter(CommunityMaybeExpressionConverter)
 
   val pos = DummyPosition(0)
 

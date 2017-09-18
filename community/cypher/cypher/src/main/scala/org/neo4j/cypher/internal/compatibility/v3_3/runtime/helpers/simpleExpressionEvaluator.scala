@@ -20,7 +20,7 @@
 package org.neo4j.cypher.internal.compatibility.v3_3.runtime.helpers
 
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.ExecutionContext
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.{CommunityMaybeExpressionConverter, CompositeExpressionConverter}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.{NullPipeDecorator, QueryState}
 import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.ExpressionEvaluator
 import org.neo4j.cypher.internal.frontend.v3_3.ast.Expression
@@ -33,7 +33,7 @@ object simpleExpressionEvaluator extends ExpressionEvaluator {
 
   // Returns Some(value) if the expression can be independently evaluated in an empty context/query state, otherwise None
   def evaluateExpression(expr: Expression): Option[Any] = {
-    val converters = new ExpressionConverters(CommunityExpressionConverter)
+    val converters = new CompositeExpressionConverter(CommunityMaybeExpressionConverter)
     val commandExpr = converters.toCommandExpression(expr)
 
     val emptyQueryState =

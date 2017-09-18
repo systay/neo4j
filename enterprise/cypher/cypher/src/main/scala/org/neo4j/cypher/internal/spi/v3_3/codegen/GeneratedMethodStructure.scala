@@ -131,10 +131,10 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
                invoke(generator.load(iterVar), fetchNextRelationship),
                generator.load(extractor))))
     generator.assign(typeRef[Long], toNodeVar, toGraphDb(direction) match {
-      case Direction.INCOMING => start
-      case Direction.OUTGOING => end
-      case Direction.BOTH => ternary(equal(start, generator.load(fromNodeVar)), end, start)
-    })
+          case Direction.INCOMING => start
+          case Direction.OUTGOING => end
+          case Direction.BOTH => ternary(equal(start, generator.load(fromNodeVar)), end, start)
+        })
     generator.assign(typeRef[Long], relVar, invoke(generator.load(extractor), getRelationship))
   }
 
@@ -154,12 +154,10 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
     generator.assign(typeRef[PrimitiveLongIterator], iterVar, invoke(readOperations, nodesGetAll))
 
   override def labelScan(iterVar: String, labelIdVar: String) =
-    generator.assign(typeRef[PrimitiveLongIterator], iterVar,
-                     invoke(readOperations, nodesGetForLabel, generator.load(labelIdVar)))
+    generator.assign(typeRef[PrimitiveLongIterator], iterVar, invoke(readOperations, nodesGetForLabel, generator.load(labelIdVar)))
 
   override def lookupLabelId(labelIdVar: String, labelName: String) =
-    generator.assign(typeRef[Int], labelIdVar,
-                     invoke(readOperations, labelGetForName, constant(labelName)))
+    generator.assign(typeRef[Int], labelIdVar, invoke(readOperations, labelGetForName, constant(labelName)))
 
   override def lookupLabelIdE(labelName: String): Expression =
     invoke(readOperations, labelGetForName, constant(labelName))
@@ -384,27 +382,23 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
     val invokeLoadParameter = invoke(loadParameter,
                                      invoke(params, method[MapValue, AnyValue]("get", typeRef[String]), constantExpression(key)),
                                      get(generator.self(), fields.entityAccessor))
-    generator.assign(lowerType(codeGenType), variableName,
-      // We assume the value in the parameter map will always be boxed, so if we are declaring
-      // a primitive variable we need to force it to be unboxed
-      codeGenType match {
-        case CodeGenType.primitiveNode =>
-          unbox(Expression.cast(typeRef[NodeIdWrapper], invokeLoadParameter),
-            CypherCodeGenType(symbols.CTNode, ReferenceType))
-        case CodeGenType.primitiveRel =>
-          unbox(Expression.cast(typeRef[RelationshipIdWrapper], invokeLoadParameter),
-            CypherCodeGenType(symbols.CTRelationship, ReferenceType))
-        case CodeGenType.primitiveInt =>
-          Expression.unbox(Expression.cast(typeRef[java.lang.Long], invokeLoadParameter))
-        case CodeGenType.primitiveFloat =>
-          Expression.unbox(Expression.cast(typeRef[java.lang.Double], invokeLoadParameter))
-        case CodeGenType.primitiveBool =>
-          Expression.unbox(Expression.cast(typeRef[java.lang.Boolean], invokeLoadParameter))
-        case CypherCodeGenType(_, ListReferenceType(repr)) if RepresentationType.isPrimitive(repr) =>
-          asPrimitiveStream(invokeLoadParameter, codeGenType)
-        case _ => invokeLoadParameter
-      }
-    )
+    generator.assign(lowerType(codeGenType), variableName, codeGenType match {
+            case CodeGenType.primitiveNode =>
+              unbox(Expression.cast(typeRef[NodeIdWrapper], invokeLoadParameter),
+                CypherCodeGenType(symbols.CTNode, ReferenceType))
+            case CodeGenType.primitiveRel =>
+              unbox(Expression.cast(typeRef[RelationshipIdWrapper], invokeLoadParameter),
+                CypherCodeGenType(symbols.CTRelationship, ReferenceType))
+            case CodeGenType.primitiveInt =>
+              Expression.unbox(Expression.cast(typeRef[java.lang.Long], invokeLoadParameter))
+            case CodeGenType.primitiveFloat =>
+              Expression.unbox(Expression.cast(typeRef[java.lang.Double], invokeLoadParameter))
+            case CodeGenType.primitiveBool =>
+              Expression.unbox(Expression.cast(typeRef[java.lang.Boolean], invokeLoadParameter))
+            case CypherCodeGenType(_, ListReferenceType(repr)) if RepresentationType.isPrimitive(repr) =>
+              asPrimitiveStream(invokeLoadParameter, codeGenType)
+            case _ => invokeLoadParameter
+          })
   }
 
   override def mapGetExpression(mapName: String, key: String): Expression = {
@@ -1073,8 +1067,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
   override def invokeMethod(resultType: JoinTableType, resultVar: String, methodName: String)
                            (block: MethodStructure[Expression] => Unit) = {
     val returnType: TypeReference = joinTableType(resultType)
-    generator.assign(returnType, resultVar,
-                     invoke(generator.self(), methodReference(generator.owner(), returnType, methodName)))
+    generator.assign(returnType, resultVar, invoke(generator.self(), methodReference(generator.owner(), returnType, methodName)))
     using(generator.classGenerator().generateMethod(returnType, methodName)) { body =>
       block(copy(generator = body, events = List.empty))
       body.returns(body.load(resultVar))
@@ -1116,8 +1109,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
       assert(keyVars.size == 1)
       val keyVar = keyVars.head
       val countName = context.namer.newVarName()
-      generator.assign(typeRef[Int], countName,
-                       invoke(generator.load(tableVar), countingTableGet, generator.load(keyVar)))
+      generator.assign(typeRef[Int], countName, invoke(generator.load(tableVar), countingTableGet, generator.load(keyVar)))
       generator.expression(
         pop(
           invoke(generator.load(tableVar), countingTablePut, generator.load(keyVar),
@@ -1128,14 +1120,12 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
     case LongsToCountTable =>
       val countName = context.namer.newVarName()
       val keyName = context.namer.newVarName()
-      generator.assign(typeRef[CompositeKey], keyName,
-                       invoke(compositeKey,
-                              newArray(typeRef[Long], keyVars.map(generator.load): _*)))
-      generator.assign(typeRef[java.lang.Integer], countName,
-                       cast(typeRef[java.lang.Integer],
-                            invoke(generator.load(tableVar), countingTableCompositeKeyGet,
-                                   generator.load(keyName))
-                       ))
+      generator.assign(typeRef[CompositeKey], keyName, invoke(compositeKey,
+                                    newArray(typeRef[Long], keyVars.map(generator.load): _*)))
+      generator.assign(typeRef[java.lang.Integer], countName, cast(typeRef[java.lang.Integer],
+                                  invoke(generator.load(tableVar), countingTableCompositeKeyGet,
+                                         generator.load(keyName))
+                             ))
       generator.expression(
         pop(
           invoke(generator.load(tableVar), countingTableCompositeKeyPut,
@@ -1191,7 +1181,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
             case (l, f) =>
               val fieldType = lowerType(tupleDescriptor.structure(f))
               forEach.assign(fieldType, l, get(forEach.load(elementName),
-                                               field(tupleDescriptor, f)))
+                                                             field(tupleDescriptor, f)))
           }
           block(copy(generator = forEach))
         }
@@ -1215,7 +1205,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
             case (l, f) =>
               val fieldType = lowerType(tupleDescriptor.structure(f))
               forEach.assign(fieldType, l, get(forEach.load(elementName),
-                                               field(tupleDescriptor, f)))
+                                                             field(tupleDescriptor, f)))
           }
           block(copy(generator = forEach))
         }
@@ -1267,9 +1257,8 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
       val listName = context.namer.newVarName()
       val keyName = context.namer.newVarName()
       val list = generator.declare(hashTable.listType, listName) // ProbeTable list;
-      generator.assign(typeRef[CompositeKey], keyName,
-                       invoke(compositeKey,
-                              newArray(typeRef[Long], keyVars.map(generator.load): _*)))
+      generator.assign(typeRef[CompositeKey], keyName, invoke(compositeKey,
+                                    newArray(typeRef[Long], keyVars.map(generator.load): _*)))
       // list = tableVar.get(keyVar);
       generator.assign(list,
                        cast(hashTable.listType,
@@ -1438,8 +1427,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
   override def newIndexDescriptor(descriptorVar: String, labelVar: String, propKeyVar: String) = {
     val getIndexDescriptor = method[IndexDescriptorFactory, IndexDescriptor]("forLabel", typeRef[Int], typeRef[Array[Int]])
     val propertyIdsExpr = Expression.newArray(typeRef[Int], generator.load(propKeyVar))
-    generator.assign(typeRef[IndexDescriptor], descriptorVar,
-                      invoke(getIndexDescriptor, generator.load(labelVar), propertyIdsExpr ))
+    generator.assign(typeRef[IndexDescriptor], descriptorVar, invoke(getIndexDescriptor, generator.load(labelVar), propertyIdsExpr ))
   }
 
   override def indexSeek(iterVar: String, descriptorVar: String, value: Expression, codeGenType: CodeGenType) = {

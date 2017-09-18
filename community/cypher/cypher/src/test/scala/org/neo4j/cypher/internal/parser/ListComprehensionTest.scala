@@ -19,7 +19,7 @@
  */
 package org.neo4j.cypher.internal.parser
 
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.{CommunityMaybeExpressionConverter, CompositeExpressionConverter}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.predicates.GreaterThan
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.values.TokenType.PropertyKey
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.{expressions => legacy}
@@ -45,6 +45,6 @@ class ListComprehensionTest extends ParserTest[ast.ListComprehension, legacy.Exp
       legacy.ExtractFunction(filterCommand, "a", legacy.Property(legacy.Variable("a"), PropertyKey("foo")))
   }
 
-  private val converters = new ExpressionConverters(CommunityExpressionConverter)
+  private val converters = new CompositeExpressionConverter(CommunityMaybeExpressionConverter)
   def convert(astNode: ast.ListComprehension): legacy.Expression = converters.toCommandExpression(astNode)
 }

@@ -22,6 +22,7 @@ package org.neo4j.cypher.internal
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime._
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.compiled.{BuildCompiledExecutionPlan, EnterpriseRuntimeContext}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.phases.CompilationState
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.vectorized.BuildVectorizedExecutionPlan
 import org.neo4j.cypher.internal.compiler.v3_3.phases.LogicalPlanState
 import org.neo4j.cypher.internal.frontend.v3_3.InvalidArgumentException
 import org.neo4j.cypher.internal.frontend.v3_3.notification.RuntimeUnsupportedNotification
@@ -44,7 +45,7 @@ object EnterpriseRuntimeBuilder extends RuntimeBuilder[Transformer[EnterpriseRun
           }
 
       case Some(InterpretedRuntimeName) =>
-        BuildInterpretedExecutionPlan
+        BuildVectorizedExecutionPlan
 
       case Some(SlottedRuntimeName) if useErrorsOverWarnings =>
         BuildEnterpriseInterpretedExecutionPlan andThen

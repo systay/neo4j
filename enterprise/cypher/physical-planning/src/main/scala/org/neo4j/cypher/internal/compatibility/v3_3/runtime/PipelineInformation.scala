@@ -129,7 +129,7 @@ object PipelineInformation {
   }
 }
 
-class PipelineInformation(private var slots: Map[String, Slot],
+class PipelineInformation(var slots: Map[String, Slot],
                           val initialNumberOfLongs: Int,
                           val initialNumberOfReferences: Int) {
 

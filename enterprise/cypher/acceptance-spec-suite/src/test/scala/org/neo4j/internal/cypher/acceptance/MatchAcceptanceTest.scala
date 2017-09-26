@@ -21,6 +21,7 @@ package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.expressions.PathImpl
+import org.neo4j.graphdb.Result.ResultVisitor
 import org.neo4j.graphdb._
 import org.neo4j.helpers.collection.Iterators.single
 
@@ -28,6 +29,18 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 
 class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
+test("apa") {
+  (0 to 10000) foreach { x =>
+   createNode("x" -> x)
+  }
+  val result = graph.execute("cypher runtime=interpreted match (a) where a.x > 4500 return a")
+  result.accept(new ResultVisitor[RuntimeException] {
+    override def visit(row: Result.ResultRow) = {
+      println(row.getNode("a"))
+      true
+    }
+  })
+}
 
   test("Do not count null elements in nodes without labels") {
 

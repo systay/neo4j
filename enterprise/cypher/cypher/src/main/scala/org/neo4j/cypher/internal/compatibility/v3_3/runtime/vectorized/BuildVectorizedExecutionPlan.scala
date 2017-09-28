@@ -22,25 +22,22 @@ package org.neo4j.cypher.internal.compatibility.v3_3.runtime.vectorized
 import java.io.PrintWriter
 import java.{lang, util}
 
-import org.neo4j.cypher.internal.{InternalExecutionResult, QueryStatistics}
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime._
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.compiled.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.executionplan.{ExecutionPlan, InternalQueryType, READ_ONLY}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.phases.CompilationState
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription.{InternalPlanDescription, LogicalPlanIdentificationBuilder}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.slotted.expressions.SlottedExpressionConverters
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.vectorized.operators.{AllNodeScanOperator, FilterOperator}
 import org.neo4j.cypher.internal.compiler.v3_3.phases.LogicalPlanState
-import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans.{LogicalPlan, LogicalPlanId, TreeBuilder}
-import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans
-import org.neo4j.cypher.internal.frontend.v3_3.phases.CompilationPhaseTracer.CompilationPhase
-import org.neo4j.cypher.internal.frontend.v3_3.phases.{CompilationPhaseTracer, Condition, Phase}
+import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans._
 import org.neo4j.cypher.internal.compiler.v3_3.spi.{GraphStatistics, PlanContext}
 import org.neo4j.cypher.internal.frontend.v3_3.PlannerName
 import org.neo4j.cypher.internal.frontend.v3_3.notification.InternalNotification
-import org.neo4j.cypher.internal.ir.v3_3.IdName
+import org.neo4j.cypher.internal.frontend.v3_3.phases.CompilationPhaseTracer.CompilationPhase
+import org.neo4j.cypher.internal.frontend.v3_3.phases.{CompilationPhaseTracer, Condition, Phase}
 import org.neo4j.cypher.internal.spi.v3_3.QueryContext
+import org.neo4j.cypher.internal.{InternalExecutionResult, QueryStatistics}
 import org.neo4j.cypher.result.QueryResult
 import org.neo4j.graphdb._
 import org.neo4j.values.virtual.MapValue
@@ -55,11 +52,12 @@ object BuildVectorizedExecutionPlan extends Phase[EnterpriseRuntimeContext, Logi
     val idMap = LogicalPlanIdentificationBuilder(physicalPlan)
     val converters: ExpressionConverters = new ExpressionConverters(SlottedExpressionConverters, CommunityExpressionConverter)
 
-    val operatorBuilder = new OperatorBuilder(pipelines, converters)
+    val operatorBuilder = new PipelineBuilder(pipelines, converters)
     val operators = operatorBuilder.create(physicalPlan)
     val execPlan: ExecutionPlan = VectorizedExecutionPlan(from.plannerName, operators, pipelines, physicalPlan)
     new CompilationState(from, Some(execPlan))
   }
+
   private def rewritePlan(context: EnterpriseRuntimeContext, beforeRewrite: LogicalPlan) = {
     beforeRewrite.assignIds()
     val pipelines: Map[LogicalPlanId, PipelineInformation] = SlotAllocation.allocateSlots(beforeRewrite)
@@ -72,7 +70,7 @@ object BuildVectorizedExecutionPlan extends Phase[EnterpriseRuntimeContext, Logi
 
 
   case class VectorizedExecutionPlan(plannerUsed: PlannerName,
-                                     operators: Map[LogicalPlanId, Operator],
+                                     operators: Pipeline,
                                      pipelineInformation: Map[LogicalPlanId, PipelineInformation],
                                      physicalPlan: LogicalPlan) extends executionplan.ExecutionPlan {
     override def run(queryContext: QueryContext, planType: ExecutionMode, params: MapValue): InternalExecutionResult = {
@@ -87,44 +85,10 @@ object BuildVectorizedExecutionPlan extends Phase[EnterpriseRuntimeContext, Logi
 
     override def notifications(planContext: PlanContext): Seq[InternalNotification] = Seq.empty
   }
+
 }
 
-class OperatorBuilder(pipelines: Map[LogicalPlanId, PipelineInformation], converters: ExpressionConverters)
-  extends TreeBuilder[Map[LogicalPlanId, Operator]] {
-  override protected def build(plan: LogicalPlan): Map[LogicalPlanId, Operator] = {
-    val pipeline = pipelines(plan.assignedId)
-
-    plan match {
-      case plans.AllNodesScan(IdName(column), argumentIds) =>
-        val operator = new AllNodeScanOperator(
-          pipeline.numberOfLongs,
-          pipeline.numberOfReferences,
-          pipeline.getLongOffsetFor(column))
-        Map(plan.assignedId -> operator)
-    }
-  }
-
-  override protected def build(plan: LogicalPlan, source: Map[LogicalPlanId, Operator]): Map[LogicalPlanId, Operator] = {
-    val pipeline = pipelines(plan.assignedId)
-    plan match {
-      case _:plans.ProduceResult =>
-        source
-      case plans.Selection(predicates, _) =>
-        val predicate = converters.toCommandPredicate(predicates.head)
-        val operator = new FilterOperator(predicate, pipeline.numberOfLongs, pipeline.numberOfReferences)
-        source + (plan.assignedId -> operator)
-    }
-  }
-
-  override protected def build(plan: LogicalPlan,
-                               lhs: Map[LogicalPlanId, Operator],
-                               rhs: Map[LogicalPlanId, Operator]): Map[LogicalPlanId, Operator] =
-    lhs ++ rhs + (plan match {
-      case _ => ???
-    })
-}
-
-class VectorizedOperatorExecutionResult(operators: Map[LogicalPlanId, Operator],
+class VectorizedOperatorExecutionResult(operators: Pipeline,
                                         pipelineInformation: Map[LogicalPlanId, PipelineInformation],
                                         logicalPlan: LogicalPlan,
                                         queryContext: QueryContext,
@@ -154,8 +118,7 @@ class VectorizedOperatorExecutionResult(operators: Map[LogicalPlanId, Operator],
   override def notifications: Iterable[Notification] = ???
 
   override def accept[E <: Exception](visitor: Result.ResultVisitor[E]): Unit = {
-    val exec = new Executor(operators, pipelineInformation, logicalPlan, queryContext, params)
-    exec.accept(visitor)
+    Dispatcher.instance.run(operators, visitor, queryContext, pipelineInformation.values.head, params)
   }
 
   override def withNotifications(notification: Notification*): InternalExecutionResult = this

@@ -25,9 +25,10 @@ import org.neo4j.values.virtual.MapValue
 import scala.collection.mutable
 
 trait Operator {
-  def operate(data: Morsel, context: QueryContext, state: QueryState): Morsel
+  def operate(input: Morsel, context: QueryContext, state: QueryState): Morsel
   def init(state: QueryState, context: QueryContext)
 }
 
 class QueryState(val operatorState: mutable.Map[Operator, AnyRef] = mutable.Map[Operator, AnyRef](),
-                 val params: MapValue)
+                 val params: MapValue,
+                 val inQueue: mutable.Map[Operator, AnyRef] = mutable.Map[Operator, AnyRef]())

@@ -27,20 +27,40 @@ import org.neo4j.helpers.collection.Iterators.single
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
+import scala.util.Random
 
 class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
-test("apa") {
-  (0 to 10000) foreach { x =>
-   createNode("x" -> x)
-  }
-  val result = graph.execute("cypher runtime=interpreted match (a) where a.x > 4500 return a")
-  result.accept(new ResultVisitor[RuntimeException] {
-    override def visit(row: Result.ResultRow) = {
-      println(row.getNode("a"))
-      true
+  test("apa") {
+
+    println("creating graph")
+
+    val NODES = 1000
+    val EDGES = 100000
+
+    val nodes = (0 to NODES).map(x =>
+      createNode("x" -> x)
+    ).toArray
+
+    val r = new Random()
+
+    graph.inTx {
+      (0 to EDGES).foreach( _ => {
+        val lhs = nodes(r.nextInt(NODES))
+        val rhs = nodes(r.nextInt(NODES))
+        relate(lhs, rhs)
+      })
     }
-  })
-}
+
+    println("running query")
+
+    val result = graph.execute("cypher runtime=interpreted match (a) where a.x > 750 return a")
+    result.accept(new ResultVisitor[RuntimeException] {
+      override def visit(row: Result.ResultRow): Boolean = {
+        println(s"${row.getNode("a")} from thread ${Thread.currentThread().getName}")
+        true
+      }
+    })
+  }
 
   test("Do not count null elements in nodes without labels") {
 

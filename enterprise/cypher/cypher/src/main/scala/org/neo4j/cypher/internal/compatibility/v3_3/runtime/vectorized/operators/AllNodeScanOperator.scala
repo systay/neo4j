@@ -20,8 +20,10 @@
 package org.neo4j.cypher.internal.compatibility.v3_3.runtime.vectorized.operators
 
 import org.neo4j.collection.primitive.PrimitiveLongIterator
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.PipelineInformation
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.LazyType
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.vectorized.{Morsel, Operator, QueryState}
-import org.neo4j.cypher.internal.frontend.v3_3.InternalException
+import org.neo4j.cypher.internal.frontend.v3_3.{InternalException, SemanticDirection}
 import org.neo4j.cypher.internal.spi.v3_3.QueryContext
 
 class AllNodeScanOperator(longsPerRow: Int, refsPerRow: Int, offset: Int) extends Operator {
@@ -48,3 +50,16 @@ class AllNodeScanOperator(longsPerRow: Int, refsPerRow: Int, offset: Int) extend
     data
   }
 }
+
+//class ExpandAllOperator(pipelineInformation: PipelineInformation,
+//                        fromOffset: Int,
+//                        relOffset: Int,
+//                        toOffset: Int,
+//                        dir: SemanticDirection,
+//                        types: LazyType) extends Operator {
+//  override def operate(data: Morsel, context: QueryContext, state: QueryState): Morsel = {
+//
+//  }
+//
+//  override def init(state: QueryState, context: QueryContext): Unit = {}
+//}

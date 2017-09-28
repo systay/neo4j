@@ -19,27 +19,32 @@
  */
 package org.neo4j.cypher.internal.compatibility.v3_3.runtime.vectorized.operators
 
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.PipelineInformation
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.predicates.Predicate
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.{QueryState => OldQueryState}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.vectorized._
 import org.neo4j.cypher.internal.spi.v3_3.QueryContext
 
-class FilterOperator(predicate: Predicate, longsPerRow: Int, refsPerRow: Int) extends Operator {
+/*
+Takes an input morsel and compacts all rows to the beginning of it, only keeping the rows that match a predicate
+ */
+class FilterOperator(pipeline: PipelineInformation, predicate: Predicate) extends Operator {
 
   override def init(state: QueryState, context: QueryContext): Unit = {}
 
-  override def operate(inputMorsel: Morsel, context: QueryContext, state: QueryState): Morsel = {
-    val morsel = Morsel.create(longsPerRow, refsPerRow, inputMorsel.rows)
+  override def operate(morsel: Morsel, context: QueryContext, state: QueryState): Morsel = {
     var readingPos = 0
     var writingPos = 0
-    val currentRow = new MorselExecutionContext(inputMorsel, longsPerRow, refsPerRow, 0)
+    val longCount = pipeline.numberOfLongs
+    val refCount = pipeline.numberOfReferences
+    val currentRow = new MorselExecutionContext(morsel, longCount, refCount, 0)
     val longs = morsel.longs
     val objects = morsel.refs
     val queryState = new OldQueryState(context, resources = null, params = state.params)
 
-    while (readingPos < inputMorsel.rows) {
-      System.arraycopy(inputMorsel.longs, readingPos * longsPerRow, longs, longsPerRow * writingPos, longsPerRow)
-      System.arraycopy(inputMorsel.refs, readingPos * refsPerRow, objects, refsPerRow * writingPos, refsPerRow)
+    while (readingPos < morsel.rows) {
+      System.arraycopy(morsel.longs, readingPos * longCount, longs, longCount * writingPos, longCount)
+      System.arraycopy(morsel.refs, readingPos * refCount, objects, refCount * writingPos, refCount)
 
       if (predicate.isTrue(currentRow)(state = queryState)) {
         writingPos += 1
@@ -48,7 +53,6 @@ class FilterOperator(predicate: Predicate, longsPerRow: Int, refsPerRow: Int) ex
       currentRow.currentRow = readingPos
     }
 
-    morsel.moreDataToCome = inputMorsel.moreDataToCome
     morsel.rows = writingPos
     morsel
   }

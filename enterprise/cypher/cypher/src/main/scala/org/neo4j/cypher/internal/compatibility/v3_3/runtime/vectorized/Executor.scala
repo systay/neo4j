@@ -25,42 +25,21 @@ import org.neo4j.cypher.internal.spi.v3_3.QueryContext
 import org.neo4j.graphdb.Result
 import org.neo4j.values.virtual.MapValue
 
-import scala.annotation.tailrec
 import scala.collection.mutable
 
-class Executor(operators: Map[LogicalPlanId, Operator],
+class Executor(lane: Pipeline,
                pipelineInformation: Map[LogicalPlanId, PipelineInformation],
-               logicalPlan: LogicalPlan,
                queryContext: QueryContext,
                params: MapValue) {
   def accept[E <: Exception](visitor: Result.ResultVisitor[E]): Unit = {
     val queryState = new QueryState(params = params)
-    operators.values.foreach { op =>
-      op.init(queryState, queryContext)
-    }
+    lane.init(queryState, queryContext)
 
-    @tailrec
-    def leafOf(in: LogicalPlan): LogicalPlan =
-      if (in.lhs.nonEmpty)
-        leafOf(in.lhs.get)
-      else
-        in
-
-    val leaf = leafOf(logicalPlan)
-    val parentsMap = parents(logicalPlan)
-    val startingPipe = pipelineInformation(leaf.assignedId)
-    val morsel = Morsel.create(startingPipe.numberOfLongs, startingPipe.numberOfReferences, 654)
-    val resultRow = new MorselResultRow(null, 0, pipelineInformation(logicalPlan.assignedId), queryContext)
+    val morsel = Morsel.create(lane.slotInformation, 654)
+    val resultRow = new MorselResultRow(null, 0, lane.slotInformation, queryContext)
 
     while(morsel.moreDataToCome) {
-      var data = morsel
-      var currentId = leaf.assignedId
-
-      do {
-        val currentOp = operators(currentId)
-        data = currentOp.operate(morsel, queryContext, queryState)
-        currentId = parentsMap(currentId)
-      } while (currentId != logicalPlan.assignedId)
+      val data = lane.operate(morsel, queryContext, queryState)
 
       resultRow.morsel = data
 
@@ -68,15 +47,13 @@ class Executor(operators: Map[LogicalPlanId, Operator],
         resultRow.currentPos = position
         visitor.visit(resultRow)
       }
-
-      println(2)
     }
   }
 
   /*
   Returns a map that can be used to look up parents of plans
    */
-  def parents(logicalPlan: LogicalPlan): Map[LogicalPlanId, LogicalPlanId] = {
+  private def parents(logicalPlan: LogicalPlan): Map[LogicalPlanId, LogicalPlanId] = {
     val mapBuilder = new mutable.HashMap[LogicalPlanId, LogicalPlanId]()
 
     def add(parent: LogicalPlan): Unit = {
@@ -96,6 +73,20 @@ class Executor(operators: Map[LogicalPlanId, Operator],
 
     mapBuilder.toMap
 
+  }
+
+}
+
+case class Pipeline(operators: Seq[Operator], slotInformation: PipelineInformation, dependencies: Set[Pipeline]) {
+  def init(queryState: QueryState, queryContext: QueryContext): Unit = {
+    operators.foreach(_.init(queryState, queryContext))
+  }
+
+  def operate(input: Morsel, context: QueryContext, state: QueryState): Morsel = {
+    operators.foldLeft(input) {
+      case (morsel, operator) =>
+        operator.operate(morsel, context, state)
+    }
   }
 
 }

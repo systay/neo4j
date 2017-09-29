@@ -29,6 +29,11 @@ trait Operator {
   def init(state: QueryState, context: QueryContext)
 }
 
+sealed trait ExecutionState
+object Init extends ExecutionState
+object Done extends ExecutionState
+case class Continue (morsel: Morsel, atRow: Int) extends ExecutionState
+
 class QueryState(val operatorState: mutable.Map[Operator, AnyRef] = mutable.Map[Operator, AnyRef](),
                  val params: MapValue,
                  val inQueue: mutable.Map[Operator, AnyRef] = mutable.Map[Operator, AnyRef]())

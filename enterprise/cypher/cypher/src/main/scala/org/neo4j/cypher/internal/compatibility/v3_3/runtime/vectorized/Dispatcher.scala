@@ -19,9 +19,8 @@ class Dispatcher {
                           resultPipe: PipelineInformation,
                           params: MapValue): Unit = {
     val state = new QueryState(params = params)
-    val query = Query(pipeline, visitor, context, state, resultPipe)
-    workQueue.put(new Task(pipeline, 0, query, true))
-
+    val query = Query(pipeline, visitor, context, state, resultPipe, Thread.currentThread().getId.toString)
+    workQueue.put(new Task(pipeline, query, true))
 
     while (query.alive) {
       try {
@@ -36,7 +35,8 @@ class Dispatcher {
                                    visitor: Result.ResultVisitor[E],
                                    context: QueryContext,
                                    state: QueryState,
-                                   resultPipe: PipelineInformation) {
+                                   resultPipe: PipelineInformation,
+                                   name: String) {
     private val _alive = new AtomicBoolean(true)
     def alive: Boolean = _alive.get()
     def die(): Unit = {
@@ -48,7 +48,7 @@ class Dispatcher {
   val resultQueue: Map[Query[_], Seq[Morsel]] = Map[Query[_], Seq[Morsel]]()
 
   private val workers: Seq[Worker] = {
-    (0 to 10) map { i =>
+    (0 to 3) map { i =>
       val worker = new Worker(workQueue)
       val t = new Thread(worker, s"Query Worker $i")
       t.setDaemon(true)
@@ -59,11 +59,10 @@ class Dispatcher {
   }
 
   class Task[E <: Exception](val pipeline: Pipeline,
-                             val startAtIndex: Int,
                              val query: Query[E],
                              val init: Boolean) {
     def cloneWithoutInit(): Task[E] =
-      new Task(pipeline, startAtIndex, query, init = false)
+      new Task(pipeline, query, init = false)
   }
 
   class Worker(workQueue: BlockingQueue[Task[_]]) extends Runnable {
@@ -96,7 +95,6 @@ class Dispatcher {
           } else {
             task.query.die() // Nothing more to do. Die peacefully
           }
-          Thread.sleep(123)
         } catch {
           case _: InterruptedException =>
           // someone seems to want us to shut down and go home.

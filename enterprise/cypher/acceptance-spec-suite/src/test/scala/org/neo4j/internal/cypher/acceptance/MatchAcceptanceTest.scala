@@ -52,14 +52,33 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     }
 
     println("running query")
-
-    val result = graph.execute("cypher runtime=interpreted match (a) where a.x > 750 return a")
-    result.accept(new ResultVisitor[RuntimeException] {
+    val res = graph.execute("cypher runtime=interpreted match (a) where a.x > 750 return a")
+    res.accept(new ResultVisitor[RuntimeException] {
       override def visit(row: Result.ResultRow): Boolean = {
         println(s"${row.getNode("a")} from thread ${Thread.currentThread().getName}")
         true
       }
     })
+
+    if (false) {
+      val threads =
+        0 to 10 map { _ =>
+          val thread = new Thread(new Runnable {
+            override def run(): Unit = {
+              val result = graph.execute("cypher runtime=interpreted match (a) where a.x > 750 return a")
+              result.accept(new ResultVisitor[RuntimeException] {
+                override def visit(row: Result.ResultRow): Boolean = {
+                  //                println(s"${row.getNode("a")} from thread ${Thread.currentThread().getName}")
+                  true
+                }
+              })
+            }
+          })
+          thread.start()
+          thread
+        }
+      threads.foreach(_.join())
+    }
   }
 
   test("Do not count null elements in nodes without labels") {

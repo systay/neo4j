@@ -51,15 +51,16 @@ class AllNodeScanOperator(longsPerRow: Int, refsPerRow: Int, offset: Int) extend
   }
 }
 
-//class ExpandAllOperator(pipelineInformation: PipelineInformation,
-//                        fromOffset: Int,
-//                        relOffset: Int,
-//                        toOffset: Int,
-//                        dir: SemanticDirection,
-//                        types: LazyType) extends Operator {
-//  override def operate(data: Morsel, context: QueryContext, state: QueryState): Morsel = {
-//
+class ExpandAllOperator(pipelineInformation: PipelineInformation,
+                        fromOffset: Int,
+                        relOffset: Int,
+                        toOffset: Int,
+                        dir: SemanticDirection,
+                        types: LazyType) extends Operator {
+  override def operate(data: Morsel, context: QueryContext, state: QueryState): Morsel = ???
+//  {
+
 //  }
-//
-//  override def init(state: QueryState, context: QueryContext): Unit = {}
-//}
+
+  override def init(state: QueryState, context: QueryContext): Unit = {}
+}

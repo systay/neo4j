@@ -108,7 +108,7 @@ class Dispatcher {
             println(s"${Thread.currentThread().getName} starting work on Q${task.query.name} ${task.pipeline} with ${task.continue}")
             val context = task.query.context
             val state = task.query.state
-            val morsel = Morsel.create(task.pipeline.slotInformation, MORSEL_SIZE)
+            val morsel = Morsel.create(task.pipeline.slotInformation, MORSEL_SIZE, lastOne = false)
             val (returnType, continue) = task.pipeline.operate(task.continue, morsel, context, state)
 
             println(s"${Thread.currentThread().getName} finished. Produced ${morsel.validRows} rows, next step is: $continue")

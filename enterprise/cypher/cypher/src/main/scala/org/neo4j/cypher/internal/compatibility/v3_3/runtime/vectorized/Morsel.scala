@@ -24,18 +24,18 @@ import org.neo4j.values.AnyValue
 
 
 object Morsel {
-  def create(pipeline: PipelineInformation, rows: Int): Morsel = {
+  def create(pipeline: PipelineInformation, rows: Int, lastOne: Boolean): Morsel = {
     val longs = new Array[Long](rows * pipeline.numberOfLongs)
     val objects = new Array[AnyValue](rows * pipeline.numberOfReferences)
 
-    new Morsel(longs, objects, rows)
+    new Morsel(longs, objects, rows, lastOne)
   }
 }
 /*
 The lifetime of a Morsel instance is entirely controlled by the Dispatcher. No operator should create Morsels - they
  should only operate on Morsels provided to them
  */
-class Morsel(val longs: Array[Long], val refs: Array[AnyValue], var validRows: Int) {
+class Morsel(val longs: Array[Long], val refs: Array[AnyValue], var validRows: Int, var lastOne: Boolean) {
 
   override def toString = s"Morsel(validRows=$validRows)"
 }

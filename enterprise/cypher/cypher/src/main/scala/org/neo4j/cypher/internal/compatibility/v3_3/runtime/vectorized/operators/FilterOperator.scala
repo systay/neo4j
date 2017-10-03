@@ -32,28 +32,29 @@ class FilterOperator(pipeline: PipelineInformation, predicate: Predicate) extend
 
   override def init(state: QueryState, context: QueryContext): Unit = {}
 
-  override def operate(morsel: Morsel, context: QueryContext, state: QueryState): Morsel = {
+  override def operate(morsel: Morsel, context: QueryContext, state: QueryState): ReturnType = {
     var readingPos = 0
     var writingPos = 0
     val longCount = pipeline.numberOfLongs
     val refCount = pipeline.numberOfReferences
-    val currentRow = new MorselExecutionContext(morsel, longCount, refCount, 0)
+    val currentRow = new MorselExecutionContext(morsel, longCount, refCount, currentRow = readingPos)
     val longs = morsel.longs
     val objects = morsel.refs
     val queryState = new OldQueryState(context, resources = null, params = state.params)
 
-    while (readingPos < morsel.rows) {
-      System.arraycopy(morsel.longs, readingPos * longCount, longs, longCount * writingPos, longCount)
-      System.arraycopy(morsel.refs, readingPos * refCount, objects, refCount * writingPos, refCount)
-
+    while (readingPos < morsel.validRows) {
+      currentRow.currentRow = readingPos
       if (predicate.isTrue(currentRow)(state = queryState)) {
+        System.arraycopy(morsel.longs, readingPos * longCount, longs, longCount * writingPos, longCount)
+        System.arraycopy(morsel.refs, readingPos * refCount, objects, refCount * writingPos, refCount)
         writingPos += 1
       }
       readingPos += 1
       currentRow.currentRow = readingPos
     }
 
-    morsel.rows = writingPos
-    morsel
+    morsel.validRows = writingPos
+
+    MorselType
   }
 }

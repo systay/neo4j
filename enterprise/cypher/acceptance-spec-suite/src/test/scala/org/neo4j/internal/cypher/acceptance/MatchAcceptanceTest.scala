@@ -34,38 +34,56 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     println("creating graph")
 
-    val NODES = 1000
-    val EDGES = 100000
+    val n1 = createNode()
+    relate(n1, createNode())
+    relate(n1, createNode())
+    relate(n1, createNode())
+    val n2 = createNode()
+    relate(n2, createNode())
+    relate(n2, createNode())
+    relate(n2, createNode())
+    val n3 = createNode()
+    relate(n3, createNode())
+    relate(n3, createNode())
+    relate(n3, createNode())
+    val n4 = createNode()
+    relate(n4, createNode())
+    relate(n4, createNode())
+    relate(n4, createNode())
 
-    val nodes = (0 to NODES).map(x =>
-      createNode("x" -> x)
-    ).toArray
-
-    val r = new Random()
-
-    graph.inTx {
-      (0 to EDGES).foreach( _ => {
-        val lhs = nodes(r.nextInt(NODES))
-        val rhs = nodes(r.nextInt(NODES))
-        relate(lhs, rhs)
-      })
-    }
+//    val NODES = 10
+//    val EDGES = 100
+//    createNode()
+//    val nodes = (0 to NODES).map(x =>
+//      createNode("x" -> x, "y" -> 12)
+//    ).toArray
+//
+//    val r = new Random()
+//
+//    graph.inTx {
+//      (0 to EDGES).foreach( _ => {
+//        val lhs = nodes(r.nextInt(NODES))
+//        val rhs = nodes(r.nextInt(NODES))
+//        relate(lhs, rhs)
+//      })
+//    }
 
     println("running query")
-    val res = graph.execute("cypher runtime=interpreted match (a) where a.x > 750 return a")
-    res.accept(new ResultVisitor[RuntimeException] {
-      override def visit(row: Result.ResultRow): Boolean = {
-        println(s"${row.getNode("a")} from thread ${Thread.currentThread().getName}")
-        true
-      }
-    })
+    val q = "cypher runtime=interpreted match (a)-->(b) return a, b"
+//    val res = graph.execute(q)
+//    res.accept(new ResultVisitor[RuntimeException] {
+//      override def visit(row: Result.ResultRow): Boolean = {
+//        println(s"${row.getNode("a")} ${row.getNode("b")} from thread ${Thread.currentThread().getName}")
+//        true
+//      }
+//    })
 
-    if (false) {
+    if (true) {
       val threads =
         0 to 10 map { _ =>
           val thread = new Thread(new Runnable {
             override def run(): Unit = {
-              val result = graph.execute("cypher runtime=interpreted match (a) where a.x > 750 return a")
+              val result = graph.execute(q)
               result.accept(new ResultVisitor[RuntimeException] {
                 override def visit(row: Result.ResultRow): Boolean = {
                   //                println(s"${row.getNode("a")} from thread ${Thread.currentThread().getName}")

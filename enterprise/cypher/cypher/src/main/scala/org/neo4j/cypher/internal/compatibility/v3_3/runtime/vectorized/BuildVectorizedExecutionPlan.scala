@@ -118,7 +118,7 @@ class VectorizedOperatorExecutionResult(operators: Pipeline,
   override def notifications: Iterable[Notification] = ???
 
   override def accept[E <: Exception](visitor: Result.ResultVisitor[E]): Unit = {
-    Dispatcher.instance.run(operators, visitor, queryContext, pipelineInformation.values.head, params)
+    Dispatcher.instance.run(operators, visitor, queryContext, pipelineInformation(logicalPlan.assignedId), params)
   }
 
   override def withNotifications(notification: Notification*): InternalExecutionResult = this

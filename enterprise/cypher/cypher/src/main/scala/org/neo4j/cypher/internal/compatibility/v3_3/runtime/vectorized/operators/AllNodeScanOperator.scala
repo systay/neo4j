@@ -20,47 +20,41 @@
 package org.neo4j.cypher.internal.compatibility.v3_3.runtime.vectorized.operators
 
 import org.neo4j.collection.primitive.PrimitiveLongIterator
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.PipelineInformation
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.LazyType
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.vectorized.{Morsel, Operator, QueryState}
-import org.neo4j.cypher.internal.frontend.v3_3.{InternalException, SemanticDirection}
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.vectorized._
 import org.neo4j.cypher.internal.spi.v3_3.QueryContext
 
-class AllNodeScanOperator(longsPerRow: Int, refsPerRow: Int, offset: Int) extends Operator {
+class AllNodeScanOperator(longsPerRow: Int, refsPerRow: Int, offset: Int) extends LeafOperator {
 
   override def init(state: QueryState, context: QueryContext): Unit = {
     state.operatorState(this) = context.nodeOps.allPrimitive
   }
 
-  override def operate(data: Morsel, context: QueryContext, state: QueryState): Morsel = {
-    val nodeIterator = state.operatorState.getOrElse(this,
-      throw new InternalException("Operator not initiatied correctly")).asInstanceOf[PrimitiveLongIterator]
+  def operate(source: Continuation,
+              data: Morsel,
+              context: QueryContext,
+              state: QueryState): (ReturnType, Continuation) = {
+    val nodeIterator = source match {
+      case Init =>
+        context.nodeOps.allPrimitive
+      case ContinueWithSource(it) =>
+        it.asInstanceOf[PrimitiveLongIterator]
+    }
 
     val longs: Array[Long] = data.longs
 
     var processedRows = 0
-    while (nodeIterator.hasNext && processedRows < data.rows) {
+    while (nodeIterator.hasNext && processedRows < data.validRows) {
       longs(processedRows * longsPerRow + offset) = nodeIterator.next()
       processedRows += 1
     }
 
-    data.moreDataToCome = nodeIterator.hasNext
-    data.rows = processedRows
+    data.validRows = processedRows
 
-    data
+    val next = if(nodeIterator.hasNext)
+      ContinueWithSource(nodeIterator)
+    else
+      Done
+
+    (MorselType, next)
   }
-}
-
-class ExpandAllOperator(pipelineInformation: PipelineInformation,
-                        fromOffset: Int,
-                        relOffset: Int,
-                        toOffset: Int,
-                        dir: SemanticDirection,
-                        types: LazyType) extends Operator {
-  override def operate(data: Morsel, context: QueryContext, state: QueryState): Morsel = ???
-//  {
-
-//  }
-
-  override def init(state: QueryState, context: QueryContext): Unit = {}
 }

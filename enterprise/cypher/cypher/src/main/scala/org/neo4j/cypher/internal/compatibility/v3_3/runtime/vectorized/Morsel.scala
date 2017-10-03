@@ -28,11 +28,14 @@ object Morsel {
     val longs = new Array[Long](rows * pipeline.numberOfLongs)
     val objects = new Array[AnyValue](rows * pipeline.numberOfReferences)
 
-    new Morsel(longs, objects, rows, moreDataToCome = true)
+    new Morsel(longs, objects, rows)
   }
 }
 /*
 The lifetime of a Morsel instance is entirely controlled by the Dispatcher. No operator should create Morsels - they
  should only operate on Morsels provided to them
  */
-class Morsel(val longs: Array[Long], val refs: Array[AnyValue], var rows: Int, var moreDataToCome: Boolean)
+class Morsel(val longs: Array[Long], val refs: Array[AnyValue], var validRows: Int) {
+
+  override def toString = s"Morsel(validRows=$validRows)"
+}

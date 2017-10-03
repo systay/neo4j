@@ -2,13 +2,21 @@ package org.neo4j.cypher.internal.compatibility.v3_3.runtime.vectorized
 
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.PipelineInformation
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.ExpressionConverters
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.vectorized.operators.{AllNodeScanOperator, FilterOperator}
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.LazyTypes
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.vectorized.operators.{AllNodeScanOperator, ExpandAllOperator, FilterOperator}
 import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans
 import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans._
+import org.neo4j.cypher.internal.frontend.v3_3.SemanticTable
 import org.neo4j.cypher.internal.ir.v3_3.IdName
 
 class PipelineBuilder(pipelines: Map[LogicalPlanId, PipelineInformation], converters: ExpressionConverters)
   extends TreeBuilder[Pipeline] {
+
+  override def create(plan: LogicalPlan): Pipeline = {
+    val pipeline = super.create(plan)
+    pipeline.construct
+  }
+
   override protected def build(plan: LogicalPlan): Pipeline = {
     val pipeline = pipelines(plan.assignedId)
 
@@ -21,7 +29,7 @@ class PipelineBuilder(pipelines: Map[LogicalPlanId, PipelineInformation], conver
 
     }
 
-    Pipeline(Seq(thisOp), pipeline, Set.empty)
+    Pipeline(thisOp, Seq.empty, pipeline, Set.empty)()
   }
 
   override protected def build(plan: LogicalPlan, source: Pipeline): Pipeline = {
@@ -30,19 +38,26 @@ class PipelineBuilder(pipelines: Map[LogicalPlanId, PipelineInformation], conver
     if(plan.isInstanceOf[ProduceResult])
       source
     else {
-      val thisOp: Operator = plan match {
+      val thisOp = plan match {
         case plans.Selection(predicates, _) =>
           val predicate = converters.toCommandPredicate(predicates.head)
           new FilterOperator(pipeline, predicate)
 
-        case plans.Expand(_, IdName(from), dir, types, IdName(to), IdName(relName), ExpandAll) =>
-          ???
+        case plans.Expand(lhs, IdName(from), dir, types, IdName(to), IdName(relName), ExpandAll) =>
+          val fromOffset = pipeline.getLongOffsetFor(from)
+          val relOffset = pipeline.getLongOffsetFor(relName)
+          val toOffset = pipeline.getLongOffsetFor(to)
+          val fromPipe = pipelines(lhs.assignedId)
+          new ExpandAllOperator(pipeline, fromPipe, fromOffset, relOffset, toOffset, dir, LazyTypes(types)(SemanticTable()))
       }
 
-      source.copy(operators = source.operators :+ thisOp)
+      thisOp match {
+        case op: Operator =>
+          source.addOperator(op)
+        case breaker: LeafOperator =>
+          Pipeline(breaker, Seq.empty, pipeline, Set(source))()
+      }
     }
-
-
   }
 
   override protected def build(plan: LogicalPlan, lhs: Pipeline, rhs: Pipeline): Pipeline = ???

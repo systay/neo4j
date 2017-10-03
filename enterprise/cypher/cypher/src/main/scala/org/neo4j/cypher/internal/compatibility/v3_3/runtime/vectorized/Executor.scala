@@ -20,9 +20,8 @@
 package org.neo4j.cypher.internal.compatibility.v3_3.runtime.vectorized
 
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.PipelineInformation
-import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans.{LogicalPlan, LogicalPlanId, TreeBuilder}
-import org.neo4j.cypher.internal.frontend.v3_3.InternalException
 import org.neo4j.cypher.internal.spi.v3_3.QueryContext
+import org.neo4j.cypher.internal.v3_3.logical.plans.{LogicalPlan, LogicalPlanId, TreeBuilder}
 import org.neo4j.graphdb.Result
 import org.neo4j.values.virtual.MapValue
 

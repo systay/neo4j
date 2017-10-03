@@ -27,16 +27,16 @@ import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.{Co
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.compiled.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.executionplan.{ExecutionPlan, InternalQueryType, READ_ONLY}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.phases.CompilationState
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription.{InternalPlanDescription, LogicalPlanIdentificationBuilder}
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription.InternalPlanDescription
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.slotted.expressions.SlottedExpressionConverters
 import org.neo4j.cypher.internal.compiler.v3_3.phases.LogicalPlanState
-import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans._
 import org.neo4j.cypher.internal.compiler.v3_3.spi.{GraphStatistics, PlanContext}
 import org.neo4j.cypher.internal.frontend.v3_3.PlannerName
 import org.neo4j.cypher.internal.frontend.v3_3.notification.InternalNotification
 import org.neo4j.cypher.internal.frontend.v3_3.phases.CompilationPhaseTracer.CompilationPhase
 import org.neo4j.cypher.internal.frontend.v3_3.phases.{CompilationPhaseTracer, Condition, Phase}
 import org.neo4j.cypher.internal.spi.v3_3.QueryContext
+import org.neo4j.cypher.internal.v3_3.logical.plans.{LogicalPlan, LogicalPlanId}
 import org.neo4j.cypher.internal.{InternalExecutionResult, QueryStatistics}
 import org.neo4j.cypher.result.QueryResult
 import org.neo4j.graphdb._
@@ -49,7 +49,6 @@ object BuildVectorizedExecutionPlan extends Phase[EnterpriseRuntimeContext, Logi
 
   override def process(from: LogicalPlanState, context: EnterpriseRuntimeContext): CompilationState = {
     val (physicalPlan, pipelines) = rewritePlan(context, from.logicalPlan)
-    val idMap = LogicalPlanIdentificationBuilder(physicalPlan)
     val converters: ExpressionConverters = new ExpressionConverters(SlottedExpressionConverters, CommunityExpressionConverter)
 
     val operatorBuilder = new PipelineBuilder(pipelines, converters)
@@ -59,7 +58,6 @@ object BuildVectorizedExecutionPlan extends Phase[EnterpriseRuntimeContext, Logi
   }
 
   private def rewritePlan(context: EnterpriseRuntimeContext, beforeRewrite: LogicalPlan) = {
-    beforeRewrite.assignIds()
     val pipelines: Map[LogicalPlanId, PipelineInformation] = SlotAllocation.allocateSlots(beforeRewrite)
     val slottedRewriter = new SlottedRewriter(context.planContext)
     val logicalPlan = slottedRewriter(beforeRewrite, pipelines)

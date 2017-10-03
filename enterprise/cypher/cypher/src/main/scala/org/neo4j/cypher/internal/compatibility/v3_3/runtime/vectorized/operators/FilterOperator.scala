@@ -44,7 +44,7 @@ class FilterOperator(pipeline: PipelineInformation, predicate: Predicate) extend
 
     while (readingPos < morsel.validRows) {
       currentRow.currentRow = readingPos
-      if (predicate.isTrue(currentRow)(state = queryState)) {
+      if (predicate.isTrue(currentRow, queryState)) {
         System.arraycopy(morsel.longs, readingPos * longCount, longs, longCount * writingPos, longCount)
         System.arraycopy(morsel.refs, readingPos * refCount, objects, refCount * writingPos, refCount)
         writingPos += 1

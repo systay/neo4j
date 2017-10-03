@@ -26,6 +26,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -60,17 +61,17 @@ public class LuceneSchemaIndexPopulationIT
     @Rule
     public final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
 
-    private int affectedNodes;
+    private final int affectedNodes;
     private final IndexDescriptor descriptor = IndexDescriptorFactory.uniqueForLabel( 0, 0 );
 
     @Before
-    public void before() throws Exception
+    public void before()
     {
         System.setProperty( "luceneSchemaIndex.maxPartitionSize", "10" );
     }
 
     @After
-    public void after() throws IOException
+    public void after()
     {
         System.setProperty( "luceneSchemaIndex.maxPartitionSize", "" );
     }
@@ -91,8 +92,7 @@ public class LuceneSchemaIndexPopulationIT
     {
         try ( SchemaIndex uniqueIndex = LuceneSchemaIndexBuilder.create( descriptor )
                 .withFileSystem( fileSystemRule.get() )
-                .withIndexRootFolder( testDir.directory( "partitionIndex" + affectedNodes ) )
-                .withIndexIdentifier( "uniqueIndex" + affectedNodes )
+                .withIndexRootFolder( new File( testDir.directory( "partitionIndex" + affectedNodes ), "uniqueIndex" + affectedNodes ) )
                 .build() )
         {
             uniqueIndex.open();
@@ -136,7 +136,7 @@ public class LuceneSchemaIndexPopulationIT
         }
     }
 
-    private IndexEntryUpdate add( long nodeId, Object value )
+    private IndexEntryUpdate<?> add( long nodeId, Object value )
     {
         return IndexEntryUpdate.add( nodeId, descriptor.schema(), Values.of( value ) );
     }

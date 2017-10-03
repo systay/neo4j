@@ -23,13 +23,13 @@ import org.neo4j.cypher.internal.compatibility.v3_3.runtime.ExecutionContext
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.expressions.Expression
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.executionplan.ProcedureCallMode
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.helpers.ValueConversion
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription.Id
-import org.neo4j.cypher.internal.compiler.v3_3.spi.ProcedureSignature
+import org.neo4j.cypher.internal.v3_3.logical.plans.LogicalPlanId
 import org.neo4j.cypher.internal.frontend.v3_3.symbols.CypherType
+import org.neo4j.cypher.internal.v3_3.logical.plans.ProcedureSignature
 import org.neo4j.values.AnyValue
 
 object ProcedureCallRowProcessing {
-  def apply(signature: ProcedureSignature) =
+  def apply(signature: ProcedureSignature): ProcedureCallRowProcessing =
     if (signature.isVoid) PassThroughRow else FlatMapAndAppendToRow
 }
 
@@ -45,7 +45,7 @@ case class ProcedureCallPipe(source: Pipe,
                              rowProcessing: ProcedureCallRowProcessing,
                              resultSymbols: Seq[(String, CypherType)],
                              resultIndices: Seq[(Int, String)])
-                            (val id: Id = new Id)
+                            (val id: LogicalPlanId = LogicalPlanId.DEFAULT)
 
   extends PipeWithSource(source) {
 
@@ -57,17 +57,14 @@ case class ProcedureCallPipe(source: Pipe,
     case PassThroughRow => internalCreateResultsByPassingThrough _
   }
 
-  override protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
-
-    rowProcessor(input, state)
-  }
+  override protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = rowProcessor(input, state)
 
   private def internalCreateResultsByAppending(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
     val qtx = state.query
     val builder = Seq.newBuilder[(String, AnyValue)]
     builder.sizeHint(resultIndices.length)
     input flatMap { input =>
-      val argValues = argExprs.map(arg => qtx.asObject(arg(input)(state)))
+      val argValues = argExprs.map(arg => qtx.asObject(arg(input, state)))
       val results = callMode.callProcedure(qtx, signature.name, argValues)
       results map { resultValues =>
         resultIndices foreach { case (k, v) =>
@@ -85,7 +82,7 @@ case class ProcedureCallPipe(source: Pipe,
   private def internalCreateResultsByPassingThrough(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
     val qtx = state.query
     input map { input =>
-      val argValues = argExprs.map(arg => qtx.asObject(arg(input)(state)))
+      val argValues = argExprs.map(arg => qtx.asObject(arg(input, state)))
       val results = callMode.callProcedure(qtx, signature.name, argValues)
       // the iterator here should be empty; we'll drain just in case
       while (results.hasNext) results.next()

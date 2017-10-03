@@ -62,7 +62,7 @@ public class RaftMachineBuilder
             getInstance() );
 
     private Inbound<RaftMessages.RaftMessage> inbound = handler -> {};
-    private Outbound<MemberId, RaftMessages.RaftMessage> outbound = ( to, message ) -> {};
+    private Outbound<MemberId, RaftMessages.RaftMessage> outbound = ( to, message, block ) -> {};
 
     private LogProvider logProvider = NullLogProvider.getInstance();
     private Clock clock = Clocks.systemClock();
@@ -100,7 +100,7 @@ public class RaftMachineBuilder
         RaftMachine raft = new RaftMachine( member, termState, voteState, raftLog, electionTimeout,
                 heartbeatInterval, renewableTimeoutService, outbound, logProvider,
                 membershipManager, logShipping, inFlightMap, false, monitors, clock );
-        inbound.registerHandler( ( incomingMessage ) ->
+        inbound.registerHandler( incomingMessage ->
         {
             try
             {

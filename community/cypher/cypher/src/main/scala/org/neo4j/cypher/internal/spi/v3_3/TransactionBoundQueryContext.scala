@@ -32,12 +32,12 @@ import org.neo4j.cypher.internal.compatibility.v3_3.runtime.helpers.JavaConversi
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.helpers.JavaConversionSupport._
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.matching.PatternNode
 import org.neo4j.cypher.internal.compiler.v3_3.MinMaxOrdering._
-import org.neo4j.cypher.internal.compiler.v3_3.spi.QualifiedName
 import org.neo4j.cypher.internal.compiler.v3_3.{IndexDescriptor, _}
 import org.neo4j.cypher.internal.frontend.v3_3._
-import org.neo4j.cypher.internal.javacompat.{NodeProxyWrappingNodeValue, RelationshipProxyWrappingEdgeValue, ValueToObjectSerializer}
+import org.neo4j.cypher.internal.javacompat.ValueToObjectSerializer
 import org.neo4j.cypher.internal.spi.BeansAPIRelationshipIterator
 import org.neo4j.cypher.internal.spi.v3_3.TransactionBoundQueryContext.IndexSearchMonitor
+import org.neo4j.cypher.internal.v3_3.logical.plans.QualifiedName
 import org.neo4j.cypher.javacompat.internal.GraphDatabaseCypherService
 import org.neo4j.cypher.{InternalException, internal}
 import org.neo4j.graphalgo.impl.path.ShortestPath
@@ -46,6 +46,7 @@ import org.neo4j.graphdb.RelationshipType._
 import org.neo4j.graphdb._
 import org.neo4j.graphdb.security.URLAccessValidationError
 import org.neo4j.graphdb.traversal.{Evaluators, TraversalDescription, Uniqueness}
+import org.neo4j.helpers.{NodeProxyWrappingNodeValue, RelationshipProxyWrappingEdgeValue}
 import org.neo4j.kernel.GraphDatabaseQueryService
 import org.neo4j.kernel.api._
 import org.neo4j.kernel.api.exceptions.ProcedureException
@@ -396,10 +397,10 @@ final class TransactionBoundQueryContext(val transactionalContext: Transactional
       transactionalContext.statement.readOperations().nodesGetAll()
 
     override def indexGet(name: String, key: String, value: Any): Iterator[Node] =
-      JavaConversionSupport.mapToScalaENFXSafe(transactionalContext.statement.readOperations().nodeLegacyIndexGet(name, key, value))(getById)
+      JavaConversionSupport.mapToScalaENFXSafe(transactionalContext.statement.readOperations().nodeExplicitIndexGet(name, key, value))(getById)
 
     override def indexQuery(name: String, query: Any): Iterator[Node] =
-      JavaConversionSupport.mapToScalaENFXSafe(transactionalContext.statement.readOperations().nodeLegacyIndexQuery(name, query))(getById)
+      JavaConversionSupport.mapToScalaENFXSafe(transactionalContext.statement.readOperations().nodeExplicitIndexQuery(name, query))(getById)
 
     override def isDeletedInThisTx(id: Long): Boolean = transactionalContext.stateView.hasTxStateWithChanges && transactionalContext.stateView.txState().nodeIsDeletedInThisTx(id)
 
@@ -493,10 +494,10 @@ final class TransactionBoundQueryContext(val transactionalContext: Transactional
       transactionalContext.statement.readOperations().relationshipsGetAll()
 
     override def indexGet(name: String, key: String, value: Any): Iterator[Relationship] =
-      JavaConversionSupport.mapToScalaENFXSafe(transactionalContext.statement.readOperations().relationshipLegacyIndexGet(name, key, value, -1, -1))(getById)
+      JavaConversionSupport.mapToScalaENFXSafe(transactionalContext.statement.readOperations().relationshipExplicitIndexGet(name, key, value, -1, -1))(getById)
 
     override def indexQuery(name: String, query: Any): Iterator[Relationship] =
-      JavaConversionSupport.mapToScalaENFXSafe(transactionalContext.statement.readOperations().relationshipLegacyIndexQuery(name, query, -1, -1))(getById)
+      JavaConversionSupport.mapToScalaENFXSafe(transactionalContext.statement.readOperations().relationshipExplicitIndexQuery(name, query, -1, -1))(getById)
 
     override def isDeletedInThisTx(id: Long): Boolean =
       transactionalContext.stateView.hasTxStateWithChanges && transactionalContext.stateView.txState().relationshipIsDeletedInThisTx(id)

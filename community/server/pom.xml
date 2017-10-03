@@ -46,7 +46,7 @@
     <docs-plugin.filter>true</docs-plugin.filter>
 
     <neo4j.version>${project.version}</neo4j.version>
-    <neo4j-browser.version>3.0.7</neo4j-browser.version>
+    <neo4j-browser.version>3.0.10</neo4j-browser.version>
 
     <neo4j-server.mainClass>org.neo4j.server.CommunityEntryPoint</neo4j-server.mainClass>
     <neo-server.home>target/generated-resources/appassembler/jsw</neo-server.home>
@@ -182,11 +182,6 @@
       <artifactId>commons-configuration</artifactId>
     </dependency>
 
-    <!-- Added directly to avoid version clash in commons-configuration. -->
-    <dependency>
-      <groupId>commons-digester</groupId>
-      <artifactId>commons-digester</artifactId>
-    </dependency>
 
     <dependency>
       <groupId>commons-io</groupId>

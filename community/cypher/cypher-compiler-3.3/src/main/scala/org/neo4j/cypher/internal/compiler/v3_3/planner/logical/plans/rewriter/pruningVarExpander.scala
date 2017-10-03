@@ -19,9 +19,9 @@
  */
 package org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans.rewriter
 
-import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans._
 import org.neo4j.cypher.internal.frontend.v3_3.ast.{Expression, FunctionInvocation}
 import org.neo4j.cypher.internal.frontend.v3_3.{Rewriter, topDown}
+import org.neo4j.cypher.internal.v3_3.logical.plans._
 
 import scala.collection.mutable
 
@@ -34,8 +34,10 @@ case object pruningVarExpander extends Rewriter {
                            dependencies: Option[Set[String]]): Option[Set[String]] = {
 
       val lowerDistinctLand: Option[Set[String]] = plan match {
-        case Aggregation(_, groupExpr, aggrExpr) if aggrExpr.values.forall(isDistinct) =>
+        case Distinct(_, groupExpr) =>
+          Some(groupExpr.values.flatMap(_.dependencies.map(_.name)).toSet)
 
+        case Aggregation(_, groupExpr, aggrExpr) if aggrExpr.values.forall(isDistinct) =>
           val variablesInTheDistinctSet = (groupExpr.values.flatMap(_.dependencies.map(_.name)) ++
             aggrExpr.values.flatMap(_.dependencies.map(_.name))).toSet
           Some(variablesInTheDistinctSet)

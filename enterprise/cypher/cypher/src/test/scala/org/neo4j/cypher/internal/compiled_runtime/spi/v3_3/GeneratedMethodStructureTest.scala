@@ -177,7 +177,7 @@ class GeneratedMethodStructureTest extends CypherFunSuite {
       m.declareAndInitialize("from", CodeGenType.primitiveNode)
       m.declareAndInitialize("to", CodeGenType.primitiveNode)
       val local = m.generator.declare(typeRef[RelationshipIterator], "iter")
-      Templates.handleKernelExceptions(m.generator, m.fields.ro, m.finalizers) { body =>
+      Templates.handleKernelExceptions(m.generator, m.fields, m.finalizers) { body =>
         body.assign(local, Expression.invoke(Methods.allConnectingRelationships,
                                              Expression.get(m.generator.self(), m.fields.ro), body.load("from"),
                                              Templates.outgoing,
@@ -188,7 +188,7 @@ class GeneratedMethodStructureTest extends CypherFunSuite {
       m.declareAndInitialize("from", CodeGenType.primitiveNode)
       m.declareAndInitialize("to", CodeGenType.primitiveNode)
       val local = m.generator.declare(typeRef[RelationshipIterator], "iter")
-      Templates.handleKernelExceptions(m.generator, m.fields.ro, m.finalizers) { body =>
+      Templates.handleKernelExceptions(m.generator, m.fields, m.finalizers) { body =>
         body.assign(local, Expression.invoke(Methods.connectingRelationships,
                                              Expression.get(m.generator.self(), m.fields.ro), body.load("from"),
                                              Templates.outgoing,
@@ -224,7 +224,7 @@ class GeneratedMethodStructureTest extends CypherFunSuite {
   private def codeGenerator[E](block: GeneratedMethodStructure => Unit, mode: CodeGenerationStrategy[_]) = {
     val codeGen = CodeGenerator.generateCode(classOf[CodeStructure[_]].getClassLoader, mode)
     val packageName = "foo"
-    implicit val context = new CodeGenContext(SemanticTable(), Map.empty, Map.empty)
+    implicit val context = new CodeGenContext(SemanticTable(), Map.empty)
     val clazz = using(codeGen.generateClass(packageName, "Test")) { body =>
       val fields = Fields(
         closer = body.field(typeRef[TaskCloser], "closer"),
@@ -235,7 +235,8 @@ class GeneratedMethodStructureTest extends CypherFunSuite {
         tracer = body.field(typeRef[QueryExecutionTracer], "tracer"),
         params = body.field(typeRef[util.Map[String, Object]], "params"),
         closeable = body.field(typeRef[Completable], "closeable"),
-        queryContext = body.field(typeRef[QueryContext], "queryContext"))
+        queryContext = body.field(typeRef[QueryContext], "queryContext"),
+        skip = body.field(typeRef[Boolean], "skip"))
       // the "COLUMNS" static field
       body.staticField(typeRef[util.List[String]], "COLUMNS", Templates.asList[String](Seq.empty))
       using(body.generate(MethodDeclaration.method(typeRef[Unit], "foo"))) { methodBody =>

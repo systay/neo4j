@@ -8,8 +8,6 @@ Apache Software License, Version 2.0
   Apache Commons Lang
   Apache Commons Text
   Caffeine cache
-  Commons BeanUtils
-  Commons Digester
   Commons IO
   Commons Lang
   Commons Logging
@@ -283,7 +281,10 @@ SUCH DAMAGE.
 
 ------------------------------------------------------------------------------
 BSD License
+  ASM Analysis
   ASM Core
+  ASM Tree
+  ASM Util
   JLine
   Scala Compiler
 ------------------------------------------------------------------------------

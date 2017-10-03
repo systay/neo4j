@@ -21,6 +21,7 @@ package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.graphdb.Node
+import org.neo4j.internal.cypher.acceptance.CypherComparisonSupport.{ComparePlansWithAssertion, Configs}
 import org.neo4j.kernel.GraphDatabaseQueryService
 import org.scalatest.matchers.{MatchResult, Matcher}
 
@@ -43,7 +44,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     graph should haveIndexes(":Person(firstname)", ":Person(firstname,lastname)")
 
     // When
-    succeedWith(Configs.Procs, "DROP INDEX ON :Person(firstname , lastname)")
+    executeWith(Configs.Procs, "DROP INDEX ON :Person(firstname , lastname)")
 
     // Then
     graph should haveIndexes(":Person(firstname)")
@@ -54,33 +55,39 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     // Given
     graph.createIndex("User", "firstname","lastname")
     val n1 = createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Soap"), "User")
-    val n2 = createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Smoke"), "User")
-    val n3 = createLabeledNode(Map("firstname" -> "Jake", "lastname" -> "Soap"), "User")
+    createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Smoke"), "User")
+    createLabeledNode(Map("firstname" -> "Jake", "lastname" -> "Soap"), "User")
 
     // When
-    val result = succeedWith(Configs.Interpreted, "MATCH (n:User) WHERE n.lastname = 'Soap' AND n.firstname = 'Joe' RETURN n")
+    val result = executeWith(Configs.Interpreted, "MATCH (n:User) WHERE n.lastname = 'Soap' AND n.firstname = 'Joe' RETURN n",
+      planComparisonStrategy = ComparePlansWithAssertion((plan) => {
+        //THEN
+        plan should useOperators("NodeIndexSeek")
+      }, Configs.AllRulePlanners + Configs.Cost))
 
     // Then
-    result should use("NodeIndexSeek")
     result.toComparableResult should equal(List(Map("n" -> n1)))
   }
 
   test("should not use composite index when not all predicates are present") {
     // Given
     graph.createIndex("User", "firstname","lastname")
-    val n1 = createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Soap"), "User")
-    val n2 = createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Smoke"), "User")
+    createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Soap"), "User")
+    createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Smoke"), "User")
     val n3 = createLabeledNode(Map("firstname" -> "Jake", "lastname" -> "Soap"), "User")
-    for (i <- 1 to 100) {
+    for (_ <- 1 to 100) {
       createLabeledNode(Map("firstname" -> "Joe"), "User")
       createLabeledNode(Map("lastname" -> "Soap"), "User")
     }
 
     // When
-    val result = succeedWith(Configs.All, "MATCH (n:User) WHERE n.firstname = 'Jake' RETURN n")
+    val result = executeWith(Configs.All, "MATCH (n:User) WHERE n.firstname = 'Jake' RETURN n",
+      planComparisonStrategy = ComparePlansWithAssertion((plan) => {
+        //THEN
+        plan should not(useOperators("NodeIndexSeek"))
+      }))
 
     // Then
-    result should not(use("NodeIndexSeek"))
     result.toComparableResult should equal(List(Map("n" -> n3)))
   }
 
@@ -90,20 +97,23 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     graph.createIndex("User", "lastname")
     graph.createIndex("User", "firstname","lastname")
     val n1 = createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Soap"), "User")
-    val n2 = createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Smoke"), "User")
-    val n3 = createLabeledNode(Map("firstname" -> "Jake", "lastname" -> "Soap"), "User")
-    for (i <- 1 to 100) {
+    createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Smoke"), "User")
+    createLabeledNode(Map("firstname" -> "Jake", "lastname" -> "Soap"), "User")
+    for (_ <- 1 to 100) {
       createLabeledNode("User")
       createLabeledNode("User")
     }
 
     // When
-    val result = succeedWith(Configs.Interpreted, "MATCH (n:User) WHERE n.lastname = 'Soap' AND n.firstname = 'Joe' RETURN n")
+    val result = executeWith(Configs.Interpreted, "MATCH (n:User) WHERE n.lastname = 'Soap' AND n.firstname = 'Joe' RETURN n",
+      planComparisonStrategy = ComparePlansWithAssertion((plan) => {
+        //THEN
+        plan should useOperatorWithText("NodeIndexSeek", ":User(firstname,lastname)")
+        plan should not(useOperatorWithText("NodeIndexSeek", ":User(firstname)"))
+        plan should not(useOperatorWithText("NodeIndexSeek", ":User(lastname)"))
+      }, Configs.AllRulePlanners + Configs.Cost))
 
     // Then
-    result should useIndex(":User(firstname,lastname)")
-    result should not(useIndex(":User(firstname)"))
-    result should not(useIndex(":User(lastname)"))
     result.toComparableResult should equal(List(Map("n" -> n1)))
   }
 
@@ -113,26 +123,28 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     graph.createIndex("User", "lastname")
     graph.createIndex("User", "firstname","lastname")
     val n1 = createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Soap"), "User")
-    val n2 = createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Smoke"), "User")
-    val n3 = createLabeledNode(Map("firstname" -> "Jake", "lastname" -> "Soap"), "User")
-    for (i <- 1 to 100) {
+    createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Smoke"), "User")
+    createLabeledNode(Map("firstname" -> "Jake", "lastname" -> "Soap"), "User")
+    for (_ <- 1 to 100) {
       createLabeledNode("User")
       createLabeledNode("User")
     }
 
     // When
-    val result = succeedWith(Configs.All,
-      """
-        |MATCH (n:User)
-        |USING INDEX n:User(lastname)
-        |WHERE n.lastname = 'Soap' AND n.firstname = 'Joe'
-        |RETURN n
-        |""".stripMargin)
+    val result = executeWith(Configs.All, """
+                                            |MATCH (n:User)
+                                            |USING INDEX n:User(lastname)
+                                            |WHERE n.lastname = 'Soap' AND n.firstname = 'Joe'
+                                            |RETURN n
+                                            |""".stripMargin,
+      planComparisonStrategy = ComparePlansWithAssertion((plan) => {
+        //THEN
+        plan should not(useOperatorWithText("NodeIndexSeek", ":User(firstname,lastname)"))
+        plan should not(useOperatorWithText("NodeIndexSeek", ":User(firstname)"))
+        plan should useOperatorWithText("NodeIndexSeek", ":User(lastname)")
+      }, Configs.AllRulePlanners))
 
     // Then
-    result should not(useIndex(":User(firstname,lastname)"))
-    result should not(useIndex(":User(firstname)"))
-    result should useIndex(":User(lastname)")
     result.toComparableResult should equal(List(Map("n" -> n1)))
   }
 
@@ -141,21 +153,24 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     graph.createIndex("User", "firstname")
     graph.createIndex("User", "lastname")
     graph.createIndex("User", "firstname", "lastname")
-    val n1 = createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Soap"), "User")
-    val n2 = createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Smoke"), "User")
+    createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Soap"), "User")
+    createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Smoke"), "User")
     val n3 = createLabeledNode(Map("firstname" -> "Jake", "lastname" -> "Soap"), "User")
-    for (i <- 1 to 100) {
+    for (_ <- 1 to 100) {
       createLabeledNode("User")
       createLabeledNode("User")
     }
 
     // When
-    val result = succeedWith(Configs.Interpreted, "MATCH (n:User) WHERE exists(n.lastname) AND n.firstname = 'Jake' RETURN n")
+    val result = executeWith(Configs.Interpreted, "MATCH (n:User) WHERE exists(n.lastname) AND n.firstname = 'Jake' RETURN n",
+      planComparisonStrategy = ComparePlansWithAssertion((plan) => {
+        //THEN
+        plan should not(useOperatorWithText("NodeIndexSeek", ":User(firstname,lastname)")) // TODO: This should change once scans of indexes is supported
+        plan should not(useOperatorWithText("NodeIndexSeek", ":User(firstname)"))
+        plan should not(useOperatorWithText("NodeIndexSeek", ":User(lastname)"))
+      }))
 
     // Then
-    result should not(useIndex(":User(firstname,lastname)")) // TODO: This should change once scans of indexes is supported
-    result should not(useIndex(":User(firstname)"))
-    result should not(useIndex(":User(lastname)"))
     result.toComparableResult should equal(List(Map("n" -> n3)))
   }
 
@@ -163,18 +178,24 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     graph.createIndex("Person", "firstname", "lastname")
     val n = graph.execute("CREATE (n:Person {firstname:'Joe', lastname:'Soap'}) RETURN n").columnAs("n").next().asInstanceOf[Node]
     graph.execute("MATCH (n:Person) SET n.lastname = 'Bloggs'")
-    val result = succeedWith(Configs.Interpreted, "MATCH (n:Person) where n.firstname = 'Joe' and n.lastname = 'Bloggs' RETURN n")
-    result should use("NodeIndexSeek")
+    val result = executeWith(Configs.Interpreted, "MATCH (n:Person) where n.firstname = 'Joe' and n.lastname = 'Bloggs' RETURN n",
+      planComparisonStrategy = ComparePlansWithAssertion((plan) => {
+        //THEN
+        plan should useOperators("NodeIndexSeek")
+      }, Configs.AllRulePlanners + Configs.Cost))
     result.toComparableResult should equal(List(Map("n" -> n)))
   }
 
   test("should plan a composite index seek for a multiple property predicate expression when index is created after data") {
-    succeedWith(Configs.Interpreted - Configs.Cost2_3, "WITH RANGE(0,10) AS num CREATE (:Person {id:num})") // ensure label cardinality favors index
-    succeedWith(Configs.Interpreted - Configs.Cost2_3, "CREATE (n:Person {firstname:'Joe', lastname:'Soap'})")
+    executeWith(Configs.Interpreted - Configs.Cost2_3, "WITH RANGE(0,10) AS num CREATE (:Person {id:num})") // ensure label cardinality favors index
+    executeWith(Configs.Interpreted - Configs.Cost2_3, "CREATE (n:Person {firstname:'Joe', lastname:'Soap'})")
     graph.createIndex("Person", "firstname")
     graph.createIndex("Person", "firstname", "lastname")
-    val result = succeedWith(Configs.Interpreted, "MATCH (n:Person) WHERE n.firstname = 'Joe' AND n.lastname = 'Soap' RETURN n")
-    result should useIndex(":Person(firstname,lastname)")
+    executeWith(Configs.Interpreted, "MATCH (n:Person) WHERE n.firstname = 'Joe' AND n.lastname = 'Soap' RETURN n",
+      planComparisonStrategy = ComparePlansWithAssertion((plan) => {
+        //THEN
+        plan should useOperatorWithText("NodeIndexSeek", ":Person(firstname,lastname)")
+      }, Configs.AllRulePlanners + Configs.Cost))
   }
 
   test("should use composite index correctly given two IN predicates") {
@@ -188,15 +209,17 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     }
 
     // When
-    val result = succeedWith(Configs.CommunityInterpreted,
-      """MATCH (n:Foo)
-        |WHERE n.bar IN [0,1,2,3,4,5,6,7,8,9]
-        |  AND n.baz IN [0,1,2,3,4,5,6,7,8,9]
-        |RETURN n.idx as x
-        |ORDER BY x""".stripMargin)
+    val result = executeWith(Configs.Interpreted, """MATCH (n:Foo)
+                                                             |WHERE n.bar IN [0,1,2,3,4,5,6,7,8,9]
+                                                             |  AND n.baz IN [0,1,2,3,4,5,6,7,8,9]
+                                                             |RETURN n.idx as x
+                                                             |ORDER BY x""".stripMargin,
+      planComparisonStrategy = ComparePlansWithAssertion((plan) => {
+        //THEN
+        plan should useOperatorWithText("NodeIndexSeek", ":Foo(bar,baz)")
+      }, Configs.AllRulePlanners + Configs.Cost))
 
     // Then
-    result should useIndex(":Foo(bar,baz)")
     result.toComparableResult should equal((0 to 99).map(i => Map("x" -> i)).toList)
   }
 
@@ -209,15 +232,17 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     }
 
     // When
-    val result = succeedWith(Configs.CommunityInterpreted,
-      """MATCH (n:Foo)
-        |WHERE n.bar = 1
-        |  AND n.baz IN [0,1,2,3,4,5,6,7,8,9]
-        |RETURN n.baz as x
-        |ORDER BY x""".stripMargin)
+    val result = executeWith(Configs.Interpreted, """MATCH (n:Foo)
+                                                             |WHERE n.bar = 1
+                                                             |  AND n.baz IN [0,1,2,3,4,5,6,7,8,9]
+                                                             |RETURN n.baz as x
+                                                             |ORDER BY x""".stripMargin,
+      planComparisonStrategy = ComparePlansWithAssertion((plan) => {
+        //THEN
+        plan should useOperatorWithText("NodeIndexSeek", ":Foo(bar,baz)")
+      }, Configs.AllRulePlanners + Configs.Cost))
 
     // Then
-    result should useIndex(":Foo(bar,baz)")
     result.toComparableResult should equal((0 to 9).map(i => Map("x" -> i)).toList)
   }
 
@@ -230,15 +255,17 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     }
 
     // When
-    val result = succeedWith(Configs.CommunityInterpreted,
-      """MATCH (n:Foo)
-        |WHERE n.baz = 1
-        |  AND n.bar IN [0,1,2,3,4,5,6,7,8,9]
-        |RETURN n.bar as x
-        |ORDER BY x""".stripMargin)
+    val result = executeWith(Configs.Interpreted, """MATCH (n:Foo)
+                                                             |WHERE n.baz = 1
+                                                             |  AND n.bar IN [0,1,2,3,4,5,6,7,8,9]
+                                                             |RETURN n.bar as x
+                                                             |ORDER BY x""".stripMargin,
+      planComparisonStrategy = ComparePlansWithAssertion((plan) => {
+        //THEN
+        plan should useOperatorWithText("NodeIndexSeek", ":Foo(bar,baz)")
+      }, Configs.AllRulePlanners + Configs.Cost))
 
     // Then
-    result should useIndex(":Foo(bar,baz)")
     result.toComparableResult should equal(List(Map("x" -> 1), Map("x" -> 3), Map("x" -> 5), Map("x" -> 7), Map("x" -> 9)))
   }
 
@@ -252,9 +279,12 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
     // Then
     graph should haveIndexes(":L(foo,bar,baz)")
-    val result = succeedWith(Configs.Interpreted, "MATCH (n:L {foo: 42, bar: 1337, baz: 1980}) RETURN count(n)")
+    val result = executeWith(Configs.Interpreted, "MATCH (n:L {foo: 42, bar: 1337, baz: 1980}) RETURN count(n)",
+      planComparisonStrategy = ComparePlansWithAssertion((plan) => {
+        //THEN
+        plan should useOperatorWithText("NodeIndexSeek", ":L(foo,bar,baz")
+      }, Configs.AllRulePlanners + Configs.Cost))
     result.toComparableResult should equal(Seq(Map("count(n)" -> 1)))
-    result should useIndex(":L(foo,bar,baz")
   }
 
   test("should handle missing properties when adding to index after creation") {
@@ -267,15 +297,18 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
     // Then
     graph should haveIndexes(":L(foo,bar,baz)")
-    val result = succeedWith(Configs.Interpreted, "MATCH (n:L {foo: 42, bar: 1337, baz: 1980}) RETURN count(n)")
+    val result = executeWith(Configs.Interpreted, "MATCH (n:L {foo: 42, bar: 1337, baz: 1980}) RETURN count(n)",
+      planComparisonStrategy = ComparePlansWithAssertion((plan) => {
+        //THEN
+        plan should useOperatorWithText("NodeIndexSeek", ":L(foo,bar,baz)")
+      }, Configs.AllRulePlanners + Configs.Cost))
     result.toComparableResult should equal(Seq(Map("count(n)" -> 1)))
-    result should useIndex(":L(foo,bar,baz)")
   }
 
   test("should not fail on multiple attempts to create a composite index") {
     // Given
-    succeedWith(Configs.Procs, "CREATE INDEX ON :Person(firstname, lastname)")
-    succeedWith(Configs.Procs, "CREATE INDEX ON :Person(firstname, lastname)")
+    executeWith(Configs.Procs, "CREATE INDEX ON :Person(firstname, lastname)")
+    executeWith(Configs.Procs, "CREATE INDEX ON :Person(firstname, lastname)")
   }
 
   test("should not use range queries against a composite index") {
@@ -284,11 +317,14 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val n = createLabeledNode(Map("p1" -> 1, "p2" -> 1), "X")
 
     // When
-    val result = succeedWith(Configs.Interpreted, "match (n:X) where n.p1 = 1 AND n.p2 > 0 return n;")
+    val result = executeWith(Configs.Interpreted, "match (n:X) where n.p1 = 1 AND n.p2 > 0 return n;",
+      planComparisonStrategy = ComparePlansWithAssertion((plan) => {
+        //THEN
+        plan shouldNot useOperatorWithText("NodeIndexSeek", ":X(p1,p2)")
+      }))
 
     // Then
     result.toComparableResult should equal(Seq(Map("n" -> n)))
-    result shouldNot useIndex(":X(p1,p2)")
   }
 
   test("should not use composite index for range, prefix, contains and exists predicates") {
@@ -314,7 +350,18 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         // When
         val query = s"MATCH (n:User) WHERE $predicates RETURN n"
         val result = try {
-          succeedWith(testConfig, query)
+          if (valid)
+            executeWith(testConfig, query,
+              planComparisonStrategy = ComparePlansWithAssertion((plan) => {
+                //THEN
+                plan should useOperatorWithText("NodeIndexSeek", ":User(name,surname,age,active)")
+              }, Configs.AllRulePlanners + Configs.Cost))
+          else
+            executeWith(testConfig, query,
+              planComparisonStrategy = ComparePlansWithAssertion((plan) => {
+                //THEN
+                plan shouldNot useOperatorWithText("NodeIndexSeek", ":User(name,surname,age,active)")
+              }))
         } catch {
           case e: Exception =>
             System.err.println(query)
@@ -324,10 +371,6 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
           // Then
           result.toComparableResult should equal(Seq(Map("n" -> n)))
-          if (valid)
-            result should useIndex(":User(name,surname,age,active)")
-          else
-            result shouldNot useIndex(":User(name,surname,age,active)")
         } catch {
           case e: Exception =>
             System.err.println(s"Failed for predicates: $predicates")
@@ -347,11 +390,13 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val b = createLabeledNode(Map("p1" -> 1, "p2" -> 1), "X")
 
     // 2.3 excluded because the params syntax was not supported in that version
-    val result = succeedWith(Configs.CommunityInterpreted - Configs.Version2_3, "match (a), (b:X) where id(a) = $id AND b.p1 = a.p1 AND b.p2 = 1 return b",
-      "id" -> a.getId)
+    val result = executeWith(Configs.CommunityInterpreted - Configs.Version2_3, "match (a), (b:X) where id(a) = $id AND b.p1 = a.p1 AND b.p2 = 1 return b",
+      planComparisonStrategy = ComparePlansWithAssertion((plan) => {
+        //THEN
+        plan should useOperatorWithText("NodeIndexSeek", ":X(p1,p2)")
+      }, Configs.AllRulePlanners + Configs.Cost), params = Map("id" -> a.getId))
 
     result.toComparableResult should equal(Seq(Map("b" -> b)))
-    result should useIndex(":X(p1,p2)")
   }
 
   case class haveIndexes(expectedIndexes: String*) extends Matcher[GraphDatabaseQueryService] {

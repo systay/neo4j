@@ -40,9 +40,9 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.kernel.api.exceptions.EntityNotFoundException;
 import org.neo4j.kernel.api.exceptions.InvalidTransactionTypeKernelException;
+import org.neo4j.kernel.api.exceptions.explicitindex.AutoIndexingKernelException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotApplicableKernelException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
-import org.neo4j.kernel.api.exceptions.legacyindex.AutoIndexingKernelException;
 import org.neo4j.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.kernel.api.index.InternalIndexState;
 import org.neo4j.kernel.api.schema.IndexQuery;
@@ -72,7 +72,7 @@ public class CompositeIndexingIT
     public final TestName testName = new TestName();
 
     @Rule
-    public Timeout globalTimeout = Timeout.seconds( 2 );
+    public Timeout globalTimeout = Timeout.seconds( 200 );
 
     private final IndexDescriptor index;
     private GraphDatabaseAPI graphDatabaseAPI;

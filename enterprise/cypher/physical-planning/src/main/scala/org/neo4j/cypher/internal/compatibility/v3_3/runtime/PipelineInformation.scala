@@ -20,9 +20,9 @@
 
 package org.neo4j.cypher.internal.compatibility.v3_3.runtime
 
-import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.frontend.v3_3.InternalException
 import org.neo4j.cypher.internal.frontend.v3_3.symbols.CypherType
+import org.neo4j.cypher.internal.v3_3.logical.plans.LogicalPlan
 
 import scala.collection.mutable
 
@@ -126,6 +126,11 @@ object PipelineInformation {
     addToString(acc.buffer(m(startFrom)))
 
     result.toString()
+  }
+
+  def isLongSlot(slot: Slot) = slot match {
+    case _: LongSlot => true
+    case _ => false
   }
 }
 

@@ -27,7 +27,6 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 
-import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
@@ -36,6 +35,8 @@ import org.neo4j.kernel.api.index.IndexEntryUpdate;
 import org.neo4j.kernel.api.index.IndexPopulator;
 import org.neo4j.kernel.api.index.IndexUpdater;
 import org.neo4j.kernel.api.index.InternalIndexState;
+import org.neo4j.kernel.api.index.LoggingMonitor;
+import org.neo4j.kernel.api.index.SchemaIndexProvider;
 import org.neo4j.kernel.api.schema.index.IndexDescriptor;
 import org.neo4j.kernel.api.schema.index.IndexDescriptorFactory;
 import org.neo4j.kernel.configuration.Config;
@@ -51,6 +52,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.IMMEDIATE;
+import static org.neo4j.kernel.api.index.IndexDirectoryStructure.directoriesByProvider;
 
 public class NativeSchemaNumberIndexProviderTest
 {
@@ -62,12 +65,12 @@ public class NativeSchemaNumberIndexProviderTest
     private static final int propId = 1;
     private NativeSchemaNumberIndexProvider provider;
     private final AssertableLogProvider logging = new AssertableLogProvider();
+    private SchemaIndexProvider.Monitor monitor = new LoggingMonitor( logging.getLog( "test" ) );
 
     @Before
     public void setup() throws IOException
     {
-        File baseDir = rules.directory().absolutePath();
-        File nativeSchemaIndexStoreDirectory = newProvider().getSchemaIndexStoreDirectory( baseDir );
+        File nativeSchemaIndexStoreDirectory = newProvider().directoryStructure().rootDirectory();
         rules.fileSystem().mkdirs( nativeSchemaIndexStoreDirectory );
     }
 
@@ -386,12 +389,12 @@ public class NativeSchemaNumberIndexProviderTest
 
     private NativeSchemaNumberIndexProvider newProvider()
     {
-        return new NativeSchemaNumberIndexProvider( pageCache(), fs(), baseDir(), logging, RecoveryCleanupWorkCollector.IMMEDIATE, false );
+        return new NativeSchemaNumberIndexProvider( pageCache(), fs(), directoriesByProvider( baseDir() ), monitor, IMMEDIATE, false );
     }
 
     private NativeSchemaNumberIndexProvider newReadOnlyProvider()
     {
-        return new NativeSchemaNumberIndexProvider( pageCache(), fs(), baseDir(), logging, RecoveryCleanupWorkCollector.IMMEDIATE, true );
+        return new NativeSchemaNumberIndexProvider( pageCache(), fs(), directoriesByProvider( baseDir() ), monitor, IMMEDIATE, true );
     }
 
     private PageCache pageCache()

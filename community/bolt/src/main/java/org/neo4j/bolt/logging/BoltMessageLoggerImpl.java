@@ -21,7 +21,9 @@
 package org.neo4j.bolt.logging;
 
 import java.io.IOException;
-import java.util.Map;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -32,6 +34,9 @@ import io.netty.util.AttributeKey;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import org.neo4j.kernel.api.exceptions.Status;
+import org.neo4j.values.AnyValue;
+import org.neo4j.values.utils.PrettyPrinter;
+import org.neo4j.values.virtual.MapValue;
 
 import static java.lang.String.format;
 
@@ -47,7 +52,7 @@ class BoltMessageLoggerImpl implements BoltMessageLogger
     private final String remoteAddress;
     private Channel channel;
 
-    private static final String BOLT_X_CORRELATION_ID_HEADER = "Bolt-X-CorrelationId";
+    private static final String BOLT_X_CORRELATION_ID_HEADER = "BoltCorrelationId";
     public static final AttributeKey<String> CORRELATION_ATTRIBUTE_KEY = AttributeKey.valueOf(
             BOLT_X_CORRELATION_ID_HEADER );
 
@@ -67,13 +72,13 @@ class BoltMessageLoggerImpl implements BoltMessageLogger
     @Override
     public void clientEvent( String eventName, Supplier<String> detailsSupplier )
     {
-        infoLogger().accept( format( "C: %s", eventName ), detailsSupplier.get() );
+        infoLogger().accept( format( "C %s", eventName ), detailsSupplier.get() );
     }
 
     @Override
     public void clientError( String eventName, String errorMessage, Supplier<String> detailsSupplier )
     {
-        errorLoggerWithArgs( errorMessage ).accept( format( "C: <%s>", eventName ), detailsSupplier.get() );
+        errorLoggerWithArgs( errorMessage ).accept( format( "C %s", eventName ), detailsSupplier.get() );
     }
 
     @Override
@@ -85,13 +90,13 @@ class BoltMessageLoggerImpl implements BoltMessageLogger
     @Override
     public void serverEvent( String eventName, Supplier<String> detailsSupplier )
     {
-        infoLogger().accept( format( "S: %s", eventName ), detailsSupplier.get() );
+        infoLogger().accept( format( "S %s", eventName ), detailsSupplier.get() );
     }
 
     @Override
     public void serverError( String eventName, String errorMessage )
     {
-        errorLogger( errorMessage ).accept( format( "S: <%s>", eventName ) );
+        errorLogger( errorMessage ).accept( format( "S %s", eventName ) );
     }
 
     @Override
@@ -101,16 +106,14 @@ class BoltMessageLoggerImpl implements BoltMessageLogger
     }
 
     @Override
-    public void logInit( String userAgent, Map<String,Object> authToken )
+    public void logInit( String userAgent )
     {
-        // log only auth toke keys, not values that include password
-        clientEvent( "INIT", () -> format( "%s %s", userAgent, json( authToken.keySet() ) ) );
+        clientEvent( "INIT", () -> userAgent);
     }
 
-    @Override
-    public void logRun( String statement, Supplier<Map<String, Object>> parametersSupplier )
+    public void logRun()
     {
-        clientEvent( "RUN", () -> format( "%s %s", statement, json( parametersSupplier.get() ) ) );
+        clientEvent( "RUN", PLACEHOLDER_DETAIL_SUPPLIER );
     }
 
     @Override
@@ -138,9 +141,9 @@ class BoltMessageLoggerImpl implements BoltMessageLogger
     }
 
     @Override
-    public void logSuccess( Supplier<String> metadataSupplier )
+    public void logSuccess( Supplier<MapValue> metadataSupplier )
     {
-        serverEvent( "SUCCESS", () -> json( metadataSupplier.get() ) );
+        serverEvent( "SUCCESS", () -> formatAnyValue( metadataSupplier.get() ) );
     }
 
     @Override
@@ -157,14 +160,8 @@ class BoltMessageLoggerImpl implements BoltMessageLogger
 
     private Consumer<String> errorLogger( String errorMessage )
     {
-        if ( !channel.hasAttr( CORRELATION_ATTRIBUTE_KEY ) )
-        {
-            channel.attr( CORRELATION_ATTRIBUTE_KEY ).set( randomCorrelationIdGenerator() );
-        }
-
-        String boltCorrelationId = channel.attr( CORRELATION_ATTRIBUTE_KEY ).get();
         return formatMessageWithEventName ->
-                messageLog.error( remoteAddress, boltCorrelationId, formatMessageWithEventName, errorMessage );
+                messageLog.error( remoteAddress, getCorrelationId(), formatMessageWithEventName, errorMessage );
     }
 
     private String randomCorrelationIdGenerator()
@@ -174,16 +171,20 @@ class BoltMessageLoggerImpl implements BoltMessageLogger
 
     private BiConsumer<String, String> infoLogger()
     {
+        return ( formatMessageWithEventName, details ) ->
+                messageLog.info( remoteAddress,
+                        getCorrelationId(),
+                        format( "%s %s", formatMessageWithEventName, details ) );
+    }
+
+    private String getCorrelationId()
+    {
         if ( !channel.hasAttr( CORRELATION_ATTRIBUTE_KEY ) )
         {
             channel.attr( CORRELATION_ATTRIBUTE_KEY ).set( randomCorrelationIdGenerator() );
         }
 
-        String boltCorrelationId = channel.attr( CORRELATION_ATTRIBUTE_KEY ).get();
-        return ( formatMessageWithEventName, details ) ->
-                messageLog.info( remoteAddress,
-                        boltCorrelationId,
-                        format( "%s %s", formatMessageWithEventName, details ) );
+        return channel.attr( CORRELATION_ATTRIBUTE_KEY ).get();
     }
 
     private BiConsumer<String, String> errorLoggerWithArgs( String errorMessage )
@@ -194,7 +195,19 @@ class BoltMessageLoggerImpl implements BoltMessageLogger
 
     private static String remoteAddress( Channel channel )
     {
-        return channel.remoteAddress().toString();
+        try
+        {
+            InetSocketAddress remoteAddress = (InetSocketAddress) channel.remoteAddress();
+            InetAddress address = remoteAddress.getAddress();
+            String hostAddress = address.getHostAddress();
+            int port = remoteAddress.getPort();
+            return format( "%s:%s", hostAddress, port );
+        }
+        catch ( ClassCastException e )
+        {
+            SocketAddress remoteAddress = channel.remoteAddress();
+            return remoteAddress.toString();
+        }
     }
 
     private static String json( Object arg )
@@ -209,4 +222,10 @@ class BoltMessageLoggerImpl implements BoltMessageLogger
         }
     }
 
+    private static String formatAnyValue( AnyValue mapValue )
+    {
+        PrettyPrinter printer = new PrettyPrinter();
+        mapValue.writeTo( printer );
+        return printer.value();
+    }
 }

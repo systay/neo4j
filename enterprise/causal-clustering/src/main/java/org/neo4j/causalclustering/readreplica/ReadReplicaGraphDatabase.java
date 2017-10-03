@@ -36,6 +36,10 @@ import org.neo4j.kernel.impl.factory.PlatformModule;
 
 public class ReadReplicaGraphDatabase extends GraphDatabaseFacade
 {
+    protected ReadReplicaGraphDatabase()
+    {
+    }
+
     public ReadReplicaGraphDatabase( File storeDir, Config config, Dependencies dependencies )
     {
         this( storeDir, config, dependencies, new HazelcastDiscoveryServiceFactory(), new MemberId( UUID.randomUUID() ) );
@@ -45,7 +49,7 @@ public class ReadReplicaGraphDatabase extends GraphDatabaseFacade
             DiscoveryServiceFactory discoveryServiceFactory, MemberId memberId )
     {
         Function<PlatformModule,EditionModule> factory =
-                ( platformModule ) -> new EnterpriseReadReplicaEditionModule( platformModule,
+                platformModule -> new EnterpriseReadReplicaEditionModule( platformModule,
                         discoveryServiceFactory, memberId );
         new GraphDatabaseFacadeFactory( DatabaseInfo.READ_REPLICA, factory ).initFacade( storeDir, config,
                 dependencies, this );

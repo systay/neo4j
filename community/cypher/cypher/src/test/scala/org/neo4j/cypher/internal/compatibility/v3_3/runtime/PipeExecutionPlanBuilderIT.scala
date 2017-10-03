@@ -30,16 +30,15 @@ import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.values.Toke
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.{expressions => legacy}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.executionplan.PipeInfo
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes._
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription.FakeIdMap
 import org.neo4j.cypher.internal.compiler.v3_3.planner._
 import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.Metrics
 import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.Metrics.QueryGraphSolverInput
-import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans._
 import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
 import org.neo4j.cypher.internal.frontend.v3_3.ast._
 import org.neo4j.cypher.internal.frontend.v3_3.test_helpers.CypherFunSuite
 import org.neo4j.cypher.internal.frontend.v3_3.{RelTypeId, SemanticDirection, SemanticTable}
 import org.neo4j.cypher.internal.ir.v3_3._
+import org.neo4j.cypher.internal.v3_3.logical.plans._
 
 import scala.collection.mutable
 
@@ -56,9 +55,10 @@ class PipeExecutionPlanBuilderIT extends CypherFunSuite with LogicalPlanningTest
     new PipeExecutionPlanBuilder(Clock.systemUTC(), monitors, expressionConverters = converters, pipeBuilderFactory = CommunityPipeBuilderFactory)
   }
 
-  def build(f: PlannerQuery with CardinalityEstimation => LogicalPlan): PipeInfo = {
+  private def build(f: PlannerQuery with CardinalityEstimation => LogicalPlan): PipeInfo = {
     val logicalPlan = f(solved)
-    planBuilder.build(None, logicalPlan, new FakeIdMap)
+    logicalPlan.assignIds()
+    planBuilder.build(None, logicalPlan)
   }
 
   test("projection only query") {

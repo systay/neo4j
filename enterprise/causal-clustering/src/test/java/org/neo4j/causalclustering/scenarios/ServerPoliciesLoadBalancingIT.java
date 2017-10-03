@@ -48,6 +48,7 @@ import org.neo4j.causalclustering.load_balancing.procedure.ResultFormatV1;
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.Result;
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.helpers.ValueUtils;
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
@@ -108,9 +109,9 @@ public class ServerPoliciesLoadBalancingIT
     public void shouldFallOverBetweenRules() throws Exception
     {
         Map<String,IntFunction<String>> instanceCoreParams = new HashMap<>();
-        instanceCoreParams.put( CausalClusteringSettings.server_groups.name(), ( id ) -> "core" + id + ",core" );
+        instanceCoreParams.put( CausalClusteringSettings.server_groups.name(), id -> "core" + id + ",core" );
         Map<String,IntFunction<String>> instanceReplicaParams = new HashMap<>();
-        instanceReplicaParams.put( CausalClusteringSettings.server_groups.name(), ( id ) -> "replica" + id + ",replica" );
+        instanceReplicaParams.put( CausalClusteringSettings.server_groups.name(), id -> "replica" + id + ",replica" );
 
         String defaultPolicy = "groups(core) -> min(3); groups(replica1,replica2) -> min(2);";
 
@@ -152,9 +153,9 @@ public class ServerPoliciesLoadBalancingIT
     public void shouldSupportSeveralPolicies() throws Exception
     {
         Map<String,IntFunction<String>> instanceCoreParams = new HashMap<>();
-        instanceCoreParams.put( CausalClusteringSettings.server_groups.name(), ( id ) -> "core" + id + ",core" );
+        instanceCoreParams.put( CausalClusteringSettings.server_groups.name(), id -> "core" + id + ",core" );
         Map<String,IntFunction<String>> instanceReplicaParams = new HashMap<>();
-        instanceReplicaParams.put( CausalClusteringSettings.server_groups.name(), ( id ) -> "replica" + id + ",replica" );
+        instanceReplicaParams.put( CausalClusteringSettings.server_groups.name(), id -> "replica" + id + ",replica" );
 
         String defaultPolicySpec = "groups(replica0,replica1)";
         String policyOneTwoSpec = "groups(replica1,replica2)";
@@ -222,7 +223,7 @@ public class ServerPoliciesLoadBalancingIT
         try ( InternalTransaction tx = db.beginTransaction( KernelTransaction.Type.explicit, EnterpriseSecurityContext.AUTH_DISABLED ) )
         {
             Map<String,Object> parameters = MapUtil.map( ParameterNames.CONTEXT.parameterName(), context );
-            try ( Result result = db.execute( tx, "CALL " + GET_SERVERS_V2.callName(), parameters ) )
+            try ( Result result = db.execute( tx, "CALL " + GET_SERVERS_V2.callName(), ValueUtils.asMapValue( parameters )) )
             {
                 while ( result.hasNext() )
                 {

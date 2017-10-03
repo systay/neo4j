@@ -21,11 +21,11 @@ package org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes
 
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.ExecutionContext
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.predicates.Predicate
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription.Id
+import org.neo4j.cypher.internal.v3_3.logical.plans.LogicalPlanId
 import org.neo4j.values.storable.Values
 
 case class LetSelectOrSemiApplyPipe(source: Pipe, inner: Pipe, letVarName: String, predicate: Predicate, negated: Boolean)
-                                   (val id: Id = new Id)
+                                   (val id: LogicalPlanId = LogicalPlanId.DEFAULT)
   extends PipeWithSource(source) {
 
   predicate.registerOwningPipe(this)
@@ -33,7 +33,7 @@ case class LetSelectOrSemiApplyPipe(source: Pipe, inner: Pipe, letVarName: Strin
   def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
     input.map {
       (outerContext) =>
-        val holds = predicate.isTrue(outerContext)(state) || {
+        val holds = predicate.isTrue(outerContext, state) || {
           val innerState = state.withInitialContext(outerContext)
           val innerResults = inner.createResults(innerState)
           if (negated) innerResults.isEmpty else innerResults.nonEmpty

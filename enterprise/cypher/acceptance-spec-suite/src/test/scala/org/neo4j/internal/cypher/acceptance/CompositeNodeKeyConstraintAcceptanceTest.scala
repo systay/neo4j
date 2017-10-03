@@ -127,15 +127,14 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
 
   test("composite NODE KEY constraint should fail when we have nodes with same properties") {
     // When
-    createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Soap"), "User")
-    createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Smoke"), "User")
-    createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Soap"), "User")
+    val a = createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Soap"), "User").getId
+    val b = createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Smoke"), "User").getId
+    val c = createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Soap"), "User").getId
 
     // Then
-    a[CypherExecutionException] should be thrownBy {
-      succeedWith(Configs.AbsolutelyAll,
-        "CREATE CONSTRAINT ON (n:User) ASSERT (n.firstname,n.lastname) IS NODE KEY")
-    }
+    val query = "CREATE CONSTRAINT ON (n:User) ASSERT (n.firstname,n.lastname) IS NODE KEY"
+    val errorMessage = "Both Node(%d) and Node(%d) have the label `User` and properties `firstname` = 'Joe', `lastname` = 'Soap'".format(a, c)
+    failWithError(Configs.AbsolutelyAll - Configs.AllRulePlanners - Configs.Version3_1 - Configs.Version2_3, query, List(errorMessage))
   }
 
   test("trying to add duplicate node when node key constraint exists") {
@@ -148,7 +147,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     failWithError(
       config,
       "CREATE (n:Person) SET n.name = 'A'",
-      "Node(0) already exists with label `Person` and property `name` = 'A'"
+      List("Node(0) already exists with label `Person` and property `name` = 'A'")
     )
   }
 
@@ -162,13 +161,13 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     failWithError(
       config,
       "CREATE (n:Person) SET n.name = 'A', n.surname = 'B'",
-      String.format("Node(0) already exists with label `Person` and properties `name` = 'A', `surname` = 'B'")
+      List(String.format("Node(0) already exists with label `Person` and properties `name` = 'A', `surname` = 'B'"))
     )
   }
 
   test("trying to add a composite node key constraint when duplicates exist") {
-    createLabeledNode(Map("name" -> "A", "surname" -> "B"), "Person")
-    createLabeledNode(Map("name" -> "A", "surname" -> "B"), "Person")
+    val a = createLabeledNode(Map("name" -> "A", "surname" -> "B"), "Person").getId
+    val b = createLabeledNode(Map("name" -> "A", "surname" -> "B"), "Person").getId
 
     val config = TestConfiguration(V3_3, Cost, Runtimes(CompiledSource, CompiledBytecode)) +
         TestConfiguration(Versions.Default, Planners.Default, Runtimes(Interpreted, Slotted, ProcedureOrSchema)) +
@@ -176,14 +175,14 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     failWithError(
       config,
       "CREATE CONSTRAINT ON (person:Person) ASSERT (person.name, person.surname) IS NODE KEY",
-      String.format("Unable to create CONSTRAINT ON ( person:Person ) ASSERT (person.name, person.surname) IS NODE KEY:%n" +
-        "Both Node(0) and Node(1) have the label `Person` and properties `name` = 'A', `surname` = 'B'")
+      List(("Unable to create CONSTRAINT ON ( person:Person ) ASSERT (person.name, person.surname) IS NODE KEY:%s" +
+        "Both Node(%d) and Node(%d) have the label `Person` and properties `name` = 'A', `surname` = 'B'").format(String.format("%n"), a, b))
     )
   }
 
   test("trying to add a node key constraint when duplicates exist") {
-    createLabeledNode(Map("name" -> "A"), "Person")
-    createLabeledNode(Map("name" -> "A"), "Person")
+    val a = createLabeledNode(Map("name" -> "A"), "Person").getId
+    val b = createLabeledNode(Map("name" -> "A"), "Person").getId
 
     val config = TestConfiguration(V3_3, Cost, Runtimes(CompiledSource, CompiledBytecode)) +
         TestConfiguration(Versions.Default, Planners.Default, Runtimes(Interpreted, Slotted, ProcedureOrSchema)) +
@@ -191,8 +190,8 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     failWithError(
       config,
       "CREATE CONSTRAINT ON (person:Person) ASSERT (person.name) IS NODE KEY",
-      String.format("Unable to create CONSTRAINT ON ( person:Person ) ASSERT person.name IS NODE KEY:%n" +
-        "Both Node(0) and Node(1) have the label `Person` and property `name` = 'A'")
+      List(("Unable to create CONSTRAINT ON ( person:Person ) ASSERT person.name IS NODE KEY:%s" +
+        "Both Node(%d) and Node(%d) have the label `Person` and property `name` = 'A'").format(String.format("%n"), a, b))
     )
   }
 
@@ -203,7 +202,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     failWithError(
       config,
       "DROP CONSTRAINT ON (person:Person) ASSERT (person.name) IS NODE KEY",
-      "No such constraint"
+      List("No such constraint")
     )
   }
 
@@ -217,7 +216,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     failWithError(
       config,
       "CREATE (n:Person) SET n.name = 'A', n.surname = 'B'",
-      String.format("Node(0) already exists with label `Person` and properties `name` = 'A', `surname` = 'B'")
+      List(String.format("Node(0) already exists with label `Person` and properties `name` = 'A', `surname` = 'B'"))
     )
   }
 
@@ -231,7 +230,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     failWithError(
       config,
       "CREATE (n:Person) SET n.name = 'A', n.surname = 'B'",
-      String.format("Node(0) already exists with label `Person` and properties `name` = 'A', `surname` = 'B'")
+      List(String.format("Node(0) already exists with label `Person` and properties `name` = 'A', `surname` = 'B'"))
       )
   }
 
@@ -245,8 +244,8 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
       TestConfiguration(V3_2, Cost, Runtimes.Default)
     failWithError(config,
       "CREATE CONSTRAINT ON (n:Person) ASSERT (n.firstname,n.lastname) IS NODE KEY",
-      "There already exists an index for label 'Person' on properties 'firstname' and 'lastname'. " +
-                  "A constraint cannot be created until the index has been dropped.")
+      List("There already exists an index for label 'Person' on properties 'firstname' and 'lastname'. " +
+                  "A constraint cannot be created until the index has been dropped."))
   }
 
   test("should give appropriate error message when there is already a NODE KEY constraint") {
@@ -260,8 +259,8 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     failWithError(
       config,
       "CREATE INDEX ON :Person(firstname, lastname)",
-      "Label 'Person' and properties 'firstname' and 'lastname' have a unique constraint defined on them, " +
-                  "so an index is already created that matches this.")
+      List("Label 'Person' and properties 'firstname' and 'lastname' have a unique constraint defined on them, " +
+                  "so an index is already created that matches this."))
   }
 
   test("Should give a nice error message when trying to remove property with node key constraint") {
@@ -275,7 +274,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
         TestConfiguration(Versions(V2_3, Versions.Default), Rule, Runtimes.Default)
     failWithError(config,
       "MATCH (p:Person {firstname: 'John', surname: 'Wood'}) REMOVE p.surname",
-      s"Node($id) with label `Person` must have the properties `firstname, surname`")
+      List(s"Node($id) with label `Person` must have the properties `firstname, surname`"))
 
   }
 
@@ -288,8 +287,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     val config = TestScenario(Versions.Default, Planners.Default, Interpreted) +
       TestConfiguration(V3_1 -> V3_2, Planners.all, Runtimes.Default) +
       TestConfiguration(Versions(Versions.Default, V2_3), Rule, Runtimes.Default)
-    succeedWith(config,
-      "MATCH (p:Person {firstname: 'John', surname: 'Wood'}) REMOVE p.foo".fixNewLines)
+    executeWith(config, "MATCH (p:Person {firstname: 'John', surname: 'Wood'}) REMOVE p.foo".fixNewLines)
 
     // Then
     graph.inTx {
@@ -306,15 +304,13 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     val configWhen = TestScenario(Versions.Default, Planners.Default, Interpreted) +
       TestConfiguration(V3_1 -> V3_2, Planners.all, Runtimes.Default) +
       TestConfiguration(Versions(Versions.Default, V2_3), Rule, Runtimes.Default)
-    succeedWith(configWhen,
-      "MATCH (p:Person {firstname: 'John', surname: 'Wood'}) DELETE p".fixNewLines)
+    executeWith(configWhen, "MATCH (p:Person {firstname: 'John', surname: 'Wood'}) DELETE p".fixNewLines)
 
     // Then
     val configThen = TestConfiguration(Versions.Default, Planners.Default, Runtimes(Runtimes.Interpreted, Runtimes.Slotted)) +
       TestConfiguration(Versions.V2_3 -> Versions.V3_2, Planners.all, Runtimes.Default) +
       TestScenario(Versions.Default, Planners.Rule, Runtimes.Default)
-    succeedWith(configThen,
-      "MATCH (p:Person {firstname: 'John', surname: 'Wood'}) RETURN p".fixNewLines) shouldBe empty
+    executeWith(configThen, "MATCH (p:Person {firstname: 'John', surname: 'Wood'}) RETURN p".fixNewLines)  shouldBe empty
   }
 
   test("Should be able to remove label when node key constraint") {
@@ -326,14 +322,12 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     val configWhen = TestScenario(Versions.Default, Planners.Default, Interpreted) +
       TestConfiguration(V3_1 -> V3_2, Planners.all, Runtimes.Default) +
       TestConfiguration(Versions(Versions.Default, V2_3), Rule, Runtimes.Default)
-    succeedWith(configWhen,
-      "MATCH (p:Person {firstname: 'John', surname: 'Wood'}) REMOVE p:Person".fixNewLines)
+    executeWith(configWhen, "MATCH (p:Person {firstname: 'John', surname: 'Wood'}) REMOVE p:Person".fixNewLines)
 
     // Then
     val configThen = TestConfiguration(Versions.Default, Planners.Default, Runtimes(Runtimes.Interpreted, Runtimes.Slotted)) +
       TestConfiguration(Versions.V2_3 -> Versions.V3_2, Planners.all, Runtimes.Default) +
       TestScenario(Versions.Default, Planners.Rule, Runtimes.Default)
-    succeedWith(configThen,
-      "MATCH (p:Person {firstname: 'John', surname: 'Wood'}) RETURN p".fixNewLines) shouldBe empty
+    executeWith(configThen, "MATCH (p:Person {firstname: 'John', surname: 'Wood'}) RETURN p".fixNewLines)  shouldBe empty
   }
 }

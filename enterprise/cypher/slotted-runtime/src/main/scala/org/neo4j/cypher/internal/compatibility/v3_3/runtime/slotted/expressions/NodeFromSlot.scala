@@ -22,12 +22,12 @@ package org.neo4j.cypher.internal.compatibility.v3_3.runtime.slotted.expressions
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.ExecutionContext
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.expressions.Expression
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.QueryState
-import org.neo4j.cypher.internal.javacompat.ValueUtils.fromNodeProxy
+import org.neo4j.helpers.ValueUtils.fromNodeProxy
 import org.neo4j.values.virtual.NodeValue
 
 case class NodeFromSlot(offset: Int) extends Expression with SlottedExpression {
 
-  override def apply(ctx: ExecutionContext)(implicit state: QueryState): NodeValue =
+  override def apply(ctx: ExecutionContext, state: QueryState): NodeValue =
     fromNodeProxy(state.query.nodeOps.getById(ctx.getLongAt(offset)))
 
 }

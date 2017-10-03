@@ -72,7 +72,6 @@ import org.neo4j.kernel.impl.index.schema.fusion.FusionSchemaIndexProvider;
 import org.neo4j.kernel.impl.spi.KernelContext;
 import org.neo4j.kernel.impl.storemigration.StoreMigrationParticipant;
 import org.neo4j.kernel.lifecycle.Lifecycle;
-import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.schema.IndexSample;
 import org.neo4j.test.DoubleLatch;
 import org.neo4j.test.ha.ClusterRule;
@@ -86,6 +85,7 @@ import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.helpers.collection.Iterators.asSet;
 import static org.neo4j.helpers.collection.Iterators.asUniqueSet;
 import static org.neo4j.io.fs.FileUtils.deleteRecursively;
+import static org.neo4j.kernel.api.index.IndexDirectoryStructure.given;
 import static org.neo4j.kernel.impl.ha.ClusterManager.allSeesAllAsAvailable;
 import static org.neo4j.kernel.impl.ha.ClusterManager.masterAvailable;
 
@@ -473,15 +473,9 @@ public class SchemaIndexHaIT
         }
 
         @Override
-        public void includeSample( IndexEntryUpdate update )
+        public void includeSample( IndexEntryUpdate<?> update )
         {
             delegate.includeSample( update );
-        }
-
-        @Override
-        public void configureSampling( boolean onlineSampling )
-        {
-            delegate.configureSampling( onlineSampling );
         }
 
         @Override
@@ -501,7 +495,7 @@ public class SchemaIndexHaIT
 
         ControlledSchemaIndexProvider( SchemaIndexProvider delegate )
         {
-            super( CONTROLLED_PROVIDER_DESCRIPTOR, 100 /*we want it to always win*/ );
+            super( CONTROLLED_PROVIDER_DESCRIPTOR, 100 /*we want it to always win*/, given( delegate.directoryStructure() ) );
             this.delegate = delegate;
         }
 
@@ -566,13 +560,13 @@ public class SchemaIndexHaIT
             PageCache pageCache = deps.pageCache();
             File storeDir = context.storeDir();
             DefaultFileSystemAbstraction fs = fileSystemRule.get();
-            NullLogProvider logProvider = NullLogProvider.getInstance();
+            SchemaIndexProvider.Monitor monitor = SchemaIndexProvider.Monitor.EMPTY;
             Config config = deps.config();
             OperationalMode operationalMode = context.databaseInfo().operationalMode;
             RecoveryCleanupWorkCollector recoveryCleanupWorkCollector = deps.recoveryCleanupWorkCollector();
 
             FusionSchemaIndexProvider fusionSchemaIndexProvider = NativeLuceneFusionSchemaIndexProviderFactory
-                    .newInstance( pageCache, storeDir, fs, logProvider, config, operationalMode, recoveryCleanupWorkCollector );
+                    .newInstance( pageCache, storeDir, fs, monitor, config, operationalMode, recoveryCleanupWorkCollector );
 
             if ( injectLatchPredicate.test( deps.db() ) )
             {

@@ -236,7 +236,7 @@ public class IndexingServiceTest
         IndexProxy proxy = indexingService.getIndexProxy( 0 );
         assertEquals( InternalIndexState.POPULATING, proxy.getState() );
 
-        IndexEntryUpdate value2 = add( 2, "value2" );
+        IndexEntryUpdate<?> value2 = add( 2, "value2" );
         try ( IndexUpdater updater = proxy.newUpdater( IndexUpdateMode.ONLINE ) )
         {
             updater.process( value2 );
@@ -984,21 +984,25 @@ public class IndexingServiceTest
     public void flushAllIndexesWhileSomeOfThemDropped() throws IOException
     {
         IndexMapReference indexMapReference = new IndexMapReference();
-        IndexMap indexMap = indexMapReference.indexMapSnapshot();
-
         IndexProxy validIndex = createIndexProxyMock();
-        indexMap.putIndexProxy( 1, validIndex );
-        indexMap.putIndexProxy( 2, validIndex );
         IndexProxy deletedIndexProxy = createIndexProxyMock();
-        indexMap.putIndexProxy( 3, deletedIndexProxy );
-        indexMap.putIndexProxy( 4, validIndex );
-        indexMap.putIndexProxy( 5, validIndex );
-
-        indexMapReference.setIndexMap( indexMap );
+        indexMapReference.modify( indexMap ->
+        {
+            indexMap.putIndexProxy( 1, validIndex );
+            indexMap.putIndexProxy( 2, validIndex );
+            indexMap.putIndexProxy( 3, deletedIndexProxy );
+            indexMap.putIndexProxy( 4, validIndex );
+            indexMap.putIndexProxy( 5, validIndex );
+            return indexMap;
+        } );
 
         doAnswer( invocation ->
         {
-            indexMap.removeIndexProxy( 3 );
+            indexMapReference.modify( indexMap ->
+            {
+                indexMap.removeIndexProxy( 3 );
+                return indexMap;
+            } );
             throw new RuntimeException( "Index deleted." );
         } ).when( deletedIndexProxy ).force();
 
@@ -1012,19 +1016,18 @@ public class IndexingServiceTest
     public void failForceAllWhenOneOfTheIndexesFailToForce() throws IOException
     {
         IndexMapReference indexMapReference = new IndexMapReference();
-        IndexMap indexMap = indexMapReference.indexMapSnapshot();
-
-        IndexProxy validIndex = createIndexProxyMock();
-
-        indexMap.putIndexProxy( 1, validIndex );
-        indexMap.putIndexProxy( 2, validIndex );
-        IndexProxy strangeIndexProxy = createIndexProxyMock();
-        indexMap.putIndexProxy( 3, strangeIndexProxy );
-        indexMap.putIndexProxy( 4, validIndex );
-        indexMap.putIndexProxy( 5, validIndex );
-        doThrow( new UncheckedIOException( new IOException( "Can't force" ) ) ).when( strangeIndexProxy ).force();
-
-        indexMapReference.setIndexMap( indexMap );
+        indexMapReference.modify( indexMap ->
+        {
+            IndexProxy validIndex = createIndexProxyMock();
+            indexMap.putIndexProxy( 1, validIndex );
+            indexMap.putIndexProxy( 2, validIndex );
+            IndexProxy strangeIndexProxy = createIndexProxyMock();
+            indexMap.putIndexProxy( 3, strangeIndexProxy );
+            indexMap.putIndexProxy( 4, validIndex );
+            indexMap.putIndexProxy( 5, validIndex );
+            doThrow( new UncheckedIOException( new IOException( "Can't force" ) ) ).when( strangeIndexProxy ).force();
+            return indexMap;
+        } );
 
         IndexingService indexingService = createIndexServiceWithCustomIndexMap( indexMapReference );
 
@@ -1225,7 +1228,7 @@ public class IndexingServiceTest
 
                 @Override
                 public void acceptUpdate( MultipleIndexPopulator.MultipleIndexUpdater updater,
-                        IndexEntryUpdate update,
+                        IndexEntryUpdate<?> update,
                         long currentlyIndexedNodeId )
                 {
                     // no-op
@@ -1235,12 +1238,6 @@ public class IndexingServiceTest
                 public PopulationProgress getProgress()
                 {
                     return new PopulationProgress( 42, 100 );
-                }
-
-                @Override
-                public void configure( Collection<MultipleIndexPopulator.IndexPopulation> populations )
-                {
-                    // no-op
                 }
             };
         }

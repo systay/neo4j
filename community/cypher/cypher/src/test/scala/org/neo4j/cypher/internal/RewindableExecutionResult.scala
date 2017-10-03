@@ -32,7 +32,6 @@ import org.neo4j.cypher.internal.compatibility.v3_3.runtime.executionplan._
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription.InternalPlanDescription.Arguments
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription._
 import org.neo4j.cypher.internal.compiler.v3_3.CostBasedPlannerName
-import org.neo4j.cypher.internal.compiler.v3_3.spi.QualifiedName
 import org.neo4j.cypher.internal.compiler.{v2_3, v3_1, v3_2}
 import org.neo4j.cypher.internal.frontend.v2_3.{SemanticDirection => SemanticDirection2_3, notification => notification_2_3}
 import org.neo4j.cypher.internal.frontend.v3_1.{SemanticDirection => SemanticDirection3_1, notification => notification_3_1, symbols => symbols3_1}
@@ -40,6 +39,7 @@ import org.neo4j.cypher.internal.frontend.v3_2.{SemanticDirection => SemanticDir
 import org.neo4j.cypher.internal.frontend.v3_3.SemanticDirection.{BOTH, INCOMING, OUTGOING}
 import org.neo4j.cypher.internal.frontend.v3_3.{InputPosition, symbols}
 import org.neo4j.cypher.internal.javacompat.ExecutionResult
+import org.neo4j.cypher.internal.v3_3.logical.plans.{LogicalPlanId, QualifiedName}
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.graphdb.Result.ResultVisitor
 import org.neo4j.graphdb.{Notification, QueryExecutionType, ResourceIterator, Result}
@@ -197,7 +197,7 @@ object RewindableExecutionResult {
           .UpdateActionName(value)
         case v2_3.planDescription.InternalPlanDescription.Arguments.MergePattern(startPoint) => Arguments
           .MergePattern(startPoint)
-        case v2_3.planDescription.InternalPlanDescription.Arguments.LegacyIndex(value) => Arguments.LegacyIndex(value)
+        case v2_3.planDescription.InternalPlanDescription.Arguments.LegacyIndex(value) => Arguments.ExplicitIndex(value)
         case v2_3.planDescription.InternalPlanDescription.Arguments.Index(label, propertyKey) => Arguments
           .Index(label, Seq(propertyKey))
         case v2_3.planDescription.InternalPlanDescription.Arguments.PrefixIndex(label, propertyKey, _) => Arguments
@@ -228,7 +228,7 @@ object RewindableExecutionResult {
         case v2_3.planDescription.InternalPlanDescription.Arguments.SourceCode(className, sourceCode) =>
           Arguments.SourceCode(className, sourceCode)
       }
-      PlanDescriptionImpl(new Id, name, children, arguments, planDescription.identifiers)
+      PlanDescriptionImpl(LogicalPlanId.DEFAULT, name, children, arguments, planDescription.identifiers)
     }
 
 
@@ -237,10 +237,6 @@ object RewindableExecutionResult {
     override def notifications: Iterable[Notification] =
       inner.notifications.map(org.neo4j.cypher.internal.compatibility.v2_3.ExecutionResultWrapper.asKernelNotification(None))
 
-    private def lift(position: frontend.v2_3.InputPosition): InputPosition = {
-      InputPosition.apply(position.offset, position.line, position.column)
-    }
-
     override def planDescriptionRequested: Boolean = inner.planDescriptionRequested
 
     override def next(): Map[String, Any] = inner.next()
@@ -248,6 +244,8 @@ object RewindableExecutionResult {
     override def hasNext: Boolean = inner.hasNext
 
     override def withNotifications(notification: Notification*): InternalExecutionResult = this
+
+    override def executionPlanString(): String = inner.executionPlanDescription().toString
   }
 
   private case class InternalExecutionResultCompatibilityWrapperFor3_1(inner: v3_1.executionplan.InternalExecutionResult)
@@ -316,7 +314,7 @@ object RewindableExecutionResult {
         case Arguments3_1.LegacyExpression(_) => Arguments.Expression(null)
         case Arguments3_1.UpdateActionName(value) => Arguments.UpdateActionName(value)
         case Arguments3_1.MergePattern(startPoint) => Arguments.MergePattern(startPoint)
-        case Arguments3_1.LegacyIndex(value) => Arguments.LegacyIndex(value)
+        case Arguments3_1.LegacyIndex(value) => Arguments.ExplicitIndex(value)
         case Arguments3_1.Index(label, propertyKey) => Arguments.Index(label, Seq(propertyKey))
         case Arguments3_1.PrefixIndex(label, propertyKey, _) => Arguments.PrefixIndex(label, propertyKey, null)
         case Arguments3_1.InequalityIndex(label, propertyKey, bounds) => Arguments
@@ -350,7 +348,7 @@ object RewindableExecutionResult {
           val procName = QualifiedName(procedureName.namespace, procedureName.name)
           Arguments.Signature(procName, Seq.empty, results.map(pair => (pair._1, lift(pair._2))))
       }
-      PlanDescriptionImpl(new Id, name, children, arguments, planDescription.variables)
+      PlanDescriptionImpl(LogicalPlanId.DEFAULT, name, children, arguments, planDescription.variables)
     }
 
     override def close(): Unit = inner.close()
@@ -385,10 +383,16 @@ object RewindableExecutionResult {
     override def hasNext: Boolean = inner.hasNext
 
     override def withNotifications(notification: Notification*): InternalExecutionResult = this
+
+    override def executionPlanString(): String = inner.executionPlanDescription().toString
   }
 
   private case class InternalExecutionResultCompatibilityWrapperFor3_2(inner: v3_2.executionplan.InternalExecutionResult)
     extends InternalExecutionResult {
+
+    private val cache = inner.toList
+
+    override def toList: List[Map[String, Any]] = cache
 
     override def javaIterator: ResourceIterator[util.Map[String, Any]] = inner.javaIterator
 
@@ -453,7 +457,7 @@ object RewindableExecutionResult {
         case Arguments3_2.LegacyExpression(_) => Arguments.Expression(null)
         case Arguments3_2.UpdateActionName(value) => Arguments.UpdateActionName(value)
         case Arguments3_2.MergePattern(startPoint) => Arguments.MergePattern(startPoint)
-        case Arguments3_2.LegacyIndex(value) => Arguments.LegacyIndex(value)
+        case Arguments3_2.LegacyIndex(value) => Arguments.ExplicitIndex(value)
         case Arguments3_2.Index(label, propertyKey) => Arguments.Index(label, propertyKey)
         case Arguments3_2.PrefixIndex(label, propertyKey, _) => Arguments.PrefixIndex(label, propertyKey, null)
         case Arguments3_2.InequalityIndex(label, propertyKey, bounds) => Arguments
@@ -486,7 +490,7 @@ object RewindableExecutionResult {
           val procName = QualifiedName(procedureName.namespace, procedureName.name)
           Arguments.Signature(procName, Seq.empty, results.map(pair => (pair._1, lift(pair._2))))
       }
-      PlanDescriptionImpl(new Id, name, children, arguments, planDescription.variables)
+      PlanDescriptionImpl(LogicalPlanId.DEFAULT, name, children, arguments, planDescription.variables)
     }
 
     override def close(): Unit = inner.close()
@@ -522,6 +526,8 @@ object RewindableExecutionResult {
     override def hasNext: Boolean = inner.hasNext
 
     override def withNotifications(notification: Notification*): InternalExecutionResult = this
+
+    override def executionPlanString(): String = inner.executionPlanDescription().toString
   }
 
 }

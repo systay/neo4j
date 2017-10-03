@@ -23,7 +23,7 @@ import org.neo4j.cypher.internal.compatibility.v3_3.runtime.ExecutionContext
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.helpers.ValueConversion
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.QueryState
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.aggregation.AggregationFunction
-import org.neo4j.cypher.internal.compiler.v3_3.spi.UserFunctionSignature
+import org.neo4j.cypher.internal.v3_3.logical.plans.UserFunctionSignature
 import org.neo4j.values.AnyValue
 
 case class AggregationFunctionInvocation(signature: UserFunctionSignature, arguments: IndexedSeq[Expression])
@@ -33,17 +33,18 @@ case class AggregationFunctionInvocation(signature: UserFunctionSignature, argum
   override def createAggregationFunction: AggregationFunction = new AggregationFunction {
     private var inner: UserDefinedAggregator = null
 
-    override def result(implicit state:QueryState): AnyValue = valueConverter(aggregator.result)
-
-    override def apply(data: ExecutionContext)
-                      (implicit state: QueryState) = {
-      val argValues = arguments.map(arg => {
-        state.query.asObject(arg(data)(state))
-      })
-      aggregator.update(argValues)
+    override def result(state: QueryState): AnyValue = {
+      valueConverter(aggregator(state).result)
     }
 
-    private def aggregator(implicit state: QueryState) = {
+    override def apply(data: ExecutionContext, state: QueryState): Unit = {
+      val argValues = arguments.map(arg => {
+        state.query.asObject(arg(data, state))
+      })
+      aggregator(state).update(argValues)
+    }
+
+    private def aggregator(state: QueryState) = {
       if (inner == null) {
         inner = state.query.aggregateFunction(signature.name, signature.allowed)
       }

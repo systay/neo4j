@@ -46,8 +46,8 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.GraphDatabaseQueryService;
+import org.neo4j.kernel.api.ExplicitIndexHits;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.api.LegacyIndexHits;
 import org.neo4j.kernel.api.ReadOperations;
 import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.dbms.DbmsOperations;
@@ -56,9 +56,9 @@ import org.neo4j.kernel.api.exceptions.LabelNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.api.exceptions.PropertyKeyIdNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.RelationshipTypeIdNotFoundKernelException;
+import org.neo4j.kernel.api.exceptions.explicitindex.ExplicitIndexNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotApplicableKernelException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
-import org.neo4j.kernel.api.exceptions.legacyindex.LegacyIndexNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.schema.IndexBrokenKernelException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.index.InternalIndexState;
@@ -103,6 +103,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.neo4j.values.virtual.VirtualValues.EMPTY_MAP;
 
 public class QueryExecutionLocksIT
 {
@@ -217,7 +218,7 @@ public class QueryExecutionLocksIT
     {
         PropertyContainerLocker locker = new PropertyContainerLocker();
         TransactionalContextFactory contextFactory = Neo4jTransactionalContextFactory.create( graph, locker );
-        return contextFactory.newContext( ClientConnectionInfo.EMBEDDED_CONNECTION, tx, query, Collections.emptyMap() );
+        return contextFactory.newContext( ClientConnectionInfo.EMBEDDED_CONNECTION, tx, query, EMPTY_MAP );
     }
 
     private static class TransactionalContextWrapper implements TransactionalContext
@@ -772,84 +773,84 @@ public class QueryExecutionLocksIT
         }
 
         @Override
-        public boolean nodeLegacyIndexExists( String indexName, Map<String,String> customConfiguration )
+        public boolean nodeExplicitIndexExists( String indexName, Map<String,String> customConfiguration )
         {
-            return readOperations.nodeLegacyIndexExists( indexName, customConfiguration );
+            return readOperations.nodeExplicitIndexExists( indexName, customConfiguration );
         }
 
         @Override
-        public boolean relationshipLegacyIndexExists( String indexName, Map<String,String> customConfiguration )
+        public boolean relationshipExplicitIndexExists( String indexName, Map<String,String> customConfiguration )
         {
-            return readOperations.relationshipLegacyIndexExists( indexName, customConfiguration );
+            return readOperations.relationshipExplicitIndexExists( indexName, customConfiguration );
         }
 
         @Override
-        public Map<String,String> nodeLegacyIndexGetConfiguration( String indexName )
-                throws LegacyIndexNotFoundKernelException
+        public Map<String,String> nodeExplicitIndexGetConfiguration( String indexName )
+                throws ExplicitIndexNotFoundKernelException
         {
-            return readOperations.nodeLegacyIndexGetConfiguration( indexName );
+            return readOperations.nodeExplicitIndexGetConfiguration( indexName );
         }
 
         @Override
-        public Map<String,String> relationshipLegacyIndexGetConfiguration( String indexName )
-                throws LegacyIndexNotFoundKernelException
+        public Map<String,String> relationshipExplicitIndexGetConfiguration( String indexName )
+                throws ExplicitIndexNotFoundKernelException
         {
-            return readOperations.relationshipLegacyIndexGetConfiguration( indexName );
+            return readOperations.relationshipExplicitIndexGetConfiguration( indexName );
         }
 
         @Override
-        public LegacyIndexHits nodeLegacyIndexGet( String indexName, String key, Object value )
-                throws LegacyIndexNotFoundKernelException
+        public ExplicitIndexHits nodeExplicitIndexGet( String indexName, String key, Object value )
+                throws ExplicitIndexNotFoundKernelException
         {
-            return readOperations.nodeLegacyIndexGet( indexName, key, value );
+            return readOperations.nodeExplicitIndexGet( indexName, key, value );
         }
 
         @Override
-        public LegacyIndexHits nodeLegacyIndexQuery( String indexName, String key, Object queryOrQueryObject )
-                throws LegacyIndexNotFoundKernelException
+        public ExplicitIndexHits nodeExplicitIndexQuery( String indexName, String key, Object queryOrQueryObject )
+                throws ExplicitIndexNotFoundKernelException
         {
-            return readOperations.nodeLegacyIndexQuery( indexName, key, queryOrQueryObject );
+            return readOperations.nodeExplicitIndexQuery( indexName, key, queryOrQueryObject );
         }
 
         @Override
-        public LegacyIndexHits nodeLegacyIndexQuery( String indexName, Object queryOrQueryObject )
-                throws LegacyIndexNotFoundKernelException
+        public ExplicitIndexHits nodeExplicitIndexQuery( String indexName, Object queryOrQueryObject )
+                throws ExplicitIndexNotFoundKernelException
         {
-            return readOperations.nodeLegacyIndexQuery( indexName, queryOrQueryObject );
+            return readOperations.nodeExplicitIndexQuery( indexName, queryOrQueryObject );
         }
 
         @Override
-        public LegacyIndexHits relationshipLegacyIndexGet( String name, String key, Object valueOrNull, long startNode,
-                long endNode ) throws LegacyIndexNotFoundKernelException
+        public ExplicitIndexHits relationshipExplicitIndexGet( String name, String key, Object valueOrNull, long startNode,
+                long endNode ) throws ExplicitIndexNotFoundKernelException
         {
-            return readOperations.relationshipLegacyIndexGet( name, key, valueOrNull, startNode, endNode );
+            return readOperations.relationshipExplicitIndexGet( name, key, valueOrNull, startNode, endNode );
         }
 
         @Override
-        public LegacyIndexHits relationshipLegacyIndexQuery( String indexName, String key, Object queryOrQueryObject,
-                long startNode, long endNode ) throws LegacyIndexNotFoundKernelException
+        public ExplicitIndexHits relationshipExplicitIndexQuery( String indexName, String key, Object queryOrQueryObject,
+                long startNode, long endNode ) throws ExplicitIndexNotFoundKernelException
         {
             return readOperations
-                    .relationshipLegacyIndexQuery( indexName, key, queryOrQueryObject, startNode, endNode );
+                    .relationshipExplicitIndexQuery( indexName, key, queryOrQueryObject, startNode, endNode );
         }
 
         @Override
-        public LegacyIndexHits relationshipLegacyIndexQuery( String indexName, Object queryOrQueryObject,
-                long startNode, long endNode ) throws LegacyIndexNotFoundKernelException
+        public ExplicitIndexHits relationshipExplicitIndexQuery( String indexName, Object queryOrQueryObject,
+                long startNode, long endNode ) throws ExplicitIndexNotFoundKernelException
         {
-            return readOperations.relationshipLegacyIndexQuery( indexName, queryOrQueryObject, startNode, endNode );
+            return readOperations.relationshipExplicitIndexQuery( indexName, queryOrQueryObject, startNode, endNode );
         }
 
         @Override
-        public String[] nodeLegacyIndexesGetAll()
+        public String[] nodeExplicitIndexesGetAll()
         {
-            return readOperations.nodeLegacyIndexesGetAll();
+            return readOperations.nodeExplicitIndexesGetAll();
         }
 
         @Override
-        public String[] relationshipLegacyIndexesGetAll()
+        public String[] relationshipExplicitIndexesGetAll()
         {
-            return readOperations.relationshipLegacyIndexesGetAll();
+            return readOperations.relationshipExplicitIndexesGetAll();
         }
 
         @Override

@@ -52,6 +52,7 @@ import org.neo4j.graphdb.schema.Schema;
 import org.neo4j.graphdb.security.URLAccessValidationError;
 import org.neo4j.graphdb.traversal.BidirectionalTraversalDescription;
 import org.neo4j.graphdb.traversal.TraversalDescription;
+import org.neo4j.helpers.ValueUtils;
 import org.neo4j.helpers.collection.PrefetchingResourceIterator;
 import org.neo4j.helpers.collection.ResourceClosingIterator;
 import org.neo4j.kernel.GraphDatabaseQueryService;
@@ -66,8 +67,8 @@ import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaKernelException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaRuleNotFoundException;
+import org.neo4j.kernel.api.explicitindex.AutoIndexing;
 import org.neo4j.kernel.api.index.InternalIndexState;
-import org.neo4j.kernel.api.legacyindex.AutoIndexing;
 import org.neo4j.kernel.api.schema.IndexQuery;
 import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
 import org.neo4j.kernel.api.schema.index.IndexDescriptor;
@@ -103,14 +104,15 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.storageengine.api.EntityType;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
+import org.neo4j.values.virtual.MapValue;
 
 import static java.lang.String.format;
 import static org.neo4j.collection.primitive.PrimitiveLongCollections.map;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.transaction_timeout;
 import static org.neo4j.helpers.collection.Iterators.emptyResourceIterator;
 import static org.neo4j.kernel.api.security.SecurityContext.AUTH_DISABLED;
-import static org.neo4j.kernel.impl.api.legacyindex.InternalAutoIndexing.NODE_AUTO_INDEX;
-import static org.neo4j.kernel.impl.api.legacyindex.InternalAutoIndexing.RELATIONSHIP_AUTO_INDEX;
+import static org.neo4j.kernel.impl.api.explicitindex.InternalAutoIndexing.NODE_AUTO_INDEX;
+import static org.neo4j.kernel.impl.api.explicitindex.InternalAutoIndexing.RELATIONSHIP_AUTO_INDEX;
 import static org.neo4j.kernel.impl.api.operations.KeyReadOperations.NO_SUCH_LABEL;
 import static org.neo4j.kernel.impl.api.operations.KeyReadOperations.NO_SUCH_PROPERTY_KEY;
 
@@ -164,7 +166,8 @@ public class GraphDatabaseFacade implements GraphDatabaseAPI
          * @throws org.neo4j.graphdb.TransactionFailureException if unable to begin, or a transaction already exists.
          * @see SPI#beginTransaction(KernelTransaction.Type, SecurityContext)
          */
-        KernelTransaction beginTransaction( KernelTransaction.Type type, SecurityContext securityContext, long timeout );
+        KernelTransaction beginTransaction( KernelTransaction.Type type, SecurityContext securityContext,
+                long timeout );
 
         /**
          * Retrieve the transaction associated with the current context. For the classic implementation of the Core API,
@@ -184,6 +187,9 @@ public class GraphDatabaseFacade implements GraphDatabaseAPI
 
         /** Execute a cypher statement */
         Result executeQuery( String query, Map<String,Object> parameters, TransactionalContext context );
+
+        /** Execute a cypher statement */
+        Result executeQuery( String query, MapValue parameters, TransactionalContext context );
 
         AutoIndexing autoIndexing();
 
@@ -206,17 +212,17 @@ public class GraphDatabaseFacade implements GraphDatabaseAPI
 
     /**
      * Create a new Core API facade, backed by the given SPI.
-     *
+     * <p>
      * Any required dependencies are resolved using the resolver obtained from the SPI.
      */
     public final void init( SPI spi )
     {
         DependencyResolver resolver = spi.resolver();
         init(
-            spi,
-            resolver.resolveDependency( Guard.class ),
-            resolver.resolveDependency( ThreadToStatementContextBridge.class ),
-            resolver.resolveDependency( Config.class )
+                spi,
+                resolver.resolveDependency( Guard.class ),
+                resolver.resolveDependency( ThreadToStatementContextBridge.class ),
+                resolver.resolveDependency( Config.class )
         );
     }
 
@@ -234,18 +240,18 @@ public class GraphDatabaseFacade implements GraphDatabaseAPI
 
         this.schema = new SchemaImpl( statementSupplier );
         this.relActions = new StandardRelationshipActions( statementSupplier, transactionSupplier, assertTransactionOpen,
-                        ( id ) -> new NodeProxy( nodeActions, id ), this );
+                        id -> new NodeProxy( nodeActions, id ), this );
         this.nodeActions = new StandardNodeActions( statementSupplier, transactionSupplier, assertTransactionOpen, relActions, this );
-
         this.indexManager = Suppliers.lazySingleton( () ->
         {
             IndexProviderImpl idxProvider = new IndexProviderImpl( this, statementSupplier );
             AutoIndexerFacade<Node> nodeAutoIndexer = new AutoIndexerFacade<>(
-                () -> new ReadOnlyIndexFacade<>( idxProvider.getOrCreateNodeIndex( NODE_AUTO_INDEX, null ) ),
-                spi.autoIndexing().nodes() );
+                    () -> new ReadOnlyIndexFacade<>( idxProvider.getOrCreateNodeIndex( NODE_AUTO_INDEX, null ) ),
+                    spi.autoIndexing().nodes() );
             RelationshipAutoIndexerFacade relAutoIndexer = new RelationshipAutoIndexerFacade(
-                () -> new ReadOnlyRelationshipIndexFacade( idxProvider.getOrCreateRelationshipIndex( RELATIONSHIP_AUTO_INDEX, null ) ),
-                spi.autoIndexing().relationships() );
+                    () -> new ReadOnlyRelationshipIndexFacade(
+                            idxProvider.getOrCreateRelationshipIndex( RELATIONSHIP_AUTO_INDEX, null ) ),
+                    spi.autoIndexing().relationships() );
 
             return new IndexManagerImpl( statementSupplier, idxProvider, nodeAutoIndexer, relAutoIndexer );
         } );
@@ -425,7 +431,7 @@ public class GraphDatabaseFacade implements GraphDatabaseAPI
         InternalTransaction transaction =
                 beginTransaction( KernelTransaction.Type.implicit, AUTH_DISABLED );
 
-        return execute( transaction, query, parameters );
+        return execute( transaction, query, ValueUtils.asMapValue( parameters ) );
     }
 
     @Override
@@ -434,10 +440,10 @@ public class GraphDatabaseFacade implements GraphDatabaseAPI
     {
         InternalTransaction transaction =
                 beginTransaction( KernelTransaction.Type.implicit, AUTH_DISABLED, timeout, unit );
-        return execute( transaction, query, parameters );
+        return execute( transaction, query, ValueUtils.asMapValue( parameters ) );
     }
 
-    public Result execute( InternalTransaction transaction, String query, Map<String,Object> parameters )
+    public Result execute( InternalTransaction transaction, String query, MapValue parameters )
             throws QueryExecutionException
     {
         TransactionalContext context =
@@ -601,7 +607,8 @@ public class GraphDatabaseFacade implements GraphDatabaseAPI
             // FIXME: perhaps we should check that the new type and access mode are compatible with the current tx
             return new PlaceboTransaction( spi::currentTransaction, spi::currentStatement );
         }
-        return new TopLevelTransaction( spi.beginTransaction( type, securityContext, timeoutMillis ), spi::currentStatement );
+        return new TopLevelTransaction( spi.beginTransaction( type, securityContext, timeoutMillis ),
+                spi::currentStatement );
     }
 
     private ResourceIterator<Node> nodesByLabelAndProperty( Label myLabel, String key, Value value )

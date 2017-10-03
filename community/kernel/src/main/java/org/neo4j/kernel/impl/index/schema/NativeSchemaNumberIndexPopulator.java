@@ -41,7 +41,8 @@ import org.neo4j.kernel.api.index.IndexEntryUpdate;
 import org.neo4j.kernel.api.index.IndexPopulator;
 import org.neo4j.kernel.api.index.IndexUpdater;
 import org.neo4j.kernel.api.index.PropertyAccessor;
-import org.neo4j.kernel.impl.index.GBPTreeUtil;
+import org.neo4j.kernel.api.index.SchemaIndexProvider;
+import org.neo4j.kernel.api.schema.index.IndexDescriptor;
 
 import static org.neo4j.index.internal.gbptree.GBPTree.NO_HEADER_WRITER;
 
@@ -67,9 +68,10 @@ public abstract class NativeSchemaNumberIndexPopulator<KEY extends SchemaNumberK
     private byte[] failureBytes;
     private boolean dropped;
 
-    NativeSchemaNumberIndexPopulator( PageCache pageCache, FileSystemAbstraction fs, File storeFile, Layout<KEY,VALUE> layout )
+    NativeSchemaNumberIndexPopulator( PageCache pageCache, FileSystemAbstraction fs, File storeFile, Layout<KEY,VALUE> layout,
+            SchemaIndexProvider.Monitor monitor, IndexDescriptor descriptor, long indexId )
     {
-        super( pageCache, fs, storeFile, layout );
+        super( pageCache, fs, storeFile, layout, monitor, descriptor, indexId );
         this.treeKey = layout.newKey();
         this.treeValue = layout.newValue();
         this.conflictDetectingValueMerger = new ConflictDetectingValueMerger<>();
@@ -78,7 +80,7 @@ public abstract class NativeSchemaNumberIndexPopulator<KEY extends SchemaNumberK
     @Override
     public synchronized void create() throws IOException
     {
-        GBPTreeUtil.deleteIfPresent( pageCache, storeFile );
+        gbpTreeFileUtil.deleteFileIfPresent( storeFile );
         instantiateTree( RecoveryCleanupWorkCollector.IMMEDIATE, new NativeSchemaIndexHeaderWriter( BYTE_POPULATING ) );
         instantiateWriter();
         workSync = new WorkSync<>( new IndexUpdateApply<>( treeKey, treeValue, singleTreeWriter, conflictDetectingValueMerger ) );
@@ -97,7 +99,7 @@ public abstract class NativeSchemaNumberIndexPopulator<KEY extends SchemaNumberK
         {
             closeWriter();
             closeTree();
-            GBPTreeUtil.deleteIfPresent( pageCache, storeFile );
+            gbpTreeFileUtil.deleteFileIfPresent( storeFile );
         }
         finally
         {
@@ -127,7 +129,7 @@ public abstract class NativeSchemaNumberIndexPopulator<KEY extends SchemaNumberK
             private final Collection<IndexEntryUpdate<?>> updates = new ArrayList<>();
 
             @Override
-            public void process( IndexEntryUpdate update ) throws IOException, IndexEntryConflictException
+            public void process( IndexEntryUpdate<?> update ) throws IOException, IndexEntryConflictException
             {
                 assertOpen();
                 updates.add( update );
@@ -232,7 +234,7 @@ public abstract class NativeSchemaNumberIndexPopulator<KEY extends SchemaNumberK
 
     private void markTreeAsOnline() throws IOException
     {
-        tree.checkpoint( IOLimiter.unlimited(), ( pc ) -> pc.putByte( BYTE_ONLINE ) );
+        tree.checkpoint( IOLimiter.unlimited(), pc -> pc.putByte( BYTE_ONLINE ) );
     }
 
     void closeWriter() throws IOException
@@ -256,7 +258,7 @@ public abstract class NativeSchemaNumberIndexPopulator<KEY extends SchemaNumberK
             this.conflictDetectingValueMerger = conflictDetectingValueMerger;
         }
 
-        public void process( IndexEntryUpdate indexEntryUpdate ) throws Exception
+        public void process( IndexEntryUpdate<?> indexEntryUpdate ) throws Exception
         {
             NativeSchemaNumberIndexUpdater.processUpdate( treeKey, treeValue, indexEntryUpdate, writer, conflictDetectingValueMerger );
         }

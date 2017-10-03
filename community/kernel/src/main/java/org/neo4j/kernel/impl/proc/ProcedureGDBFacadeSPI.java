@@ -34,7 +34,7 @@ import org.neo4j.kernel.GraphDatabaseQueryService;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.exceptions.TransactionFailureException;
-import org.neo4j.kernel.api.legacyindex.AutoIndexing;
+import org.neo4j.kernel.api.explicitindex.AutoIndexing;
 import org.neo4j.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.impl.coreapi.CoreAPIAvailabilityGuard;
 import org.neo4j.kernel.impl.factory.DataSourceModule;
@@ -43,6 +43,7 @@ import org.neo4j.kernel.impl.factory.PlatformModule;
 import org.neo4j.kernel.impl.query.QueryExecutionKernelException;
 import org.neo4j.kernel.impl.query.TransactionalContext;
 import org.neo4j.kernel.impl.store.StoreId;
+import org.neo4j.values.virtual.MapValue;
 
 class ProcedureGDBFacadeSPI implements GraphDatabaseFacade.SPI
 {
@@ -134,6 +135,20 @@ class ProcedureGDBFacadeSPI implements GraphDatabaseFacade.SPI
     }
 
     @Override
+    public Result executeQuery( String query, MapValue parameters, TransactionalContext tc )
+    {
+        try
+        {
+            availability.assertDatabaseAvailable();
+            return sourceModule.queryExecutor.get().executeQuery( query, parameters, tc );
+        }
+        catch ( QueryExecutionKernelException e )
+        {
+            throw e.asUserException();
+        }
+    }
+
+    @Override
     public AutoIndexing autoIndexing()
     {
         return sourceModule.autoIndexing;
@@ -189,7 +204,7 @@ class ProcedureGDBFacadeSPI implements GraphDatabaseFacade.SPI
             availability.assertDatabaseAvailable();
             KernelTransaction kernelTx = sourceModule.kernelAPI.get().newTransaction( type, this.securityContext, timeout );
             kernelTx.registerCloseListener(
-                    ( txId ) -> sourceModule.threadToTransactionBridge.unbindTransactionFromCurrentThread() );
+                    txId -> sourceModule.threadToTransactionBridge.unbindTransactionFromCurrentThread() );
             sourceModule.threadToTransactionBridge.bindTransactionToCurrentThread( kernelTx );
             return kernelTx;
         }

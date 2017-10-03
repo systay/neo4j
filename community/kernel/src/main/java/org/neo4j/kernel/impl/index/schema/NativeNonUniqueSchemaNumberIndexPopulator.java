@@ -27,6 +27,8 @@ import org.neo4j.index.internal.gbptree.Layout;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.api.index.IndexEntryUpdate;
+import org.neo4j.kernel.api.index.SchemaIndexProvider;
+import org.neo4j.kernel.api.schema.index.IndexDescriptor;
 import org.neo4j.kernel.impl.api.index.sampling.DefaultNonUniqueIndexSampler;
 import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingConfig;
 import org.neo4j.kernel.impl.api.index.sampling.NonUniqueIndexSampler;
@@ -43,35 +45,22 @@ class NativeNonUniqueSchemaNumberIndexPopulator<KEY extends SchemaNumberKey, VAL
     private NonUniqueIndexSampler sampler;
 
     NativeNonUniqueSchemaNumberIndexPopulator( PageCache pageCache, FileSystemAbstraction fs, File storeFile, Layout<KEY,VALUE> layout,
-            IndexSamplingConfig samplingConfig )
+            IndexSamplingConfig samplingConfig, SchemaIndexProvider.Monitor monitor, IndexDescriptor descriptor, long indexId )
     {
-        super( pageCache, fs, storeFile, layout );
+        super( pageCache, fs, storeFile, layout, monitor, descriptor, indexId );
         this.samplingConfig = samplingConfig;
+        this.sampler = new DefaultNonUniqueIndexSampler( samplingConfig.sampleSizeLimit() );
     }
 
     @Override
-    public void includeSample( IndexEntryUpdate update )
+    public void includeSample( IndexEntryUpdate<?> update )
     {
-        if ( updateSampling )
-        {
-            checkSampler();
-            sampler.include( SamplingUtil.encodedStringValuesForSampling( (Object[]) update.values() ) );
-        }
-    }
-
-    @Override
-    public void configureSampling( boolean onlineSampling )
-    {
-        this.updateSampling = onlineSampling;
-        this.sampler = onlineSampling ? new DefaultNonUniqueIndexSampler( samplingConfig.sampleSizeLimit() )
-                                      : new FullScanNonUniqueIndexSampler<>( tree, layout, samplingConfig );
+        sampler.include( SamplingUtil.encodedStringValuesForSampling( (Object[]) update.values() ) );
     }
 
     @Override
     public IndexSample sampleResult()
     {
-        checkSampler();
-
         // Close the writer before scanning
         try
         {
@@ -96,14 +85,6 @@ class NativeNonUniqueSchemaNumberIndexPopulator<KEY extends SchemaNumberKey, VAL
             {
                 throw new UncheckedIOException( e );
             }
-        }
-    }
-
-    private void checkSampler()
-    {
-        if ( sampler == null )
-        {
-            throw new IllegalStateException( "Please configure populator sampler before using it." );
         }
     }
 }

@@ -22,7 +22,7 @@ package org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.ExecutionContext
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.expressions.{AggregationExpression, Expression}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.aggregation.AggregationFunction
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription.Id
+import org.neo4j.cypher.internal.v3_3.logical.plans.LogicalPlanId
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.{ListValue, MapValue, VirtualValues}
 
@@ -33,7 +33,7 @@ import scala.collection.mutable.{Map => MutableMap}
 // to emit aggregated results.
 // Cypher is lazy until it can't - this pipe will eagerly load the full match
 case class EagerAggregationPipe(source: Pipe, keyExpressions: Map[String, Expression], aggregations: Map[String, AggregationExpression])
-                               (val id: Id = new Id) extends PipeWithSource(source) {
+                               (val id: LogicalPlanId = LogicalPlanId.DEFAULT) extends PipeWithSource(source) {
 
   aggregations.values.foreach(_.registerOwningPipe(this))
   keyExpressions.values.foreach(_.registerOwningPipe(this))
@@ -44,22 +44,22 @@ case class EagerAggregationPipe(source: Pipe, keyExpressions: Map[String, Expres
     keyExpressions.size match {
       case 1 =>
         val firstExpression = keyExpressions.head._2
-        (ctx, state) => firstExpression(ctx)(state)
+        (ctx, state) => firstExpression(ctx, state)
 
       case 2 =>
         val e1 = keyExpressions.head._2
         val e2 = keyExpressions.last._2
-        (ctx, state) => VirtualValues.list(e1(ctx)(state), e2(ctx)(state))
+        (ctx, state) => VirtualValues.list(e1(ctx, state), e2(ctx, state))
 
       case 3 =>
         val e1 = keyExpressions.head._2
         val e2 = keyExpressions.tail.head._2
         val e3 = keyExpressions.last._2
-        (ctx, state) => VirtualValues.list(e1(ctx)(state), e2(ctx)(state), e3(ctx)(state))
+        (ctx, state) => VirtualValues.list(e1(ctx, state), e2(ctx, state), e3(ctx, state))
 
       case _ =>
         val expressions = keyExpressions.values.toSeq
-        (ctx, state) => VirtualValues.list(expressions.map(e => e(ctx)(state)): _*)
+        (ctx, state) => VirtualValues.list(expressions.map(e => e(ctx, state)): _*)
     }
   }
 
@@ -88,8 +88,6 @@ case class EagerAggregationPipe(source: Pipe, keyExpressions: Map[String, Expres
 
   protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
 
-    implicit val s = state
-
     val result = MutableMap[AnyValue, Seq[AggregationFunction]]()
     val keyNames = keyExpressions.keySet.toList
     val aggregationNames: IndexedSeq[String] = aggregations.keys.toIndexedSeq
@@ -98,7 +96,8 @@ case class EagerAggregationPipe(source: Pipe, keyExpressions: Map[String, Expres
 
     def createEmptyResult(params: MapValue): Iterator[ExecutionContext] = {
       val newMap = MutableMaps.empty
-      val aggregationNamesAndFunctions = aggregationNames zip aggregations.map(_._2.createAggregationFunction.result)
+      val values = aggregations.map(_._2.createAggregationFunction.result(state))
+      val aggregationNamesAndFunctions: IndexedSeq[(String, AnyValue)] = aggregationNames zip values
 
       aggregationNamesAndFunctions.toMap
         .foreach { case (name, zeroValue) => newMap += name -> zeroValue}
@@ -112,7 +111,7 @@ case class EagerAggregationPipe(source: Pipe, keyExpressions: Map[String, Expres
     def createResults(groupingKey: AnyValue, aggregator: scala.Seq[AggregationFunction]): ExecutionContext = {
       val newMap = MutableMaps.create(mapSize)
       createResultFunction(newMap, groupingKey)
-      (aggregationNames zip aggregator.map(_.result)).foreach(newMap += _)
+      (aggregationNames zip aggregator.map(_.result(state))).foreach(newMap += _)
       ExecutionContext(newMap)
     }
 
@@ -122,7 +121,7 @@ case class EagerAggregationPipe(source: Pipe, keyExpressions: Map[String, Expres
         val aggregateFunctions: Seq[AggregationFunction] = aggregations.map(_._2.createAggregationFunction).toIndexedSeq
         aggregateFunctions
       })
-      functions.foreach(func => func(ctx)(state))
+      functions.foreach(func => func(ctx, state))
     })
 
     if (result.isEmpty && keyNames.isEmpty) {

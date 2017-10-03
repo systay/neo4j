@@ -21,12 +21,12 @@ package org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes
 
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.ExecutionContext
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.expressions.Expression
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription.Id
 import org.neo4j.cypher.internal.compiler.v3_3._
+import org.neo4j.cypher.internal.v3_3.logical.plans.LogicalPlanId
 import org.neo4j.cypher.internal.frontend.v3_3.CypherTypeException
 import org.neo4j.cypher.internal.frontend.v3_3.ast.{LabelToken, PropertyKeyToken}
-import org.neo4j.cypher.internal.javacompat.ValueUtils
 import org.neo4j.graphdb.Node
+import org.neo4j.helpers.ValueUtils
 import org.neo4j.values.storable.{TextValue, Values}
 
 abstract class AbstractNodeIndexStringScanPipe(ident: String,
@@ -40,7 +40,7 @@ abstract class AbstractNodeIndexStringScanPipe(ident: String,
 
   override protected def internalCreateResults(state: QueryState): Iterator[ExecutionContext] = {
     val baseContext = state.createOrGetInitialContext()
-    val value = valueExpr(baseContext)(state)
+    val value = valueExpr(baseContext, state)
 
     val resultNodes = value match {
       case value: TextValue =>
@@ -62,7 +62,7 @@ case class NodeIndexContainsScanPipe(ident: String,
                                      label: LabelToken,
                                      propertyKey: PropertyKeyToken,
                                      valueExpr: Expression)
-                                    (val id: Id = new Id)
+                                    (val id: LogicalPlanId = LogicalPlanId.DEFAULT)
   extends AbstractNodeIndexStringScanPipe(ident, label, propertyKey, valueExpr) {
 
   override protected def queryContextCall(state: QueryState, indexDescriptor: IndexDescriptor, value: String) =
@@ -73,7 +73,7 @@ case class NodeIndexEndsWithScanPipe(ident: String,
                                      label: LabelToken,
                                      propertyKey: PropertyKeyToken,
                                      valueExpr: Expression)
-                                    (val id: Id = new Id)
+                                    (val id: LogicalPlanId = LogicalPlanId.DEFAULT)
   extends AbstractNodeIndexStringScanPipe(ident, label, propertyKey, valueExpr) {
 
   override protected def queryContextCall(state: QueryState, indexDescriptor: IndexDescriptor, value: String) =

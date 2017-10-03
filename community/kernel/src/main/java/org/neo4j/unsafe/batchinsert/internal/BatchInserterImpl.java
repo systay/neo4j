@@ -297,7 +297,7 @@ public class BatchInserterImpl implements BatchInserter, IndexConfigStoreProvide
                 kernelExtensions, deps, UnsatisfiedDependencyStrategies.ignore() ) );
 
         SchemaIndexProvider provider = extensions.resolveDependency( SchemaIndexProvider.class,
-                HighestSelectionStrategy.getInstance() );
+                HighestSelectionStrategy.INSTANCE );
         schemaIndexProviders = new DefaultSchemaIndexProviderMap( provider );
         labelScanStore = new NativeLabelScanStore( pageCache, storeDir, FullStoreChangeStream.EMPTY, false, new Monitors(),
                 RecoveryCleanupWorkCollector.IMMEDIATE );
@@ -533,7 +533,7 @@ public class BatchInserterImpl implements BatchInserter, IndexConfigStoreProvide
         try ( InitialNodeLabelCreationVisitor labelUpdateVisitor = new InitialNodeLabelCreationVisitor() )
         {
             StoreScan<IOException> storeScan = indexStoreView.visitNodes( labelIds,
-                    ( propertyKeyId ) -> PrimitiveIntCollections.contains( propertyKeyIds, propertyKeyId ),
+                    propertyKeyId -> PrimitiveIntCollections.contains( propertyKeyIds, propertyKeyId ),
                     propertyUpdateVisitor, labelUpdateVisitor, true );
             storeScan.run();
 

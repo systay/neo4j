@@ -52,6 +52,7 @@ import org.neo4j.kernel.StoreLockException;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.api.TransactionHeaderInformation;
+import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.impl.factory.CommunityEditionModule;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.factory.EditionModule;
@@ -644,7 +645,7 @@ public class BackupIT
                     GraphDatabaseFacadeFactory.Dependencies dependencies )
             {
                 Function<PlatformModule,EditionModule> factory =
-                        ( platformModule ) -> new CommunityEditionModule( platformModule )
+                        platformModule -> new CommunityEditionModule( platformModule )
                         {
 
                             @Override

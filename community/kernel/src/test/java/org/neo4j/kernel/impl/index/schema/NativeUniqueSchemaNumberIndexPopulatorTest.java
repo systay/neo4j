@@ -47,7 +47,7 @@ public class NativeUniqueSchemaNumberIndexPopulatorTest extends NativeSchemaNumb
             PageCache pageCache, FileSystemAbstraction fs, File indexFile,
             Layout<SchemaNumberKey,SchemaNumberValue> layout, IndexSamplingConfig samplingConfig )
     {
-        return new NativeUniqueSchemaNumberIndexPopulator<>( pageCache, fs, indexFile, layout );
+        return new NativeUniqueSchemaNumberIndexPopulator<>( pageCache, fs, indexFile, layout, monitor, indexDescriptor, indexId );
     }
 
     @Override
@@ -114,7 +114,6 @@ public class NativeUniqueSchemaNumberIndexPopulatorTest extends NativeSchemaNumb
     {
         // GIVEN
         populator.create();
-        populator.configureSampling( true ); // has no effect, really
         IndexEntryUpdate<IndexDescriptor>[] updates = layoutUtil.someUpdates();
 
         // WHEN

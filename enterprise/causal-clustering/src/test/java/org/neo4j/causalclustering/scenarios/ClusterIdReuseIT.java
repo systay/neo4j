@@ -19,17 +19,17 @@
  */
 package org.neo4j.causalclustering.scenarios;
 
-
 import org.apache.commons.lang3.mutable.MutableLong;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.concurrent.TimeoutException;
 
+import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.discovery.Cluster;
 import org.neo4j.causalclustering.discovery.CoreClusterMember;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.id.IdController;
 import org.neo4j.kernel.impl.store.id.IdGenerator;
 import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
@@ -45,18 +45,18 @@ public class ClusterIdReuseIT
     @Rule
     public final ClusterRule clusterRule = new ClusterRule( getClass() )
             .withNumberOfCoreMembers( 3 )
+            // increased to decrease likelihood of unnecessary leadership changes
+            .withSharedCoreParam( CausalClusteringSettings.leader_election_timeout, "2s" )
+            // need to be 1 in order for the reuse count to be deterministic
+            .withSharedCoreParam( GraphDatabaseSettings.record_id_batch_size, Integer.toString( 1 ) )
             .withNumberOfReadReplicas( 0 );
     private Cluster cluster;
-
-    @Before
-    public void setUp() throws Exception
-    {
-        cluster = clusterRule.startCluster();
-    }
 
     @Test
     public void shouldReuseIdsInCluster() throws Exception
     {
+        cluster = clusterRule.startCluster();
+
         final MutableLong first = new MutableLong();
         final MutableLong second = new MutableLong();
 
@@ -98,12 +98,15 @@ public class ClusterIdReuseIT
     @Test
     public void newLeaderShouldNotReuseIds() throws Exception
     {
+        cluster = clusterRule.startCluster();
+
         final MutableLong first = new MutableLong();
         final MutableLong second = new MutableLong();
 
         CoreClusterMember creationLeader = createThreeNodes( cluster, first, second );
         CoreClusterMember deletionLeader = removeTwoNodes( cluster, first, second );
 
+        // the following assumption is not sufficient for the subsequent assertions, since leadership is a volatile state
         assumeTrue( creationLeader != null && creationLeader.equals( deletionLeader ) );
 
         idMaintenanceOnLeader( creationLeader );
@@ -136,6 +139,8 @@ public class ClusterIdReuseIT
     @Test
     public void reusePreviouslyFreedIds() throws Exception
     {
+        cluster = clusterRule.startCluster();
+
         final MutableLong first = new MutableLong();
         final MutableLong second = new MutableLong();
 

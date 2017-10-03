@@ -25,16 +25,16 @@ import org.neo4j.cypher.internal.compatibility.v3_3.runtime._
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.executionplan.{InternalQueryType, ProcedureCallMode, StandardInternalExecutionResult}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription.InternalPlanDescription
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription.InternalPlanDescription.Arguments.{Runtime, RuntimeImpl}
-import org.neo4j.cypher.internal.compiler.v3_3.spi.QualifiedName
 import org.neo4j.cypher.internal.frontend.v3_3.ProfilerStatisticsNotReadyException
 import org.neo4j.cypher.internal.frontend.v3_3.symbols.{CypherType, _}
-import org.neo4j.cypher.internal.javacompat.ValueUtils
-import org.neo4j.cypher.internal.javacompat.ValueUtils.{fromNodeProxy, fromRelationshipProxy, _}
 import org.neo4j.cypher.internal.spi.v3_3.QueryContext
+import org.neo4j.cypher.internal.v3_3.logical.plans.QualifiedName
 import org.neo4j.cypher.internal.{InternalExecutionResult, QueryStatistics}
 import org.neo4j.cypher.result.QueryResult.{QueryResultVisitor, Record}
 import org.neo4j.graphdb.Notification
 import org.neo4j.graphdb.spatial.{Geometry, Point}
+import org.neo4j.helpers.ValueUtils
+import org.neo4j.helpers.ValueUtils._
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.storable.Values.{of => _, _}
@@ -51,17 +51,17 @@ import org.neo4j.values.storable.Values.{of => _, _}
   * @param executionPlanDescriptionGenerator Generator for the plan description of the result.
   * @param executionMode                     The execution mode.
   */
-class ProcedureExecutionResult[E <: Exception](context: QueryContext,
-                                               taskCloser: TaskCloser,
-                                               name: QualifiedName,
-                                               callMode: ProcedureCallMode,
-                                               args: Seq[Any],
-                                               indexResultNameMappings: IndexedSeq[(Int, String, CypherType)],
-                                               executionPlanDescriptionGenerator: () => InternalPlanDescription,
-                                               val executionMode: ExecutionMode)
+class ProcedureExecutionResult(context: QueryContext,
+                               taskCloser: TaskCloser,
+                               name: QualifiedName,
+                               callMode: ProcedureCallMode,
+                               args: Seq[Any],
+                               indexResultNameMappings: IndexedSeq[(Int, String, CypherType)],
+                               executionPlanDescriptionGenerator: () => InternalPlanDescription,
+                               val executionMode: ExecutionMode)
   extends StandardInternalExecutionResult(context, ProcedureRuntimeName, Some(taskCloser)) {
 
-  override def fieldNames: Array[String] = indexResultNameMappings.map(_._2).toArray
+  override val fieldNames: Array[String] = indexResultNameMappings.map(_._2).toArray
 
   private final val executionResults = executeCall
 
@@ -95,9 +95,10 @@ class ProcedureExecutionResult[E <: Exception](context: QueryContext,
   override def accept[EX <: Exception](visitor: QueryResultVisitor[EX]): Unit = {
     executionResults.foreach { res =>
       val fieldArray = new Array[AnyValue](indexResultNameMappings.size)
-      var i = 0
-      for ((pos, _, typ) <- indexResultNameMappings) {
-        fieldArray(i) = typ match {
+      for (i <- indexResultNameMappings.indices) {
+        val mapping = indexResultNameMappings(i)
+        val pos = mapping._1
+        fieldArray(i) = mapping._3 match {
           case CTNode => transform(res(pos), fromNodeProxy)
           case CTRelationship => transform(res(pos), fromRelationshipProxy)
           case CTPath => transform(res(pos), asPathValue)
@@ -112,7 +113,6 @@ class ProcedureExecutionResult[E <: Exception](context: QueryContext,
           case ListType(_) => transform(res(pos), asListValue)
           case CTAny => transform(res(pos), ValueUtils.of)
         }
-        i += 1
       }
       visitor.visit(new Record {
         override def fields(): Array[AnyValue] = fieldArray

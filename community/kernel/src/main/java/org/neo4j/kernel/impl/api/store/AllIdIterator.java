@@ -21,11 +21,11 @@ package org.neo4j.kernel.impl.api.store;
 
 import org.neo4j.kernel.impl.store.CommonAbstractStore;
 
-class AllIdIterator extends HighIdAwareIterator<CommonAbstractStore<?,?>>
+public class AllIdIterator extends HighIdAwareIterator<CommonAbstractStore<?,?>>
 {
     private long currentId;
 
-    AllIdIterator( CommonAbstractStore<?,?> store )
+    public AllIdIterator( CommonAbstractStore<?,?> store )
     {
         super( store );
     }

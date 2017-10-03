@@ -30,8 +30,10 @@ import org.neo4j.kernel.api.index.IndexEntryUpdate;
 import org.neo4j.kernel.api.index.IndexPopulator;
 import org.neo4j.kernel.api.schema.LabelSchemaDescriptor;
 import org.neo4j.kernel.impl.index.schema.NativeSelector;
+import org.neo4j.kernel.impl.index.schema.fusion.FusionSchemaIndexProvider.DropAction;
 import org.neo4j.values.storable.Value;
 
+import static java.util.Arrays.asList;
 import static org.hamcrest.Matchers.sameInstance;
 import static org.hamcrest.core.AnyOf.anyOf;
 import static org.junit.Assert.assertThat;
@@ -44,9 +46,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-
-import static java.util.Arrays.asList;
-
 import static org.neo4j.kernel.impl.index.schema.fusion.FusionIndexTestHelp.add;
 import static org.neo4j.kernel.impl.index.schema.fusion.FusionIndexTestHelp.verifyCallFail;
 
@@ -55,13 +54,15 @@ public class FusionIndexPopulatorTest
     private IndexPopulator nativePopulator;
     private IndexPopulator lucenePopulator;
     private FusionIndexPopulator fusionIndexPopulator;
+    private final long indexId = 8;
+    private final DropAction dropAction = mock( DropAction.class );
 
     @Before
     public void mockComponents()
     {
         nativePopulator = mock( IndexPopulator.class );
         lucenePopulator = mock( IndexPopulator.class );
-        fusionIndexPopulator = new FusionIndexPopulator( nativePopulator, lucenePopulator, new NativeSelector() );
+        fusionIndexPopulator = new FusionIndexPopulator( nativePopulator, lucenePopulator, new NativeSelector(), indexId, dropAction );
     }
 
     /* create */
@@ -116,6 +117,7 @@ public class FusionIndexPopulatorTest
         // then
         verify( nativePopulator, times( 1 ) ).drop();
         verify( lucenePopulator, times( 1 ) ).drop();
+        verify( dropAction ).drop( indexId );
     }
 
     @Test
@@ -407,16 +409,5 @@ public class FusionIndexPopulatorTest
             verify( lucenePopulator ).includeSample( update );
             reset( lucenePopulator );
         }
-    }
-
-    @Test
-    public void shouldConfigureSamplingOnBothPopulators() throws Exception
-    {
-        // when
-        fusionIndexPopulator.configureSampling( true );
-
-        // then
-        verify( nativePopulator ).configureSampling( true );
-        verify( lucenePopulator ).configureSampling( true );
     }
 }

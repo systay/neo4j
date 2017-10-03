@@ -21,21 +21,19 @@ package org.neo4j.cypher.internal.compatibility.v3_3.runtime
 
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.PatternConverters._
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.expressions.{AggregationExpression, Literal, Expression => CommandExpression}
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.expressions.{AggregationExpression, Literal}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.predicates.{Predicate, True}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.executionplan._
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.executionplan.builders.prepare.KeyTokenResolver
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes._
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription.Id
-import org.neo4j.cypher.internal.compiler.v3_3.ast.ResolvedCall
-import org.neo4j.cypher.internal.compiler.v3_3.planner.logical
-import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans.{Limit => LimitPlan, LoadCSV => LoadCSVPlan, Skip => SkipPlan, _}
 import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
 import org.neo4j.cypher.internal.frontend.v3_3.ast._
 import org.neo4j.cypher.internal.frontend.v3_3.helpers.Eagerly
 import org.neo4j.cypher.internal.frontend.v3_3.phases.Monitors
 import org.neo4j.cypher.internal.frontend.v3_3.{ast => frontEndAst, _}
 import org.neo4j.cypher.internal.ir.v3_3.{IdName, VarPatternLength}
+import org.neo4j.cypher.internal.v3_3.logical.plans
+import org.neo4j.cypher.internal.v3_3.logical.plans.{ColumnOrder, Limit => LimitPlan, LoadCSV => LoadCSVPlan, Skip => SkipPlan, _}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.{EdgeValue, NodeValue}
 
@@ -44,7 +42,7 @@ import org.neo4j.values.virtual.{EdgeValue, NodeValue}
  * When adding new Pipes and LogicalPlans, this is where you should be looking.
  */
 case class CommunityPipeBuilder(monitors: Monitors, recurse: LogicalPlan => Pipe, readOnly: Boolean,
-                                idMap: Map[LogicalPlan, Id], expressionConverters: ExpressionConverters,
+                                expressionConverters: ExpressionConverters,
                                 rewriteAstExpression: (frontEndAst.Expression) => frontEndAst.Expression)
                                (implicit context: PipeExecutionBuilderContext, planContext: PlanContext) extends PipeBuilder {
 
@@ -56,7 +54,7 @@ case class CommunityPipeBuilder(monitors: Monitors, recurse: LogicalPlan => Pipe
 
 
   def build(plan: LogicalPlan): Pipe = {
-    val id = idMap.getOrElse(plan, new Id)
+    val id = plan.assignedId
     plan match {
       case SingleRow() =>
         SingleRowPipe()(id)
@@ -105,7 +103,7 @@ case class CommunityPipeBuilder(monitors: Monitors, recurse: LogicalPlan => Pipe
   }
 
   def build(plan: LogicalPlan, source: Pipe): Pipe = {
-    val id = idMap.getOrElse(plan, new Id)
+    val id = plan.assignedId
     plan match {
       case Projection(_, expressions) =>
         ProjectionPipe(source, Eagerly.immutableMapValues(expressions, buildExpression))(id = id)
@@ -318,7 +316,7 @@ case class CommunityPipeBuilder(monitors: Monitors, recurse: LogicalPlan => Pipe
       (context: ExecutionContext, state: QueryState, entity: AnyValue) => {
         keys.zip(commands).forall { case (variable: Variable, expr: Predicate) =>
           context(variable.name) = entity
-          val result = expr.isTrue(context)(state)
+          val result = expr.isTrue(context, state)
           context.remove(variable.name)
           result
         }
@@ -338,7 +336,7 @@ case class CommunityPipeBuilder(monitors: Monitors, recurse: LogicalPlan => Pipe
   }
 
   def build(plan: LogicalPlan, lhs: Pipe, rhs: Pipe): Pipe = {
-    val id = idMap.getOrElse(plan, new Id)
+    val id = plan.assignedId
     plan match {
       case CartesianProduct(_, _) =>
         CartesianProductPipe(lhs, rhs)(id = id)
@@ -404,7 +402,6 @@ case class CommunityPipeBuilder(monitors: Monitors, recurse: LogicalPlan => Pipe
     }
   }
 
-  private val resolver = new KeyTokenResolver
   implicit val table: SemanticTable = context.semanticTable
 
   private def buildPredicate(expr: frontEndAst.Expression)(implicit context: PipeExecutionBuilderContext, planContext: PlanContext): Predicate = {
@@ -413,8 +410,8 @@ case class CommunityPipeBuilder(monitors: Monitors, recurse: LogicalPlan => Pipe
     expressionConverters.toCommandPredicate(rewrittenExpr).rewrite(KeyTokenResolver.resolveExpressions(_, planContext)).asInstanceOf[Predicate]
   }
 
-  private def translateColumnOrder(s: logical.SortDescription): pipes.ColumnOrder = s match {
-    case logical.Ascending(IdName(name)) => pipes.Ascending(name)
-    case logical.Descending(IdName(name)) => pipes.Descending(name)
+  private def translateColumnOrder(s: ColumnOrder): pipes.ColumnOrder = s match {
+    case plans.Ascending(IdName(name)) => pipes.Ascending(name)
+    case plans.Descending(IdName(name)) => pipes.Descending(name)
   }
 }

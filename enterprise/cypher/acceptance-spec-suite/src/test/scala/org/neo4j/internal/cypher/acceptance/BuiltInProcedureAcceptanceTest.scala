@@ -19,9 +19,14 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.neo4j.cypher.SyntaxException
+import org.neo4j.graphdb.{Label, Node, Relationship}
+import org.neo4j.internal.cypher.acceptance.CypherComparisonSupport.Configs
 
-class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest {
+import scala.collection.JavaConversions._
+
+class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with CypherComparisonSupport {
+
+  private val combinedCallconfiguration = Configs.CommunityInterpreted - Configs.AllRulePlanners - Configs.Version2_3
 
   test("should be able to filter as part of call") {
     // Given
@@ -30,7 +35,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest {
     createLabeledNode("C")
 
     //When
-    val result = execute("CALL db.labels() YIELD label WHERE label <> 'A' RETURN *")
+    val result = executeWith(combinedCallconfiguration, "CALL db.labels() YIELD label WHERE label <> 'A' RETURN *")
 
     // Then
     result.toList should equal(
@@ -39,10 +44,48 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest {
         Map("label" -> "C")))
   }
 
+  test("should be able to use db.schema") {
+
+    // Given
+    val neo = createLabeledNode("Neo")
+    val d1 = createLabeledNode("Department")
+    val e1 = createLabeledNode("Employee")
+    relate(e1, d1, "WORKS_AT", "Hallo")
+    relate(d1, neo, "PART_OF", "Hallo")
+
+    // When
+    val query = "CALL db.schema()"
+    val result = executeWith(Configs.Procs, query).toList
+
+    // Then
+    result.size should equal(1)
+
+    // And then nodes
+    val nodes = result.head("nodes").asInstanceOf[Seq[Node]]
+
+    val nodeState: Set[(List[Label], Map[String,AnyRef])] =
+      nodes.map(n => (n.getLabels.toList, n.getAllProperties.toMap)).toSet
+
+    val empty = new java.util.ArrayList()
+    nodeState should equal(
+      Set(
+        (List(Label.label("Neo")),        Map("indexes" -> empty, "constraints" -> empty, "name" -> "Neo")),
+        (List(Label.label("Department")), Map("indexes" -> empty, "constraints" -> empty, "name" -> "Department")),
+        (List(Label.label("Employee")),   Map("indexes" -> empty, "constraints" -> empty, "name" -> "Employee"))
+      ))
+
+    // And then relationships
+    val relationships = result.head("relationships").asInstanceOf[Seq[Relationship]]
+
+    val relationshipState: Set[String] = relationships.map(_.getType.name()).toSet
+    relationshipState should equal(Set("WORKS_AT", "PART_OF"))
+  }
+
   test("should not be able to filter as part of standalone call") {
-    a [SyntaxException] should be thrownBy {
-      execute("CALL db.labels() YIELD label WHERE label <> 'A'")
-    }
+    failWithError(
+      Configs.AbsolutelyAll - Configs.Version2_3,
+      "CALL db.labels() YIELD label WHERE label <> 'A'",
+      List("Cannot use standalone call with WHERE"))
   }
 
   test("should be able to find labels from built-in-procedure") {
@@ -52,7 +95,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest {
     createLabeledNode("C")
 
     //When
-    val result = execute("CALL db.labels() YIELD label RETURN *")
+    val result = executeWith(combinedCallconfiguration, "CALL db.labels() YIELD label RETURN *")
 
     // Then
     result.toList should equal(
@@ -69,7 +112,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest {
     createLabeledNode(Map("name" -> "Toc"), "C")
 
     //When
-    val result = execute("MATCH (n {name: 'Toc'}) WITH n.name AS name CALL db.labels() YIELD label RETURN *")
+    val result = executeWith(combinedCallconfiguration, "MATCH (n {name: 'Toc'}) WITH n.name AS name CALL db.labels() YIELD label RETURN *")
 
     // Then
     result.toList should equal(
@@ -82,7 +125,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest {
   test("db.labels works on an empty database") {
     // Given an empty database
     //When
-    val result = execute("CALL db.labels() YIELD label RETURN *")
+    val result = executeWith(combinedCallconfiguration, "CALL db.labels() YIELD label RETURN *")
 
     // Then
     result.toList shouldBe empty
@@ -91,7 +134,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest {
   test("db.labels work on an empty database") {
     // Given an empty database
     //When
-    val result = execute("CALL db.labels")
+    val result = executeWith(Configs.Procs, "CALL db.labels")
 
     // Then
     result.toList shouldBe empty
@@ -103,7 +146,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest {
     execute("MATCH (a:A) REMOVE a:A")
 
     //When
-    val result = execute("CALL db.labels")
+    val result = executeWith(Configs.Procs, "CALL db.labels")
 
     // Then
     result shouldBe empty
@@ -115,7 +158,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest {
     execute("MATCH (a) DETACH DELETE a")
 
     //When
-    val result = execute("CALL db.labels")
+    val result = executeWith(Configs.Procs, "CALL db.labels")
 
     // Then
     result shouldBe empty
@@ -128,7 +171,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest {
     relate(createNode(), createNode(), "C")
 
     // When
-    val result = execute("CALL db.relationshipTypes")
+    val result = executeWith(Configs.Procs, "CALL db.relationshipTypes")
 
     // Then
     result.toList should equal(
@@ -141,7 +184,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest {
   test("db.relationshipType work on an empty database") {
     // Given an empty database
     //When
-    val result = execute("CALL db.relationshipTypes")
+    val result = executeWith(Configs.Procs, "CALL db.relationshipTypes")
 
     // Then
     result shouldBe empty
@@ -149,14 +192,13 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest {
 
   test("db.relationshipTypes should be empty when all relationships are removed") {
     // Given
-    // Given
     relate(createNode(), createNode(), "A")
     relate(createNode(), createNode(), "B")
     relate(createNode(), createNode(), "C")
     execute("MATCH (a) DETACH DELETE a")
 
     //When
-    val result = execute("CALL db.relationshipTypes")
+    val result = executeWith(Configs.Procs, "CALL db.relationshipTypes")
 
     // Then
     result shouldBe empty
@@ -167,7 +209,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest {
     createNode("A" -> 1, "B" -> 2, "C" -> 3)
 
     // When
-    val result = execute("CALL db.propertyKeys")
+    val result = executeWith(Configs.Procs, "CALL db.propertyKeys")
 
     // Then
     result.toList should equal(
@@ -181,7 +223,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest {
     // Given an empty database
 
     // When
-    val result = execute("CALL db.propertyKeys")
+    val result = executeWith(Configs.Procs, "CALL db.propertyKeys")
 
     // Then
     result shouldBe empty
@@ -193,7 +235,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest {
     execute("MATCH (a)-[r]-(b) REMOVE a.A, r.R, b.B")
 
     // When
-    val result = execute("CALL db.propertyKeys")
+    val result = executeWith(Configs.Procs, "CALL db.propertyKeys")
 
     // Then
     result.toList should equal(
@@ -209,7 +251,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest {
     execute("MATCH (a) DETACH DELETE a")
 
     // When
-    val result = execute("CALL db.propertyKeys")
+    val result = executeWith(Configs.Procs, "CALL db.propertyKeys")
 
     // Then
     result.toList should equal(
@@ -224,7 +266,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest {
     graph.createIndex("A", "prop")
 
     //When
-    val result = execute("CALL db.indexes")
+    val result = executeWith(Configs.Procs, "CALL db.indexes")
 
     // Then
     result.toList should equal(

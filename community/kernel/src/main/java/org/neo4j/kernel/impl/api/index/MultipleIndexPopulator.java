@@ -93,7 +93,7 @@ public class MultipleIndexPopulator implements IndexPopulator
 
     // Concurrency queue since multiple concurrent threads may enqueue updates into it. It is important for this queue
     // to have fast #size() method since it might be drained in batches
-    protected final Queue<IndexEntryUpdate> queue = new LinkedBlockingQueue<>();
+    protected final Queue<IndexEntryUpdate<?>> queue = new LinkedBlockingQueue<>();
 
     // Populators are added into this list. The same thread adding populators will later call #indexAllNodes.
     // Multiple concurrent threads might fail individual populations.
@@ -166,10 +166,9 @@ public class MultipleIndexPopulator implements IndexPopulator
     {
         int[] labelIds = labelIds();
         int[] propertyKeyIds = propertyKeyIds();
-        IntPredicate propertyKeyIdFilter = ( propertyKeyId ) -> contains( propertyKeyIds, propertyKeyId );
+        IntPredicate propertyKeyIdFilter = propertyKeyId -> contains( propertyKeyIds, propertyKeyId );
 
         storeScan = storeView.visitNodes( labelIds, propertyKeyIdFilter, new NodePopulationVisitor(), null, false );
-        storeScan.configure( populations );
         return new DelegatingStoreScan<IndexPopulationFailedKernelException>( storeScan )
         {
             @Override
@@ -187,13 +186,15 @@ public class MultipleIndexPopulator implements IndexPopulator
      *
      * @param update {@link IndexEntryUpdate} to queue.
      */
-    public void queue( IndexEntryUpdate update )
+    public void queue( IndexEntryUpdate<?> update )
     {
         queue.add( update );
     }
 
     /**
      * Called if forced failure from the outside
+     *
+     * @param failure index population failure.
      */
     public void fail( Throwable failure )
     {
@@ -279,15 +280,9 @@ public class MultipleIndexPopulator implements IndexPopulator
     }
 
     @Override
-    public void includeSample( IndexEntryUpdate update )
+    public void includeSample( IndexEntryUpdate<?> update )
     {
         throw new UnsupportedOperationException( "Multiple index populator can't perform index sampling." );
-    }
-
-    @Override
-    public void configureSampling( boolean onlineSampling )
-    {
-        throw new UnsupportedOperationException( "Multiple index populator can't be configured." );
     }
 
     @Override
@@ -383,7 +378,7 @@ public class MultipleIndexPopulator implements IndexPopulator
                 do
                 {
                     // no need to check for null as nobody else is emptying this queue
-                    IndexEntryUpdate update = queue.poll();
+                    IndexEntryUpdate<?> update = queue.poll();
                     storeScan.acceptUpdate( updater, update, currentlyIndexedNodeId );
                 }
                 while ( !queue.isEmpty() );
@@ -421,7 +416,7 @@ public class MultipleIndexPopulator implements IndexPopulator
         }
 
         @Override
-        public void process( IndexEntryUpdate update )
+        public void process( IndexEntryUpdate<?> update )
         {
             Pair<IndexPopulation,IndexUpdater> pair = populationsWithUpdaters.get( update.indexKey().schema() );
             if ( pair != null )
@@ -510,7 +505,7 @@ public class MultipleIndexPopulator implements IndexPopulator
                     populator, failure( t ), indexCountsRemover, logProvider ) );
         }
 
-        private void onUpdate( IndexEntryUpdate update )
+        private void onUpdate( IndexEntryUpdate<?> update )
         {
             populator.includeSample( update );
             if ( batch( update ) )
@@ -602,7 +597,7 @@ public class MultipleIndexPopulator implements IndexPopulator
         }
 
         @Override
-        public void acceptUpdate( MultipleIndexUpdater updater, IndexEntryUpdate update, long currentlyIndexedNodeId )
+        public void acceptUpdate( MultipleIndexUpdater updater, IndexEntryUpdate<?> update, long currentlyIndexedNodeId )
         {
             delegate.acceptUpdate( updater, update, currentlyIndexedNodeId );
         }
@@ -611,12 +606,6 @@ public class MultipleIndexPopulator implements IndexPopulator
         public PopulationProgress getProgress()
         {
             return delegate.getProgress();
-        }
-
-        @Override
-        public void configure( Collection<IndexPopulation> populations )
-        {
-            delegate.configure( populations );
         }
     }
 }

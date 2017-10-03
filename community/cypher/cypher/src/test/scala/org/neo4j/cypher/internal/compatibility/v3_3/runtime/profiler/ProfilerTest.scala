@@ -26,6 +26,7 @@ import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.expressions
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes._
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription.InternalPlanDescription.Arguments._
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription._
+import org.neo4j.cypher.internal.v3_3.logical.plans.LogicalPlanId
 import org.neo4j.cypher.internal.compiler.v3_3.spi.{EmptyKernelStatisticProvider, KernelStatisticProvider}
 import org.neo4j.cypher.internal.frontend.v3_3.test_helpers.CypherFunSuite
 import org.neo4j.cypher.internal.spi.v3_3.{QueryContext, QueryTransactionalContext}
@@ -148,7 +149,7 @@ class ProfilerTest extends CypherFunSuite {
   test("count dbhits for NestedPipes") {
     // GIVEN
     val projectedPath = mock[ProjectedPath]
-    when(projectedPath.apply(any())(any())).thenReturn(NO_VALUE)
+    when(projectedPath.apply(any(), any())).thenReturn(NO_VALUE)
     val DB_HITS = 100
     val start1 = SingleRowPipe()()
     val testPipe = ProfilerTestPipe(start1, "nested pipe", rows = 10, dbAccess = DB_HITS)
@@ -176,7 +177,7 @@ class ProfilerTest extends CypherFunSuite {
   test("count page cache hits for NestedPipes") {
     // GIVEN
     val projectedPath = mock[ProjectedPath]
-    when(projectedPath.apply(any())(any())).thenReturn(NO_VALUE)
+    when(projectedPath.apply(any(), any())).thenReturn(NO_VALUE)
     val start1 = SingleRowPipe()()
     val statisticProvider = new ConfiguredKernelStatisticProvider()
     val testPipe = ProfilerTestPipe(start1, "nested pipe", rows = 10, dbAccess = 2, statisticProvider, hits = 3, misses = 4 )
@@ -204,7 +205,7 @@ class ProfilerTest extends CypherFunSuite {
   test("count dbhits for deeply nested NestedPipes") {
     // GIVEN
     val projectedPath = mock[ProjectedPath]
-    when(projectedPath.apply(any())(any())).thenReturn(NO_VALUE)
+    when(projectedPath.apply(any(), any())).thenReturn(NO_VALUE)
     val DB_HITS = 100
     val start1 = SingleRowPipe()()
     val start2 = SingleRowPipe()()
@@ -319,7 +320,7 @@ case class ProfilerTestPipe(source: Pipe, name: String, rows: Int, dbAccess: Int
                             hits: Long = 0,
                             misses: Long = 0)
     extends PipeWithSource(source) {
-  var id = new Id
+  var id = LogicalPlanId.DEFAULT
 
   protected def internalCreateResults(input:Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
     input.size

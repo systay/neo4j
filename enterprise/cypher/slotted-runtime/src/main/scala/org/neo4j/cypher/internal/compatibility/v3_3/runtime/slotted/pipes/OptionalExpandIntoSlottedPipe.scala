@@ -23,10 +23,10 @@ import org.neo4j.collection.primitive.PrimitiveLongIterator
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.predicates.Predicate
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.helpers.PrimitiveLongHelper
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes._
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription.Id
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.slotted.PrimitiveExecutionContext
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.slotted.helpers.NullChecker.nodeIsNull
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.{ExecutionContext, PipelineInformation}
+import org.neo4j.cypher.internal.v3_3.logical.plans.LogicalPlanId
 import org.neo4j.cypher.internal.frontend.v3_3.SemanticDirection
 
 case class OptionalExpandIntoSlottedPipe(source: Pipe,
@@ -37,13 +37,12 @@ case class OptionalExpandIntoSlottedPipe(source: Pipe,
                                          lazyTypes: LazyTypes,
                                          predicate: Predicate,
                                          pipelineInformation: PipelineInformation)
-                                        (val id: Id = new Id)
+                                        (val id: LogicalPlanId = LogicalPlanId.DEFAULT)
   extends PipeWithSource(source) with PrimitiveCachingExpandInto {
   self =>
   private final val CACHE_SIZE = 100000
 
   protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
-    implicit val s = state
     //cache of known connected nodes
     val relCache = new PrimitiveRelationshipsCache(CACHE_SIZE)
 
@@ -63,7 +62,7 @@ case class OptionalExpandIntoSlottedPipe(source: Pipe,
             outputRow.copyFrom(inputRow, pipelineInformation.initialNumberOfLongs, pipelineInformation.initialNumberOfReferences)
             outputRow.setLongAt(relOffset, relId)
             outputRow
-          }).filter(ctx => predicate.isTrue(ctx))
+          }).filter(ctx => predicate.isTrue(ctx, state))
 
           if (matchIterator.isEmpty)
             Iterator(withNulls(inputRow))

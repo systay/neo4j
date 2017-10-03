@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.function.IntFunction;
 
-import org.neo4j.backup.OnlineBackupSettings;
 import org.neo4j.causalclustering.catchup.CatchupServer;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.CoreGraphDatabase;
@@ -35,7 +34,6 @@ import org.neo4j.causalclustering.core.consensus.log.segmented.FileNames;
 import org.neo4j.causalclustering.core.state.ClusterStateDirectory;
 import org.neo4j.causalclustering.core.state.RaftLogPruner;
 import org.neo4j.causalclustering.identity.MemberId;
-import org.neo4j.cluster.ClusterSettings;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -45,6 +43,9 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.HttpConnector;
 import org.neo4j.kernel.configuration.HttpConnector.Encryption;
 import org.neo4j.kernel.configuration.Settings;
+import org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
+import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.Level;
 
 import static java.lang.String.format;
@@ -54,18 +55,18 @@ import static org.neo4j.helpers.AdvertisedSocketAddress.advertisedAddress;
 import static org.neo4j.helpers.ListenSocketAddress.listenAddress;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 
-public class CoreClusterMember implements ClusterMember
+public class CoreClusterMember implements ClusterMember<GraphDatabaseFacade>
 {
     private final File neo4jHome;
-    private final DiscoveryServiceFactory discoveryServiceFactory;
-    private final File storeDir;
+    protected final DiscoveryServiceFactory discoveryServiceFactory;
+    protected final File storeDir;
     private final File clusterStateDir;
     private final File raftLogDir;
     private final Map<String, String> config = stringMap();
     private final int serverId;
     private final String boltAdvertisedSocketAddress;
     private final int discoveryPort;
-    private CoreGraphDatabase database;
+    protected CoreGraphDatabase database;
 
     public CoreClusterMember( int serverId,
                               int discoveryPort,
@@ -90,7 +91,7 @@ public class CoreClusterMember implements ClusterMember
         String initialMembers = addresses.stream().map( AdvertisedSocketAddress::toString ).collect( joining( "," ) );
         boltAdvertisedSocketAddress = advertisedAddress( advertisedAddress, boltPort );
 
-        config.put( ClusterSettings.mode.name(), ClusterSettings.Mode.CORE.name() );
+        config.put( EnterpriseEditionSettings.mode.name(), EnterpriseEditionSettings.Mode.CORE.name() );
         config.put( GraphDatabaseSettings.default_advertised_address.name(), advertisedAddress );
         config.put( CausalClusteringSettings.initial_discovery_members.name(), initialMembers );
         config.put( CausalClusteringSettings.discovery_listen_address.name(), listenAddress( listenAddress, discoveryPort ) );

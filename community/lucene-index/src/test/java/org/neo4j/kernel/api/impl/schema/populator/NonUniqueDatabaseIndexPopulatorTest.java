@@ -63,14 +63,13 @@ public class NonUniqueDatabaseIndexPopulatorTest
 
     private SchemaIndex index;
     private NonUniqueLuceneIndexPopulator populator;
-    private LabelSchemaDescriptor labelSchemaDescriptor = SchemaDescriptorFactory.forLabel( 0, 0 );
+    private final LabelSchemaDescriptor labelSchemaDescriptor = SchemaDescriptorFactory.forLabel( 0, 0 );
 
     @Before
     public void setUp() throws Exception
     {
         File folder = testDir.directory( "folder" );
-        PartitionedIndexStorage indexStorage = new PartitionedIndexStorage( dirFactory, fileSystemRule.get(), folder,
-                "testIndex", false );
+        PartitionedIndexStorage indexStorage = new PartitionedIndexStorage( dirFactory, fileSystemRule.get(), folder, false );
 
         index = LuceneSchemaIndexBuilder.create( IndexDescriptorFactory.forSchema( labelSchemaDescriptor ) )
                 .withIndexStorage( indexStorage )
@@ -102,7 +101,7 @@ public class NonUniqueDatabaseIndexPopulatorTest
     {
         populator = newPopulator();
 
-        List<IndexEntryUpdate> updates = Arrays.asList(
+        List<IndexEntryUpdate<?>> updates = Arrays.asList(
                 add( 1, labelSchemaDescriptor, "aaa" ),
                 add( 2, labelSchemaDescriptor, "bbb" ),
                 add( 3, labelSchemaDescriptor, "ccc" ) );
@@ -119,7 +118,7 @@ public class NonUniqueDatabaseIndexPopulatorTest
     {
         populator = newPopulator();
 
-        List<IndexEntryUpdate> updates = Arrays.asList(
+        List<IndexEntryUpdate<?>> updates = Arrays.asList(
                 add( 1, labelSchemaDescriptor, "foo" ),
                 add( 2, labelSchemaDescriptor, "bar" ),
                 add( 3, labelSchemaDescriptor, "foo" ) );
@@ -157,7 +156,6 @@ public class NonUniqueDatabaseIndexPopulatorTest
         IndexSamplingConfig samplingConfig = new IndexSamplingConfig( Config.defaults() );
         NonUniqueLuceneIndexPopulator populator = new NonUniqueLuceneIndexPopulator( index, samplingConfig );
         populator.create();
-        populator.configureSampling( true );
         return populator;
     }
 }

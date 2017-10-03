@@ -28,6 +28,7 @@ import org.neo4j.cypher.internal.compiler.v3_3.spi._
 import org.neo4j.cypher.internal.frontend.v3_3.phases.InternalNotificationLogger
 import org.neo4j.cypher.internal.frontend.v3_3.symbols.CypherType
 import org.neo4j.cypher.internal.frontend.v3_3.{CypherExecutionException, symbols}
+import org.neo4j.cypher.internal.v3_3.logical.plans._
 import org.neo4j.kernel.api.exceptions.KernelException
 import org.neo4j.kernel.api.index.InternalIndexState
 import org.neo4j.kernel.api.proc.Neo4jTypes.AnyType
@@ -102,13 +103,13 @@ class TransactionBoundPlanContext(tc: TransactionalContextWrapper, logger: Inter
   }
 
   def checkNodeIndex(idxName: String) {
-    if (!tc.statement.readOperations().nodeLegacyIndexesGetAll().contains(idxName)) {
+    if (!tc.statement.readOperations().nodeExplicitIndexesGetAll().contains(idxName)) {
       throw new MissingIndexException(idxName)
     }
   }
 
   def checkRelIndex(idxName: String) {
-    if (!tc.statement.readOperations().relationshipLegacyIndexesGetAll().contains(idxName)) {
+    if (!tc.statement.readOperations().relationshipExplicitIndexesGetAll().contains(idxName)) {
       throw new MissingIndexException(idxName)
     }
   }

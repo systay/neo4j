@@ -25,22 +25,21 @@ import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.predicates.
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.{expressions => commandExpressions}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.executionplan.builders.prepare.KeyTokenResolver
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.{ColumnOrder => _, _}
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription.Id
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.slotted.pipes._
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.slotted.{expressions => slottedExpressions}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.{LongSlot, PipeBuilder, PipeExecutionBuilderContext, PipelineInformation, _}
-import org.neo4j.cypher.internal.compiler.v3_3.planner.{CantCompileQueryException, logical}
-import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans._
+import org.neo4j.cypher.internal.compiler.v3_3.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
-import org.neo4j.cypher.internal.frontend.v3_3.ast.Expression
+import org.neo4j.cypher.internal.frontend.v3_3.ast.{Expression, SignedDecimalIntegerLiteral}
 import org.neo4j.cypher.internal.frontend.v3_3.phases.Monitors
 import org.neo4j.cypher.internal.frontend.v3_3.symbols._
 import org.neo4j.cypher.internal.frontend.v3_3.{InternalException, SemanticTable, ast => frontEndAst}
 import org.neo4j.cypher.internal.ir.v3_3.{IdName, VarPatternLength}
+import org.neo4j.cypher.internal.v3_3.logical.plans
+import org.neo4j.cypher.internal.v3_3.logical.plans._
 
 class SlottedPipeBuilder(fallback: PipeBuilder,
                          expressionConverters: ExpressionConverters,
-                         idMap: Map[LogicalPlan, Id],
                          monitors: Monitors,
                          pipelines: Map[LogicalPlanId, PipelineInformation],
                          readOnly: Boolean,
@@ -54,7 +53,7 @@ class SlottedPipeBuilder(fallback: PipeBuilder,
   override def build(plan: LogicalPlan): Pipe = {
     implicit val table: SemanticTable = context.semanticTable
 
-    val id = idMap.getOrElse(plan, new Id)
+    val id = plan.assignedId
     val pipelineInformation = pipelines(plan.assignedId)
 
     plan match {
@@ -92,7 +91,7 @@ class SlottedPipeBuilder(fallback: PipeBuilder,
   override def build(plan: LogicalPlan, source: Pipe): Pipe = {
     implicit val table: SemanticTable = context.semanticTable
 
-    val id = idMap.getOrElse(plan, new Id)
+    val id = plan.assignedId
     val pipeline = pipelines(plan.assignedId)
 
     plan match {
@@ -226,6 +225,20 @@ class SlottedPipeBuilder(fallback: PipeBuilder,
         MergeCreateRelationshipSlottedPipe(source, idName.name, fromOffset, LazyType(typ)(context.semanticTable),
                                             endOffset, pipeline, props.map(convertExpressions))(id = id)
 
+      case Top(_, sortItems, SignedDecimalIntegerLiteral("1")) =>
+        Top1SlottedPipe(source, sortItems.map(translateColumnOrder(pipeline, _)).toList)(id = id)
+
+      case Top(_, sortItems, limit) =>
+        TopNSlottedPipe(source, sortItems.map(translateColumnOrder(pipeline, _)).toList, convertExpressions(limit))(id = id)
+
+      case Limit(_, count, IncludeTies) =>
+        (source, count) match {
+          case (SortSlottedPipe(inner, sortDescription, _), SignedDecimalIntegerLiteral("1")) =>
+            Top1WithTiesSlottedPipe(inner, sortDescription.toList)(id = id)
+
+          case _ => throw new InternalException("Including ties is only supported for very specific plans")
+        }
+
       // Pipes that do not themselves read/write slots should be fine to use the fallback (non-slot aware pipes)
       case _: Selection |
            _: Limit |
@@ -244,16 +257,16 @@ class SlottedPipeBuilder(fallback: PipeBuilder,
     }
   }
 
-  private def translateColumnOrder(pipeline: PipelineInformation, s: logical.SortDescription): ColumnOrder = s match {
-    case logical.Ascending(IdName(name)) => {
+  private def translateColumnOrder(pipeline: PipelineInformation, s: plans.ColumnOrder): pipes.ColumnOrder = s match {
+    case plans.Ascending(IdName(name)) => {
       pipeline.get(name) match {
-        case Some(slot) => pipes.Ascending(slot.offset)
+        case Some(slot) => pipes.Ascending(slot)
         case None => throw new InternalException(s"Did not find `$name` in the pipeline information")
       }
     }
-    case logical.Descending(IdName(name)) => {
+    case plans.Descending(IdName(name)) => {
       pipeline.get(name) match {
-        case Some(slot) => pipes.Descending(slot.offset)
+        case Some(slot) => pipes.Descending(slot)
         case None => throw new InternalException(s"Did not find `$name` in the pipeline information")
       }
     }
@@ -293,7 +306,7 @@ class SlottedPipeBuilder(fallback: PipeBuilder,
   override def build(plan: LogicalPlan, lhs: Pipe, rhs: Pipe): Pipe = {
     implicit val table: SemanticTable = context.semanticTable
 
-    val id = idMap.getOrElse(plan, new Id)
+    val id = plan.assignedId
     val pipeline = pipelines(plan.assignedId)
 
     plan match {
@@ -313,6 +326,7 @@ class SlottedPipeBuilder(fallback: PipeBuilder,
         val (longIds , refIds) = items.partition(idName => pipeline.get(idName.name) match {
           case Some(s: LongSlot) => true
           case Some(s: RefSlot) => false
+          case _ => throw new InternalException("We expect only an existing LongSlot or RefSlot here")
         })
         val longOffsets = longIds.map(e => pipeline.getLongOffsetFor(e.name))
         val refOffsets = refIds.map(e => pipeline.getReferenceOffsetFor(e.name))
@@ -322,6 +336,7 @@ class SlottedPipeBuilder(fallback: PipeBuilder,
         val (longIds , refIds) = items.partition(idName => pipeline.get(idName.name) match {
           case Some(s: LongSlot) => true
           case Some(s: RefSlot) => false
+          case _ => throw new InternalException("We expect only an existing LongSlot or RefSlot here")
         })
         val longOffsets = longIds.map(e => pipeline.getLongOffsetFor(e.name))
         val refOffsets = refIds.map(e => pipeline.getReferenceOffsetFor(e.name))

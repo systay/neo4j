@@ -61,9 +61,12 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.api.proc.Context.KERNEL_TRANSACTION;
 import static org.neo4j.kernel.api.proc.Context.SECURITY_CONTEXT;
@@ -208,80 +211,80 @@ public class BuiltInProceduresTest
                 record( "db.schema",
                         "db.schema() :: (nodes :: LIST? OF NODE?, relationships :: LIST? OF RELATIONSHIP?)",
                         "Show the schema of the data." ),
-                record( "db.index.manual.nodes",
-                        "db.index.manual.nodes(indexName :: STRING?, query :: ANY?) :: (node :: NODE?, weight :: FLOAT?)",
-                        "Search nodes from manual index. Replaces `START n=node:nodes('key:foo*')`"),
-                record( "db.index.manual.seek.nodes",
-                        "db.index.manual.seek.nodes(indexName :: STRING?, key :: STRING?, value :: ANY?) :: (node :: NODE?)",
-                        "Get node from manual index. Replaces `START n=node:nodes(key = 'A')`"),
-                record( "db.index.manual.relationships",
-                        "db.index.manual.relationships(indexName :: STRING?, query :: ANY?) :: " +
+                record( "db.index.explicit.searchNodes",
+                        "db.index.explicit.searchNodes(indexName :: STRING?, query :: ANY?) :: (node :: NODE?, weight :: FLOAT?)",
+                        "Search nodes from explicit index. Replaces `START n=node:nodes('key:foo*')`"),
+                record( "db.index.explicit.seekNodes",
+                        "db.index.explicit.seekNodes(indexName :: STRING?, key :: STRING?, value :: ANY?) :: (node :: NODE?)",
+                        "Get node from explicit index. Replaces `START n=node:nodes(key = 'A')`"),
+                record( "db.index.explicit.searchRelationships",
+                        "db.index.explicit.searchRelationships(indexName :: STRING?, query :: ANY?) :: " +
                                 "(relationship :: RELATIONSHIP?, weight :: FLOAT?)",
-                        "Search relationship from manual index. Replaces `START r=relationship:relIndex('key:foo*')`"),
-                record( "db.index.manual.in",
-                        "db.index.manual.in(indexName :: STRING?, in :: NODE?, query :: ANY?) :: " +
+                        "Search relationship from explicit index. Replaces `START r=relationship:relIndex('key:foo*')`"),
+                record( "db.index.explicit.searchRelationshipsIn",
+                        "db.index.explicit.searchRelationshipsIn(indexName :: STRING?, in :: NODE?, query :: ANY?) :: " +
                                 "(relationship :: RELATIONSHIP?, weight :: FLOAT?)",
-                        "Search relationship from manual index, starting at the node 'in'."),
-                record( "db.index.manual.out",
-                        "db.index.manual.out(indexName :: STRING?, out :: NODE?, query :: ANY?) :: " +
+                        "Search relationship from explicit index, starting at the node 'in'."),
+                record( "db.index.explicit.searchRelationshipsOut",
+                        "db.index.explicit.searchRelationshipsOut(indexName :: STRING?, out :: NODE?, query :: ANY?) :: " +
                                 "(relationship :: RELATIONSHIP?, weight :: FLOAT?)",
-                        "Search relationship from manual index, ending at the node 'out'."),
-                record( "db.index.manual.between",
-                        "db.index.manual.between(indexName :: STRING?, in :: NODE?, out :: NODE?, query :: ANY?) :: " +
+                        "Search relationship from explicit index, ending at the node 'out'."),
+                record( "db.index.explicit.searchRelationshipsBetween",
+                        "db.index.explicit.searchRelationshipsBetween(indexName :: STRING?, in :: NODE?, out :: NODE?, query :: ANY?) :: " +
                                 "(relationship :: RELATIONSHIP?, weight :: FLOAT?)",
-                        "Search relationship from manual index, starting at the node 'in' and ending at 'out'."),
-                record( "db.index.manual.seek.relationships",
-                        "db.index.manual.seek.relationships(indexName :: STRING?, key :: STRING?, value :: ANY?) :: " +
+                        "Search relationship from explicit index, starting at the node 'in' and ending at 'out'."),
+                record( "db.index.explicit.seekRelationships",
+                        "db.index.explicit.seekRelationships(indexName :: STRING?, key :: STRING?, value :: ANY?) :: " +
                         "(relationship :: RELATIONSHIP?)",
-                        "Get relationship from manual index. Replaces `START r=relationship:relIndex(key = 'A')`"),
-                record( "db.index.auto.nodes",
-                        "db.index.auto.nodes(query :: ANY?) :: (node :: NODE?, weight :: FLOAT?)",
-                        "Search nodes from automatic index. Replaces `START n=node:node_auto_index('key:foo*')`"),
-                record( "db.index.auto.seek.nodes",
-                        "db.index.auto.seek.nodes(key :: STRING?, value :: ANY?) :: (node :: NODE?)",
-                        "Get node from automatic index. Replaces `START n=node:node_auto_index(key = 'A')`"),
-                record( "db.index.auto.relationships",
-                        "db.index.auto.relationships(query :: ANY?) :: (relationship :: RELATIONSHIP?, weight :: FLOAT?)",
-                        "Search relationship from automatic index. Replaces `START r=relationship:relationship_auto_index('key:foo*')`"),
-                record( "db.index.auto.seek.relationships",
-                        "db.index.auto.seek.relationships(key :: STRING?, value :: ANY?) :: " +
+                        "Get relationship from explicit index. Replaces `START r=relationship:relIndex(key = 'A')`"),
+                record( "db.index.explicit.auto.searchNodes",
+                        "db.index.explicit.auto.searchNodes(query :: ANY?) :: (node :: NODE?, weight :: FLOAT?)",
+                        "Search nodes from explicit automatic index. Replaces `START n=node:node_auto_index('key:foo*')`"),
+                record( "db.index.explicit.auto.seekNodes",
+                        "db.index.explicit.auto.seekNodes(key :: STRING?, value :: ANY?) :: (node :: NODE?)",
+                        "Get node from explicit automatic index. Replaces `START n=node:node_auto_index(key = 'A')`"),
+                record( "db.index.explicit.auto.searchRelationships",
+                        "db.index.explicit.auto.searchRelationships(query :: ANY?) :: (relationship :: RELATIONSHIP?, weight :: FLOAT?)",
+                        "Search relationship from explicit automatic index. Replaces `START r=relationship:relationship_auto_index('key:foo*')`"),
+                record( "db.index.explicit.auto.seekRelationships",
+                        "db.index.explicit.auto.seekRelationships(key :: STRING?, value :: ANY?) :: " +
                         "(relationship :: RELATIONSHIP?)",
-                        "Get relationship from automatic index. Replaces `START r=relationship:relationship_auto_index(key = 'A')`"),
-                record( "db.index.manual.add.node",
-                        "db.index.manual.add.node(indexName :: STRING?, node :: NODE?, key :: STRING?, value :: ANY?) :: (success :: BOOLEAN?)",
-                        "Add a node to a manual index based on a specified key and value"),
-                record( "db.index.manual.add.relationship",
-                        "db.index.manual.add.relationship(indexName :: STRING?, relationship :: RELATIONSHIP?, key :: STRING?, value :: ANY?) :: " +
+                        "Get relationship from explicit automatic index. Replaces `START r=relationship:relationship_auto_index(key = 'A')`"),
+                record( "db.index.explicit.addNode",
+                        "db.index.explicit.addNode(indexName :: STRING?, node :: NODE?, key :: STRING?, value :: ANY?) :: (success :: BOOLEAN?)",
+                        "Add a node to a explicit index based on a specified key and value"),
+                record( "db.index.explicit.addRelationship",
+                        "db.index.explicit.addRelationship(indexName :: STRING?, relationship :: RELATIONSHIP?, key :: STRING?, value :: ANY?) :: " +
                         "(success :: BOOLEAN?)",
-                        "Add a relationship to a manual index based on a specified key and value"),
-                record( "db.index.manual.remove.node",
-                        "db.index.manual.remove.node(indexName :: STRING?, node :: NODE?, key :: STRING?) :: (success :: BOOLEAN?)",
-                        "Remove a node from a manual index with an optional key"),
-                record( "db.index.manual.remove.relationship",
-                        "db.index.manual.remove.relationship(indexName :: STRING?, relationship :: RELATIONSHIP?, key :: STRING?) :: " +
+                        "Add a relationship to a explicit index based on a specified key and value"),
+                record( "db.index.explicit.removeNode",
+                        "db.index.explicit.removeNode(indexName :: STRING?, node :: NODE?, key :: STRING?) :: (success :: BOOLEAN?)",
+                        "Remove a node from a explicit index with an optional key"),
+                record( "db.index.explicit.removeRelationship",
+                        "db.index.explicit.removeRelationship(indexName :: STRING?, relationship :: RELATIONSHIP?, key :: STRING?) :: " +
                         "(success :: BOOLEAN?)",
-                        "Remove a relationship from a manual index with an optional key"),
-                record( "db.index.manual.drop",
-                        "db.index.manual.drop(indexName :: STRING?) :: " +
+                        "Remove a relationship from a explicit index with an optional key"),
+                record( "db.index.explicit.drop",
+                        "db.index.explicit.drop(indexName :: STRING?) :: " +
                         "(type :: STRING?, name :: STRING?, config :: MAP?)",
-                        "Remove a manual index - YIELD type,name,config"),
-                record( "db.index.manual.forNodes",
-                        "db.index.manual.forNodes(indexName :: STRING?) :: " +
+                        "Remove a explicit index - YIELD type,name,config"),
+                record( "db.index.explicit.forNodes",
+                        "db.index.explicit.forNodes(indexName :: STRING?) :: " +
                         "(type :: STRING?, name :: STRING?, config :: MAP?)",
-                        "Get or create a node manual index - YIELD type,name,config"),
-                record( "db.index.manual.forRelationships",
-                        "db.index.manual.forRelationships(indexName :: STRING?) :: " +
+                        "Get or create a node explicit index - YIELD type,name,config"),
+                record( "db.index.explicit.forRelationships",
+                        "db.index.explicit.forRelationships(indexName :: STRING?) :: " +
                         "(type :: STRING?, name :: STRING?, config :: MAP?)",
-                        "Get or create a relationship manual index - YIELD type,name,config"),
-                record( "db.index.manual.exists.forNodes",
-                        "db.index.manual.exists.forNodes(indexName :: STRING?) :: (success :: BOOLEAN?)",
-                        "Check if a node manual index exists"),
-                record( "db.index.manual.exists.forRelationships",
-                        "db.index.manual.exists.forRelationships(indexName :: STRING?) :: (success :: BOOLEAN?)",
-                        "Check if a relationship manual index exists"),
-                record( "db.index.manual.list",
-                        "db.index.manual.list() :: (type :: STRING?, name :: STRING?, config :: MAP?)",
-                        "List all manual indexes - YIELD type,name,config"),
+                        "Get or create a relationship explicit index - YIELD type,name,config"),
+                record( "db.index.explicit.existsForNodes",
+                        "db.index.explicit.existsForNodes(indexName :: STRING?) :: (success :: BOOLEAN?)",
+                        "Check if a node explicit index exists"),
+                record( "db.index.explicit.existsForRelationships",
+                        "db.index.explicit.existsForRelationships(indexName :: STRING?) :: (success :: BOOLEAN?)",
+                        "Check if a relationship explicit index exists"),
+                record( "db.index.explicit.list",
+                        "db.index.explicit.list() :: (type :: STRING?, name :: STRING?, config :: MAP?)",
+                        "List all explicit indexes - YIELD type,name,config"),
                 record( "dbms.components",
                         "dbms.components() :: (name :: STRING?, versions :: LIST? OF STRING?, edition :: STRING?)",
                         "List DBMS components and their versions." ),
@@ -305,6 +308,75 @@ public class BuiltInProceduresTest
         assertThat( call( "dbms.components" ), contains(
                 record( "Neo4j Kernel", singletonList( "1.3.37" ), "enterprise" )
         ) );
+    }
+
+    @Test
+    public void shouldCloseStatementIfExceptionIsThrownDbLabels() throws Throwable
+    {
+        // Given
+        RuntimeException runtimeException = new RuntimeException();
+        when( read.labelsGetAllTokens() ).thenThrow( runtimeException );
+
+        // When
+        try
+        {
+            call( "db.labels" );
+            fail( "Procedure call should have failed" );
+        }
+        catch ( ProcedureException e )
+        {
+            assertThat( e.getCause(), is( runtimeException ) );
+            // expected
+        }
+
+        // Then
+        verify( statement ).close();
+    }
+
+    @Test
+    public void shouldCloseStatementIfExceptionIsThrownDbPropertyKeys() throws Throwable
+    {
+        // Given
+        RuntimeException runtimeException = new RuntimeException();
+        when( read.propertyKeyGetAllTokens() ).thenThrow( runtimeException );
+
+        // When
+        try
+        {
+            call( "db.propertyKeys" );
+            fail( "Procedure call should have failed" );
+        }
+        catch ( ProcedureException e )
+        {
+            assertThat( e.getCause(), is( runtimeException ) );
+            // expected
+        }
+
+        // Then
+        verify( statement ).close();
+    }
+
+    @Test
+    public void shouldCloseStatementIfExceptionIsThrownDRelationshipTypes() throws Throwable
+    {
+        // Given
+        RuntimeException runtimeException = new RuntimeException();
+        when( read.relationshipTypesGetAllTokens() ).thenThrow( runtimeException );
+
+        // When
+        try
+        {
+            call( "db.relationshipTypes" );
+            fail( "Procedure call should have failed" );
+        }
+        catch ( ProcedureException e )
+        {
+            assertThat( e.getCause(), is( runtimeException ) );
+            // expected
+        }
+
+        // Then
+        verify( statement ).close();
     }
 
     private Matcher<Object[]> record( Object... fields )
@@ -372,7 +444,7 @@ public class BuiltInProceduresTest
             return newIndex;
         };
         return tokens.entrySet().stream()
-                     .filter( ( entry ) -> entry.getValue().equals( name ) )
+                     .filter( entry -> entry.getValue().equals( name ) )
                      .map( Map.Entry::getKey )
                      .findFirst().orElseGet( allocateFromMap );
     }
@@ -380,9 +452,9 @@ public class BuiltInProceduresTest
     @Before
     public void setup() throws Exception
     {
-        procs.registerComponent( KernelTransaction.class, ( ctx ) -> ctx.get( KERNEL_TRANSACTION ), false );
-        procs.registerComponent( DependencyResolver.class, ( ctx ) -> ctx.get( DEPENDENCY_RESOLVER ), false );
-        procs.registerComponent( GraphDatabaseAPI.class, ( ctx ) -> ctx.get( GRAPHDATABASEAPI ), false );
+        procs.registerComponent( KernelTransaction.class, ctx -> ctx.get( KERNEL_TRANSACTION ), false );
+        procs.registerComponent( DependencyResolver.class, ctx -> ctx.get( DEPENDENCY_RESOLVER ), false );
+        procs.registerComponent( GraphDatabaseAPI.class, ctx -> ctx.get( GRAPHDATABASEAPI ), false );
         procs.registerComponent( SecurityContext.class, ctx -> ctx.get( SECURITY_CONTEXT ), true );
 
         procs.registerType( Node.class, new TypeMappers.SimpleConverter( NTNode, Node.class ) );
@@ -400,16 +472,16 @@ public class BuiltInProceduresTest
         when( read.labelsGetAllTokens() ).thenAnswer( asTokens( labels ) );
         when( read.relationshipTypesGetAllTokens() ).thenAnswer( asTokens( relTypes ) );
         when( read.indexesGetAll() ).thenAnswer(
-                ( i ) -> Iterators.concat( indexes.iterator(), uniqueIndexes.iterator() ) );
-        when( read.constraintsGetAll() ).thenAnswer( ( i ) -> constraints.iterator() );
+                i -> Iterators.concat( indexes.iterator(), uniqueIndexes.iterator() ) );
+        when( read.constraintsGetAll() ).thenAnswer( i -> constraints.iterator() );
         when( read.proceduresGetAll() ).thenReturn( procs.getAllProcedures() );
 
         when( read.propertyKeyGetName( anyInt() ) )
-                .thenAnswer( ( invocation ) -> propKeys.get( invocation.getArguments()[0] ) );
+                .thenAnswer( invocation -> propKeys.get( invocation.getArguments()[0] ) );
         when( read.labelGetName( anyInt() ) )
-                .thenAnswer( ( invocation ) -> labels.get( invocation.getArguments()[0] ) );
+                .thenAnswer( invocation -> labels.get( invocation.getArguments()[0] ) );
         when( read.relationshipTypeGetName( anyInt() ) )
-                .thenAnswer( ( invocation ) -> relTypes.get( invocation.getArguments()[0] ) );
+                .thenAnswer( invocation -> relTypes.get( invocation.getArguments()[0] ) );
 
         // Make it appear that labels are in use
         // TODO: We really should just have `labelsInUse()` on the Kernel API directly,
@@ -424,8 +496,8 @@ public class BuiltInProceduresTest
 
     private Answer<Iterator<Token>> asTokens( Map<Integer,String> tokens )
     {
-        return ( i ) -> tokens.entrySet().stream()
-                              .map( ( entry ) -> new Token( entry.getValue(), entry.getKey() ) )
+        return i -> tokens.entrySet().stream()
+                              .map( entry -> new Token( entry.getValue(), entry.getKey() ) )
                               .iterator();
     }
 

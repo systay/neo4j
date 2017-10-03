@@ -19,6 +19,8 @@
  */
 package org.neo4j.jmx.impl;
 
+import org.apache.commons.lang3.mutable.MutableLong;
+
 import java.io.File;
 import java.io.IOException;
 import javax.management.NotCompliantMBeanException;
@@ -28,14 +30,14 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.jmx.StoreSize;
 import org.neo4j.kernel.NeoStoreDataSource;
-import org.neo4j.kernel.api.index.SchemaIndexProvider;
 import org.neo4j.kernel.api.labelscan.LabelScanStore;
-import org.neo4j.kernel.impl.api.LegacyIndexProviderLookup;
+import org.neo4j.kernel.impl.api.ExplicitIndexProviderLookup;
+import org.neo4j.kernel.impl.api.index.SchemaIndexProviderMap;
 import org.neo4j.kernel.impl.store.StoreFile;
 import org.neo4j.kernel.impl.storemigration.StoreFileType;
 import org.neo4j.kernel.impl.transaction.log.PhysicalLogFiles;
 import org.neo4j.kernel.impl.transaction.state.DataSourceManager;
-import org.neo4j.kernel.spi.legacyindex.IndexImplementation;
+import org.neo4j.kernel.spi.explicitindex.IndexImplementation;
 
 import static org.neo4j.kernel.impl.store.StoreFile.COUNTS_STORE_LEFT;
 import static org.neo4j.kernel.impl.store.StoreFile.COUNTS_STORE_RIGHT;
@@ -81,8 +83,8 @@ public final class StoreSizeBean extends ManagementBeanProvider
         private final File storePath;
 
         private PhysicalLogFiles physicalLogFiles;
-        private LegacyIndexProviderLookup legacyIndexProviderLookup;
-        private SchemaIndexProvider schemaIndexProvider;
+        private ExplicitIndexProviderLookup explicitIndexProviderLookup;
+        private SchemaIndexProviderMap schemaIndexProviderMap;
         private LabelScanStore labelScanStore;
 
         StoreSizeImpl( ManagementData management, boolean isMXBean ) throws NotCompliantMBeanException
@@ -99,8 +101,8 @@ public final class StoreSizeBean extends ManagementBeanProvider
                 public void registered( NeoStoreDataSource ds )
                 {
                     physicalLogFiles = resolveDependency( ds, PhysicalLogFiles.class );
-                    legacyIndexProviderLookup = resolveDependency( ds, LegacyIndexProviderLookup.class );
-                    schemaIndexProvider = resolveDependency( ds, SchemaIndexProvider.class );
+                    explicitIndexProviderLookup = resolveDependency( ds, ExplicitIndexProviderLookup.class );
+                    schemaIndexProviderMap = resolveDependency( ds, SchemaIndexProviderMap.class );
                     labelScanStore = resolveDependency( ds, LabelScanStore.class );
                 }
 
@@ -113,8 +115,8 @@ public final class StoreSizeBean extends ManagementBeanProvider
                 public void unregistered( NeoStoreDataSource ds )
                 {
                     physicalLogFiles = null;
-                    legacyIndexProviderLookup = null;
-                    schemaIndexProvider = null;
+                    explicitIndexProviderLookup = null;
+                    schemaIndexProviderMap = null;
                     labelScanStore = null;
                 }
             } );
@@ -184,14 +186,24 @@ public final class StoreSizeBean extends ManagementBeanProvider
         {
             long size = 0L;
 
-            // Add legacy indices
-            for ( IndexImplementation index : legacyIndexProviderLookup.all() )
+            // Add explicit indices
+            for ( IndexImplementation index : explicitIndexProviderLookup.all() )
             {
                 size += FileUtils.size( fs, index.getIndexImplementationDirectory( storePath ) );
             }
 
             // Add schema index
-            size += FileUtils.size( fs, schemaIndexProvider.getSchemaIndexStoreDirectory( storePath ) );
+            MutableLong schemaSize = new MutableLong();
+            schemaIndexProviderMap.accept( provider ->
+            {
+                File rootDirectory = provider.directoryStructure().rootDirectory();
+                if ( rootDirectory != null )
+                {
+                    schemaSize.add( FileUtils.size( fs, rootDirectory ) );
+                }
+                // else this provider didn't have any persistent storage
+            } );
+            size += schemaSize.longValue();
 
             // Add label index
             size += FileUtils.size( fs, labelScanStore.getLabelScanStoreFile() );

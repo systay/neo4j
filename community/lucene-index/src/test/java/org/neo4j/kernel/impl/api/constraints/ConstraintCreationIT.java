@@ -31,6 +31,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.kernel.api.impl.index.storage.layout.IndexFolderLayout;
 import org.neo4j.kernel.api.index.SchemaIndexProvider;
+import org.neo4j.kernel.impl.api.index.SchemaIndexProviderMap;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.rule.EmbeddedDatabaseRule;
 
@@ -44,7 +45,7 @@ public class ConstraintCreationIT
     public EmbeddedDatabaseRule dbRule = new EmbeddedDatabaseRule();
 
     private static final Label LABEL = Label.label( "label1" );
-    private static final String INDEX_IDENTIFIER = "1";
+    private static final long indexId = 1;
 
     @Test
     public void shouldNotLeaveLuceneIndexFilesHangingAroundIfConstraintCreationFails()
@@ -81,9 +82,9 @@ public class ConstraintCreationIT
         }
 
         SchemaIndexProvider schemaIndexProvider =
-                db.getDependencyResolver().resolveDependency( SchemaIndexProvider.class );
-        File schemaStoreDir = schemaIndexProvider.getSchemaIndexStoreDirectory( db.getStoreDir() );
+                db.getDependencyResolver().resolveDependency( SchemaIndexProviderMap.class ).getDefaultProvider();
+        File indexDir = schemaIndexProvider.directoryStructure().directoryForIndex( indexId );
 
-        assertFalse( new IndexFolderLayout( schemaStoreDir, INDEX_IDENTIFIER ).getIndexFolder().exists() );
+        assertFalse( new IndexFolderLayout( indexDir ).getIndexFolder().exists() );
     }
 }

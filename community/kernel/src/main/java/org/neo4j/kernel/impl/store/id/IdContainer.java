@@ -22,8 +22,10 @@ package org.neo4j.kernel.impl.store.id;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.fs.OffsetChannel;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.impl.store.InvalidIdGeneratorException;
 import org.neo4j.kernel.impl.store.UnderlyingStorageException;
@@ -71,27 +73,34 @@ public class IdContainer
         this.aggressiveReuse = aggressiveReuse;
     }
 
-    // initialize the id generator and performs a simple validation
-    public void init()
+    /**
+     * Initializes the id generator and performs a simple validation. Returns true if the initialization restored
+     * properly on disk state, false otherwise (such as creating an id file from scratch).
+     * Will throw {@link InvalidIdGeneratorException} if the id file is found to be damaged or unclean.
+     */
+    public boolean init()
     {
+        boolean result = true;
         try
         {
             if ( !fs.fileExists( file ) )
             {
                 createEmptyIdFile( fs, file, 0, false );
+                result = false;
             }
 
             fileChannel = fs.open( file, "rw" );
             initialHighId = readAndValidateHeader();
             markAsSticky();
 
-            this.freeIdKeeper = new FreeIdKeeper( fileChannel, grabSize, aggressiveReuse, HEADER_SIZE );
+            this.freeIdKeeper = new FreeIdKeeper( new OffsetChannel( fileChannel, HEADER_SIZE ), grabSize, aggressiveReuse );
             closed = false;
         }
         catch ( IOException e )
         {
             throw new UnderlyingStorageException( "Unable to init id file " + file, e );
         }
+        return result;
     }
 
     public boolean isClosed()
@@ -230,6 +239,24 @@ public class IdContainer
     public long getReusableId()
     {
         return freeIdKeeper.getId();
+    }
+
+    public IdRange getReusableIdBatch( int maxSize )
+    {
+        long[] tmpIdArr = new long[maxSize];
+        int count = 0;
+        while ( count < maxSize )
+        {
+            long id = freeIdKeeper.getId();
+            if ( id == NO_RESULT )
+            {
+                break;
+            }
+            tmpIdArr[count++] = id;
+        }
+
+        long[] defragIdArr = count == maxSize ? tmpIdArr : Arrays.copyOfRange( tmpIdArr, 0, count );
+        return new IdRange( defragIdArr, 0, 0 );
     }
 
     public void freeId( long id )

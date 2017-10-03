@@ -32,6 +32,7 @@ import org.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import org.neo4j.causalclustering.core.consensus.ConsensusModule;
 import org.neo4j.causalclustering.core.consensus.RaftMessages;
 import org.neo4j.causalclustering.core.consensus.roles.Role;
+import org.neo4j.causalclustering.core.replication.ReplicationBenchmarkProcedure;
 import org.neo4j.causalclustering.core.replication.Replicator;
 import org.neo4j.causalclustering.core.server.CoreServerModule;
 import org.neo4j.causalclustering.core.state.ClusterStateDirectory;
@@ -39,11 +40,13 @@ import org.neo4j.causalclustering.core.state.ClusterStateException;
 import org.neo4j.causalclustering.core.state.ClusteringModule;
 import org.neo4j.causalclustering.core.state.machines.CoreStateMachinesModule;
 import org.neo4j.causalclustering.core.state.machines.id.FreeIdFilteredIdGeneratorFactory;
-import org.neo4j.causalclustering.core.replication.ReplicationBenchmarkProcedure;
 import org.neo4j.causalclustering.discovery.CoreTopologyService;
 import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import org.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
 import org.neo4j.causalclustering.discovery.procedures.CoreRoleProcedure;
+import org.neo4j.causalclustering.handlers.NoOpPipelineHandlerAppenderFactory;
+import org.neo4j.causalclustering.handlers.PipelineHandlerAppender;
+import org.neo4j.causalclustering.handlers.PipelineHandlerAppenderFactory;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.causalclustering.load_balancing.LoadBalancingPluginLoader;
 import org.neo4j.causalclustering.load_balancing.LoadBalancingProcessor;
@@ -99,7 +102,6 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.LifecycleStatus;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.ssl.SslPolicy;
 import org.neo4j.udc.UsageData;
 
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.raft_messages_log_path;
@@ -113,8 +115,8 @@ public class EnterpriseCoreEditionModule extends EditionModule
     private final ConsensusModule consensusModule;
     private final ReplicationModule replicationModule;
     private final CoreTopologyService topologyService;
-    private final LogProvider logProvider;
-    private final Config config;
+    protected final LogProvider logProvider;
+    protected final Config config;
     private CoreStateMachinesModule coreStateMachinesModule;
 
     public enum RaftLogImplementation
@@ -153,7 +155,7 @@ public class EnterpriseCoreEditionModule extends EditionModule
 
         procedures.register( new ClusterOverviewProcedure( topologyService, consensusModule.raftMachine(), logProvider ) );
         procedures.register( new CoreRoleProcedure( consensusModule.raftMachine() ) );
-        procedures.registerComponent( Replicator.class, ( x ) -> replicationModule.getReplicator(), true );
+        procedures.registerComponent( Replicator.class, x -> replicationModule.getReplicator(), true );
         procedures.registerProcedure( ReplicationBenchmarkProcedure.class );
     }
 
@@ -198,19 +200,22 @@ public class EnterpriseCoreEditionModule extends EditionModule
 
         IdentityModule identityModule = new IdentityModule( platformModule, clusterStateDirectory.get() );
 
-        SslPolicyLoader sslPolicyFactory = dependencies.satisfyDependency( SslPolicyLoader.create( config, logProvider ) );
-        SslPolicy clusterSslPolicy = sslPolicyFactory.getPolicy( config.get( CausalClusteringSettings.ssl_policy ) );
+        ClusteringModule clusteringModule = getClusteringModule( platformModule, discoveryServiceFactory,
+                clusterStateDirectory, identityModule, dependencies );
 
-        ClusteringModule clusteringModule = new ClusteringModule( discoveryServiceFactory, identityModule.myself(),
-                platformModule, clusterStateDirectory.get(), clusterSslPolicy );
+        // We need to satisfy the dependency here to keep users of it, such as BoltKernelExtension, happy.
+        dependencies.satisfyDependency( SslPolicyLoader.create( config, logProvider ) );
+
+        PipelineHandlerAppenderFactory appenderFactory = appenderFactory();
+        PipelineHandlerAppender pipelineHandlerAppender = appenderFactory.create( config, dependencies, logProvider );
+
         topologyService = clusteringModule.topologyService();
 
         long logThresholdMillis = config.get( CausalClusteringSettings.unknown_address_logging_throttle ).toMillis();
-        int maxQueueSize = config.get( CausalClusteringSettings.outgoing_queue_size );
 
         final SenderService raftSender = new SenderService(
-                new RaftChannelInitializer( new CoreReplicatedContentMarshal(), logProvider, monitors, clusterSslPolicy ),
-                logProvider, platformModule.monitors, maxQueueSize );
+                new RaftChannelInitializer( new CoreReplicatedContentMarshal(), logProvider, monitors, pipelineHandlerAppender ),
+                logProvider, platformModule.monitors );
         life.add( raftSender );
 
         final MessageLogger<MemberId> messageLogger = createMessageLogger( config, life, identityModule.myself() );
@@ -247,7 +252,7 @@ public class EnterpriseCoreEditionModule extends EditionModule
 
         CoreServerModule coreServerModule = new CoreServerModule( identityModule, platformModule, consensusModule,
                 coreStateMachinesModule, replicationModule, clusterStateDirectory.get(), clusteringModule, localDatabase,
-                messageLogger, databaseHealthSupplier, clusterSslPolicy );
+                messageLogger, databaseHealthSupplier, pipelineHandlerAppender );
 
         editionInvariants( platformModule, dependencies, config, logging, life );
 
@@ -255,6 +260,20 @@ public class EnterpriseCoreEditionModule extends EditionModule
 
         life.add( consensusModule.raftTimeoutService() );
         life.add( coreServerModule.membershipWaiterLifecycle );
+    }
+
+    protected ClusteringModule getClusteringModule( PlatformModule platformModule,
+                                                  DiscoveryServiceFactory discoveryServiceFactory,
+                                                  ClusterStateDirectory clusterStateDirectory,
+                                                  IdentityModule identityModule, Dependencies dependencies )
+    {
+        return new ClusteringModule( discoveryServiceFactory, identityModule.myself(),
+                platformModule, clusterStateDirectory.get() );
+    }
+
+    protected PipelineHandlerAppenderFactory appenderFactory()
+    {
+        return new NoOpPipelineHandlerAppenderFactory();
     }
 
     @Override

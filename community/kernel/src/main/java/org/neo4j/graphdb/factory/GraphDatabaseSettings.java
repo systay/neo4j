@@ -132,8 +132,11 @@ public class GraphDatabaseSettings implements LoadableConfig
     @Description( "Whether to allow an upgrade in case the current version of the database starts against an older version." )
     public static final Setting<Boolean> allow_upgrade = setting( "dbms.allow_upgrade", BOOLEAN, FALSE );
 
-    @Description( "Database record format. Enterprise edition only. Valid values: `standard`, `high_limit`. " +
-                  "Default value:  `standard`." )
+    @Description( "Database record format. Valid values: `standard`, `high_limit`. " +
+            "The `high_limit` format is available for Enterprise Edition only. " +
+            "It is required if you have a graph that is larger than 34 billion nodes, 34 billion relationships, or 68 billion properties. " +
+            "A change of the record format is irreversible. " +
+            "Certain operations may suffer from a performance penalty of up to 10%, which is why this format is not switched on by default." )
     public static final Setting<String> record_format = setting( "dbms.record_format", Settings.STRING, "" );
 
     // Cypher settings
@@ -490,6 +493,17 @@ public class GraphDatabaseSettings implements LoadableConfig
     public static final Setting<Integer> label_block_size = buildSetting( "unsupported.dbms.block_size.labels", INTEGER,
             "0" ).constraint( min( 0 ) ).build();
 
+    @Description( "Specifies the size of id batches local to each transaction when committing. " +
+            "Committing a transaction which contains changes most often results in new data records being created. " +
+            "For each record a new id needs to be generated from an id generator. " +
+            "It's more efficient to allocate a batch of ids from the contended id generator, which the transaction " +
+            "holds and generates ids from while creating these new records. " +
+            "This setting specifies how big those batches are. " +
+            "Remaining ids are freed back to id generator on clean shutdown." )
+    @Internal
+    public static final Setting<Integer> record_id_batch_size = buildSetting( "unsupported.dbms.record_id_batch_size", INTEGER,
+            "20" ).constraint( range( 1, 1_000 ) ).build();
+
     @Description( "An identifier that uniquely identifies this graph database instance within this JVM. " +
             "Defaults to an auto-generated number depending on how many instance are started in this JVM." )
     @Internal
@@ -525,13 +539,13 @@ public class GraphDatabaseSettings implements LoadableConfig
     @Description( "Path to the query log file." )
     public static final Setting<File> log_queries_filename = derivedSetting( "dbms.logs.query.path",
             logs_directory,
-            ( logs ) -> new File( logs, "query.log" ),
+            logs -> new File( logs, "query.log" ),
             PATH );
 
     @Description( "Path to the debug log file." )
     public static final Setting<File> store_internal_log_path = derivedSetting( "dbms.logs.debug.path",
             logs_directory,
-            ( logs ) -> new File( logs, "debug.log" ),
+            logs -> new File( logs, "debug.log" ),
             PATH );
 
     @Description( "Log parameters for the executed queries being logged." )

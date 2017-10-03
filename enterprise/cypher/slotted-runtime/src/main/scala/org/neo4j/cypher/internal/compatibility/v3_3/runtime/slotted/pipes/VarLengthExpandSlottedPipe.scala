@@ -21,12 +21,12 @@ package org.neo4j.cypher.internal.compatibility.v3_3.runtime.slotted.pipes
 
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.predicates.Predicate
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.{LazyTypes, Pipe, PipeWithSource, QueryState}
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription.Id
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.slotted.PrimitiveExecutionContext
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.{ExecutionContext, PipelineInformation}
+import org.neo4j.cypher.internal.v3_3.logical.plans.LogicalPlanId
 import org.neo4j.cypher.internal.frontend.v3_3.{InternalException, SemanticDirection}
-import org.neo4j.cypher.internal.javacompat.ValueUtils
 import org.neo4j.graphdb.Relationship
+import org.neo4j.helpers.ValueUtils
 import org.neo4j.kernel.impl.api.RelationshipVisitor
 import org.neo4j.kernel.impl.api.store.RelationshipIterator
 
@@ -48,7 +48,7 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
                                       nodePredicate: Predicate,
                                       edgePredicate: Predicate,
                                       longsToCopy: Int)
-                                     (val id: Id = new Id) extends PipeWithSource(source) {
+                                     (val id: LogicalPlanId = LogicalPlanId.DEFAULT) extends PipeWithSource(source) {
   type LNode = Long
 
   private def varLengthExpand(node: LNode,
@@ -81,7 +81,7 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
               row.setLongAt(tempEdgeOffset, relId)
               row.setLongAt(tempNodeOffset, relationship.getOtherNodeId(fromNode))
               // Before expanding, check that both the edge and node in question fulfil the predicate
-              if (edgePredicate.isTrue(row)(state) && nodePredicate.isTrue(row)(state)) {
+              if (edgePredicate.isTrue(row, state) && nodePredicate.isTrue(row, state)) {
                 // TODO: This call creates an intermediate NodeProxy which should not be necessary
                 stack.push((relationship.getOtherNodeId(fromNode), rels :+ relationship))
               }
@@ -113,7 +113,7 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
         // We set the fromNode on the temp node offset as well, to be able to run our node predicate and make sure
         // the start node is valid
         inputRowWithFromNode.setLongAt(tempNodeOffset, fromNode)
-        if (nodePredicate.isTrue(inputRowWithFromNode)(state)) {
+        if (nodePredicate.isTrue(inputRowWithFromNode, state)) {
 
           val paths: Iterator[(LNode, Seq[Relationship])] = varLengthExpand(fromNode, state, inputRowWithFromNode)
           paths collect {

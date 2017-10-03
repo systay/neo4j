@@ -19,7 +19,6 @@
  */
 package org.neo4j.kernel.impl.api.index;
 
-import java.util.Collection;
 import java.util.function.IntPredicate;
 
 import org.neo4j.collection.primitive.PrimitiveIntSet;
@@ -72,6 +71,7 @@ public interface IndexStoreView extends PropertyAccessor, PropertyLoader
 
     void incrementIndexUpdates( long indexId, long updatesDelta );
 
+    @SuppressWarnings( "rawtypes" )
     StoreScan EMPTY_SCAN = new StoreScan()
     {
         @Override
@@ -95,11 +95,6 @@ public interface IndexStoreView extends PropertyAccessor, PropertyLoader
         {
             return PopulationProgress.DONE;
         }
-
-        @Override
-        public void configure( Collection collection )
-        {
-        }
     };
 
     IndexStoreView EMPTY = new IndexStoreView()
@@ -115,6 +110,7 @@ public interface IndexStoreView extends PropertyAccessor, PropertyLoader
             return Values.NO_VALUE;
         }
 
+        @SuppressWarnings( "unchecked" )
         @Override
         public <FAILURE extends Exception> StoreScan<FAILURE> visitNodes( int[] labelIds,
                 IntPredicate propertyKeyIdFilter, Visitor<NodeUpdates,FAILURE> propertyUpdateVisitor,
@@ -151,6 +147,5 @@ public interface IndexStoreView extends PropertyAccessor, PropertyLoader
         public void incrementIndexUpdates( long indexId, long updatesDelta )
         {
         }
-
     };
 }

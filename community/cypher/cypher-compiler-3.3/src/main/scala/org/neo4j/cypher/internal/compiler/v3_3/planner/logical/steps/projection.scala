@@ -20,14 +20,14 @@
 package org.neo4j.cypher.internal.compiler.v3_3.planner.logical.steps
 
 import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.LogicalPlanningContext
-import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans._
 import org.neo4j.cypher.internal.frontend.v3_3.ast
 import org.neo4j.cypher.internal.frontend.v3_3.ast.Expression
 import org.neo4j.cypher.internal.ir.v3_3.IdName
+import org.neo4j.cypher.internal.v3_3.logical.plans.LogicalPlan
 
 object projection {
 
-  def apply(in: LogicalPlan, projs: Map[String, Expression], distinct: Boolean)
+  def apply(in: LogicalPlan, projs: Map[String, Expression])
            (implicit context: LogicalPlanningContext): LogicalPlan = {
 
     val (plan, projectionsMap) = PatternExpressionSolver()(in, projs)
@@ -39,9 +39,7 @@ object projection {
     }
     val projections: Set[(String, Expression)] = projectionsMap.toIndexedSeq.toSet
 
-    if (distinct) {
-      context.logicalPlanProducer.planDistinct(plan, projectionsMap, projs)
-    } else if (projections.subsetOf(projectAllCoveredIds) || projections == projectAllCoveredIds) {
+    if (projections.subsetOf(projectAllCoveredIds) || projections == projectAllCoveredIds) {
       context.logicalPlanProducer.planStarProjection(plan, projectionsMap, projs)
     } else {
       context.logicalPlanProducer.planRegularProjection(plan, projectionsMap, projs)

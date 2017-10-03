@@ -29,6 +29,7 @@ import org.neo4j.bolt.v1.runtime.spi.BoltResult;
 import org.neo4j.cypher.result.QueryResult;
 import org.neo4j.logging.Log;
 import org.neo4j.values.AnyValue;
+import org.neo4j.values.virtual.MapValue;
 
 /**
  * This class is responsible for routing incoming request messages to a worker
@@ -65,7 +66,7 @@ public class BoltMessageRouter implements BoltRequestMessageHandler<RuntimeExcep
     public void onInit( String userAgent, Map<String,Object> authToken ) throws RuntimeException
     {
         // TODO: make the client transmit the version for now it is hardcoded to -1 to ensure current behaviour
-        messageLogger.logInit(userAgent, authToken);
+        messageLogger.logInit(userAgent );
         worker.enqueue( session -> session.init( userAgent, authToken, initHandler ) );
     }
 
@@ -86,9 +87,9 @@ public class BoltMessageRouter implements BoltRequestMessageHandler<RuntimeExcep
     }
 
     @Override
-    public void onRun( String statement, Map<String,Object> params )
+    public void onRun( String statement, MapValue params )
     {
-        messageLogger.logRun( statement, () -> params );
+        messageLogger.logRun();
         worker.enqueue( session -> session.run( statement, params, runHandler ) );
     }
 

@@ -42,7 +42,7 @@ import org.neo4j.kernel.api.KernelAPI;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.exceptions.KernelException;
-import org.neo4j.kernel.api.legacyindex.AutoIndexing;
+import org.neo4j.kernel.api.explicitindex.AutoIndexing;
 import org.neo4j.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.builtinprocs.SpecialBuiltInProcedures;
 import org.neo4j.kernel.configuration.Config;
@@ -51,8 +51,8 @@ import org.neo4j.kernel.guard.TerminationGuard;
 import org.neo4j.kernel.impl.api.NonTransactionalTokenNameLookup;
 import org.neo4j.kernel.impl.api.SchemaWriteGuard;
 import org.neo4j.kernel.impl.api.dbms.NonTransactionalDbmsOperations;
+import org.neo4j.kernel.impl.api.explicitindex.InternalAutoIndexing;
 import org.neo4j.kernel.impl.api.index.IndexingService;
-import org.neo4j.kernel.impl.api.legacyindex.InternalAutoIndexing;
 import org.neo4j.kernel.impl.cache.MonitorGc;
 import org.neo4j.kernel.impl.core.DatabasePanicEventGenerator;
 import org.neo4j.kernel.impl.core.NodeManager;
@@ -368,7 +368,7 @@ public class DataSourceModule
 
         // Register injected public API components
         Log proceduresLog = platform.logging.getUserLog( Procedures.class );
-        procedures.registerComponent( Log.class, ( ctx ) -> proceduresLog, true );
+        procedures.registerComponent( Log.class, ctx -> proceduresLog, true );
 
         Guard guard = platform.dependencies.resolveDependency( Guard.class );
         procedures.registerComponent( ProcedureTransaction.class, new ProcedureTransactionProvider(), true );
@@ -381,9 +381,9 @@ public class DataSourceModule
         //  - Group-transaction writes (same pattern as above, but rather than splitting large transactions,
         //                              combine lots of small ones)
         //  - Bleeding-edge performance (KernelTransaction, to bypass overhead of working with Core API)
-        procedures.registerComponent( DependencyResolver.class, ( ctx ) -> platform.dependencies, false );
-        procedures.registerComponent( KernelTransaction.class, ( ctx ) -> ctx.get( KERNEL_TRANSACTION ), false );
-        procedures.registerComponent( GraphDatabaseAPI.class, ( ctx ) -> platform.graphDatabaseFacade, false );
+        procedures.registerComponent( DependencyResolver.class, ctx -> platform.dependencies, false );
+        procedures.registerComponent( KernelTransaction.class, ctx -> ctx.get( KERNEL_TRANSACTION ), false );
+        procedures.registerComponent( GraphDatabaseAPI.class, ctx -> platform.graphDatabaseFacade, false );
 
         // Security procedures
         procedures.registerComponent( SecurityContext.class, ctx -> ctx.get( SECURITY_CONTEXT ), true );

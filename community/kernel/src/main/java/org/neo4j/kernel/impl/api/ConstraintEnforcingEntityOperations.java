@@ -35,10 +35,10 @@ import org.neo4j.kernel.api.StatementConstants;
 import org.neo4j.kernel.api.exceptions.EntityNotFoundException;
 import org.neo4j.kernel.api.exceptions.InvalidTransactionTypeKernelException;
 import org.neo4j.kernel.api.exceptions.KernelException;
+import org.neo4j.kernel.api.exceptions.explicitindex.AutoIndexingKernelException;
 import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotApplicableKernelException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
-import org.neo4j.kernel.api.exceptions.legacyindex.AutoIndexingKernelException;
 import org.neo4j.kernel.api.exceptions.schema.AlreadyConstrainedException;
 import org.neo4j.kernel.api.exceptions.schema.AlreadyIndexedException;
 import org.neo4j.kernel.api.exceptions.schema.ConstraintValidationException;
@@ -579,7 +579,7 @@ public class ConstraintEnforcingEntityOperations implements EntityOperations, Sc
             RepeatedPropertyInCompositeSchemaException
     {
         Iterator<Cursor<NodeItem>> nodes = new NodeLoadingIterator( nodesGetForLabel( state, descriptor.getLabelId() ),
-                ( id ) -> nodeCursorById( state, id ) );
+                id -> nodeCursorById( state, id ) );
         constraintSemantics.validateNodeKeyConstraint( nodes, descriptor,
                 ( node, propertyKey ) -> entityReadOperations.nodeHasProperty( state, node, propertyKey ) );
         return schemaWriteOperations.nodeKeyConstraintCreate( state, descriptor );
@@ -600,7 +600,7 @@ public class ConstraintEnforcingEntityOperations implements EntityOperations, Sc
     ) throws AlreadyConstrainedException, CreateConstraintFailureException, RepeatedPropertyInCompositeSchemaException
     {
         Iterator<Cursor<NodeItem>> nodes = new NodeLoadingIterator( nodesGetForLabel( state, descriptor.getLabelId() ),
-                ( id ) -> nodeCursorById( state, id ) );
+                id -> nodeCursorById( state, id ) );
         constraintSemantics.validateNodePropertyExistenceConstraint( nodes, descriptor,
                 ( node, propertyKey ) -> entityReadOperations.nodeHasProperty( state, node, propertyKey ) );
         return schemaWriteOperations.nodePropertyExistenceConstraintCreate( state, descriptor );

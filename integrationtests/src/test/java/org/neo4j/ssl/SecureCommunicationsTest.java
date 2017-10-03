@@ -36,6 +36,8 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
+import io.netty.handler.ssl.SslProvider;
+import org.apache.commons.lang3.SystemUtils;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
@@ -53,6 +55,7 @@ import javax.net.ssl.SSLException;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ssl.SslPolicyConfig;
 import org.neo4j.kernel.configuration.ssl.SslPolicyLoader;
+import org.neo4j.kernel.configuration.ssl.SslSystemSettings;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
@@ -60,8 +63,11 @@ import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.isOneOf;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeThat;
+import static org.junit.Assume.assumeTrue;
 import static org.neo4j.ssl.SslResourceBuilder.caSignedKeyId;
 import static org.neo4j.ssl.SslResourceBuilder.selfSignedKeyId;
 import static org.neo4j.test.assertion.Assert.assertEventually;
@@ -249,9 +255,43 @@ public class SecureCommunicationsTest
         }
     }
 
+    @Test
+    public void shouldSupportOpenSSLOnSupportedPlatforms() throws Exception
+    {
+        // depends on the statically linked uber-jar with boring ssl: http://netty.io/wiki/forked-tomcat-native.html
+        assumeTrue( SystemUtils.IS_OS_WINDOWS || SystemUtils.IS_OS_LINUX || SystemUtils.IS_OS_MAC_OSX );
+        assumeThat( System.getProperty( "os.arch" ), equalTo( "x86_64" ) );
+        assumeThat( SystemUtils.JAVA_VENDOR, isOneOf( "Oracle Corporation", "Sun Microsystems Inc." ) );
+
+        // given
+        SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDir.directory( "server" ) );
+        SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directory( "client" ) );
+
+        server = new SecureServer( makeSslContext( sslServerResource, true, SslProvider.OPENSSL.name() ) );
+
+        server.start();
+        client = new SecureClient( makeSslContext( sslClientResource, false, SslProvider.OPENSSL.name() ) );
+        client.connect( server.port() );
+
+        // when
+        ByteBuf request = ByteBufAllocator.DEFAULT.buffer().writeBytes( REQUEST );
+        client.channel.writeAndFlush( request );
+
+        // then
+        expected = ByteBufAllocator.DEFAULT.buffer().writeBytes( RESPONSE );
+        client.clientInitializer.handshakeFuture.get();
+        client.assertResponse( expected );
+    }
+
     private SslContext makeSslContext( SslResource sslResource, boolean forServer ) throws CertificateException, IOException
     {
+        return makeSslContext( sslResource, forServer, SslProvider.JDK.name() );
+    }
+
+    private SslContext makeSslContext( SslResource sslResource, boolean forServer, String sslProvider ) throws CertificateException, IOException
+    {
         Map<String,String> config = new HashMap<>();
+        config.put( SslSystemSettings.netty_ssl_provider.name(), sslProvider );
 
         SslPolicyConfig policyConfig = new SslPolicyConfig( "default" );
         File baseDirectory = sslResource.privateKey().getParentFile();

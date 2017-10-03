@@ -21,23 +21,21 @@ package org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes
 
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.ExecutionContext
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.predicates.Predicate
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription.Id
+import org.neo4j.cypher.internal.v3_3.logical.plans.LogicalPlanId
 import org.neo4j.cypher.internal.frontend.v3_3.{InternalException, SemanticDirection}
-import org.neo4j.cypher.internal.javacompat.ValueUtils
+import org.neo4j.helpers.ValueUtils
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.NodeValue
 
 case class OptionalExpandAllPipe(source: Pipe, fromName: String, relName: String, toName: String, dir: SemanticDirection,
                                  types: LazyTypes, predicate: Predicate)
-                                (val id: Id = new Id)
+                                (val id: LogicalPlanId = LogicalPlanId.DEFAULT)
   extends PipeWithSource(source) {
 
   predicate.registerOwningPipe(this)
 
   protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
-    implicit val s = state
-
     input.flatMap {
       row =>
         val fromNode = getFromNode(row)
@@ -47,7 +45,7 @@ case class OptionalExpandAllPipe(source: Pipe, fromName: String, relName: String
             val matchIterator = relationships.map { r =>
                 val other = if (n.id() == r.getStartNodeId) r.getEndNode else r.getStartNode
                 row.newWith2(relName, ValueUtils.fromRelationshipProxy(r), toName, ValueUtils.fromNodeProxy(other))
-            }.filter(ctx => predicate.isTrue(ctx))
+            }.filter(ctx => predicate.isTrue(ctx, state))
 
             if (matchIterator.isEmpty) {
               Iterator(withNulls(row))

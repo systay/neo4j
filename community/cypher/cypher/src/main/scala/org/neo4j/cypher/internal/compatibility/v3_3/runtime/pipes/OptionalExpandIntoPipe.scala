@@ -21,7 +21,7 @@ package org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes
 
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.ExecutionContext
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.predicates.Predicate
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription.Id
+import org.neo4j.cypher.internal.v3_3.logical.plans.LogicalPlanId
 import org.neo4j.cypher.internal.frontend.v3_3.SemanticDirection
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.NodeValue
@@ -30,7 +30,7 @@ import scala.collection.mutable.ListBuffer
 
 case class OptionalExpandIntoPipe(source: Pipe, fromName: String, relName: String, toName: String,
                                   dir: SemanticDirection, types: LazyTypes, predicate: Predicate)
-                                 (val id: Id = new Id)
+                                 (val id: LogicalPlanId = LogicalPlanId.DEFAULT)
   extends PipeWithSource(source) with CachingExpandInto {
   private final val CACHE_SIZE = 100000
 
@@ -55,7 +55,7 @@ case class OptionalExpandIntoPipe(source: Pipe, fromName: String, relName: Strin
                 val filteredRows = ListBuffer.empty[ExecutionContext]
                 while (it.hasNext) {
                   val candidateRow = row.newWith1(relName, it.next())
-                  if (predicate.isTrue(candidateRow)(state)) {
+                  if (predicate.isTrue(candidateRow, state)) {
                     filteredRows.append(candidateRow)
                   }
                 }

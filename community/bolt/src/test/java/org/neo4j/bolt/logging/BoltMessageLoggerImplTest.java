@@ -22,6 +22,7 @@ package org.neo4j.bolt.logging;
 import java.net.InetSocketAddress;
 
 import io.netty.channel.Channel;
+import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.util.Attribute;
 import org.junit.Before;
 import org.junit.Test;
@@ -32,20 +33,21 @@ import org.mockito.runners.MockitoJUnitRunner;
 import org.neo4j.bolt.v1.runtime.Neo4jError;
 import org.neo4j.kernel.DeadlockDetectedException;
 
-import static java.util.Collections.singletonMap;
-
 import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import static org.neo4j.bolt.logging.BoltMessageLoggerImpl.CORRELATION_ATTRIBUTE_KEY;
+import static org.neo4j.helpers.ValueUtils.asMapValue;
+import static org.neo4j.helpers.collection.MapUtil.map;
 
 @RunWith( MockitoJUnitRunner.class )
 public class BoltMessageLoggerImplTest
 {
 
-    private static final String REMOTE_ADDRESS = "localhost/127.0.0.1:60297";
-    private static final String CORRELATION_ID = "Bolt-X-CorrelationId-1234";
+    private static final String REMOTE_ADDRESS = "127.0.0.1:60297";
+    private static final String CORRELATION_ID = "Bolt-CorrelationId-1234";
     private static String errorMessage = "Oh my woes!";
     private static Neo4jError error = Neo4jError.from( new DeadlockDetectedException( errorMessage ) );
 
@@ -73,7 +75,22 @@ public class BoltMessageLoggerImplTest
         // when
         boltMessageLogger.clientEvent( "TEST", () -> "details" );
         // then
-        verify( boltMessageLog ).info( REMOTE_ADDRESS, CORRELATION_ID, "C: TEST details" );
+        verify( boltMessageLog ).info( REMOTE_ADDRESS, CORRELATION_ID, "C TEST details" );
+    }
+
+    @Test
+    public void getRemoteAddressAsIsIncaseOfNonSocketChannel() throws Exception
+    {
+        // given
+        Channel channel = mock( Channel.class );
+        when( channel.attr( CORRELATION_ATTRIBUTE_KEY ) ).thenReturn( correlationIdAttribute );
+        when( correlationIdAttribute.get() ).thenReturn( CORRELATION_ID );
+        when( channel.remoteAddress() ).thenReturn( new DomainSocketAddress( "socketPath" ) );
+        // when
+        BoltMessageLoggerImpl boltMessageLogger = new BoltMessageLoggerImpl( boltMessageLog, channel );
+        boltMessageLogger.clientEvent( "TEST", () -> "details" );
+        // then
+        verify( boltMessageLog ).info( "socketPath", CORRELATION_ID, "C TEST details" );
     }
 
     @Test
@@ -82,7 +99,7 @@ public class BoltMessageLoggerImplTest
         // when
         boltMessageLogger.serverEvent( "TEST" );
         // then
-        verify( boltMessageLog ).info( REMOTE_ADDRESS, CORRELATION_ID, "S: TEST -" );
+        verify( boltMessageLog ).info( REMOTE_ADDRESS, CORRELATION_ID, "S TEST -" );
     }
 
     @Test
@@ -91,7 +108,7 @@ public class BoltMessageLoggerImplTest
         // when
         boltMessageLogger.serverEvent( "TEST", () -> "details" );
         // then
-        verify( boltMessageLog ).info( REMOTE_ADDRESS, CORRELATION_ID, "S: TEST details" );
+        verify( boltMessageLog ).info( REMOTE_ADDRESS, CORRELATION_ID, "S TEST details" );
     }
 
     @Test
@@ -100,7 +117,7 @@ public class BoltMessageLoggerImplTest
         // when
         boltMessageLogger.logAckFailure();
         // then
-        verify( boltMessageLog ).info( REMOTE_ADDRESS, CORRELATION_ID, "C: ACK_FAILURE -" );
+        verify( boltMessageLog ).info( REMOTE_ADDRESS, CORRELATION_ID, "C ACK_FAILURE -" );
 
     }
 
@@ -108,9 +125,9 @@ public class BoltMessageLoggerImplTest
     public void logInit() throws Exception
     {
         // when
-        boltMessageLogger.logInit( "userAgent", singletonMap( "username", "password" ) );
+        boltMessageLogger.logInit( "userAgent" );
         // then
-        verify( boltMessageLog ).info( REMOTE_ADDRESS, CORRELATION_ID, "C: INIT userAgent [\"username\"]" );
+        verify( boltMessageLog ).info( REMOTE_ADDRESS, CORRELATION_ID, "C INIT userAgent" );
 
     }
 
@@ -118,9 +135,9 @@ public class BoltMessageLoggerImplTest
     public void logRun() throws Exception
     {
         // when
-        boltMessageLogger.logRun( "RETURN 42", () -> singletonMap( "param1", "value" ) );
+        boltMessageLogger.logRun();
         // then
-        verify( boltMessageLog ).info( REMOTE_ADDRESS, CORRELATION_ID, "C: RUN RETURN 42 {\"param1\":\"value\"}" );
+        verify( boltMessageLog ).info( REMOTE_ADDRESS, CORRELATION_ID, "C RUN -" );
     }
 
     @Test
@@ -129,7 +146,7 @@ public class BoltMessageLoggerImplTest
         // when
         boltMessageLogger.logPullAll();
         // then
-        verify( boltMessageLog ).info( REMOTE_ADDRESS, CORRELATION_ID, "C: PULL_ALL -" );
+        verify( boltMessageLog ).info( REMOTE_ADDRESS, CORRELATION_ID, "C PULL_ALL -" );
     }
 
     @Test
@@ -138,7 +155,7 @@ public class BoltMessageLoggerImplTest
         // when
         boltMessageLogger.logDiscardAll();
         // then
-        verify( boltMessageLog ).info( REMOTE_ADDRESS, CORRELATION_ID, "C: DISCARD_ALL -" );
+        verify( boltMessageLog ).info( REMOTE_ADDRESS, CORRELATION_ID, "C DISCARD_ALL -" );
     }
 
     @Test
@@ -147,16 +164,16 @@ public class BoltMessageLoggerImplTest
         // when
         boltMessageLogger.logReset();
         // then
-        verify( boltMessageLog ).info( REMOTE_ADDRESS, CORRELATION_ID, "C: RESET -" );
+        verify( boltMessageLog ).info( REMOTE_ADDRESS, CORRELATION_ID, "C RESET -" );
     }
 
     @Test
     public void logSuccess() throws Exception
     {
         // when
-        boltMessageLogger.logSuccess( () -> "metadata" );
+        boltMessageLogger.logSuccess( () -> asMapValue( map( "key", "value"  ) ) );
         // then
-        verify( boltMessageLog ).info( REMOTE_ADDRESS, CORRELATION_ID, "S: SUCCESS \"metadata\"" );
+        verify( boltMessageLog ).info( REMOTE_ADDRESS, CORRELATION_ID, "S SUCCESS {key: \"value\"}" );
     }
 
     @Test
@@ -165,7 +182,7 @@ public class BoltMessageLoggerImplTest
         // when
         boltMessageLogger.logIgnored();
         // then
-        verify( boltMessageLog ).info( REMOTE_ADDRESS, CORRELATION_ID, "S: IGNORED -" );
+        verify( boltMessageLog ).info( REMOTE_ADDRESS, CORRELATION_ID, "S IGNORED -" );
     }
 
     @Test
@@ -175,7 +192,7 @@ public class BoltMessageLoggerImplTest
         boltMessageLogger.logFailure( error.status() );
         // then
         verify( boltMessageLog ).info( REMOTE_ADDRESS, CORRELATION_ID,
-                "S: FAILURE Neo.TransientError.Transaction.DeadlockDetected" );
+                "S FAILURE Neo.TransientError.Transaction.DeadlockDetected" );
 
     }
 
@@ -186,7 +203,7 @@ public class BoltMessageLoggerImplTest
         boltMessageLogger.clientEvent( "TEST" );
 
         // then
-        verify( boltMessageLog ).info( REMOTE_ADDRESS, CORRELATION_ID, "C: TEST -" );
+        verify( boltMessageLog ).info( REMOTE_ADDRESS, CORRELATION_ID, "C TEST -" );
     }
 
     @Test
@@ -200,7 +217,7 @@ public class BoltMessageLoggerImplTest
         boltMessageLogger.clientError( "TEST", "errorMessage", () -> "details" );
 
         // then
-        verify( boltMessageLog ).error( REMOTE_ADDRESS, CORRELATION_ID, "C: <TEST> details", "errorMessage" );
+        verify( boltMessageLog ).error( REMOTE_ADDRESS, CORRELATION_ID, "C TEST details", "errorMessage" );
     }
 
     @Test
@@ -210,7 +227,7 @@ public class BoltMessageLoggerImplTest
         boltMessageLogger.serverError( "TEST", "errorMessage" );
 
         // then
-        verify( boltMessageLog ).error( REMOTE_ADDRESS, CORRELATION_ID, "S: <TEST>", "errorMessage" );
+        verify( boltMessageLog ).error( REMOTE_ADDRESS, CORRELATION_ID, "S TEST", "errorMessage" );
     }
 
     @Test
@@ -220,7 +237,7 @@ public class BoltMessageLoggerImplTest
         boltMessageLogger.serverError( "TEST", error.status() );
 
         // then
-        verify( boltMessageLog ).error( REMOTE_ADDRESS, CORRELATION_ID, "S: <TEST>",
+        verify( boltMessageLog ).error( REMOTE_ADDRESS, CORRELATION_ID, "S TEST",
                 "Neo.TransientError.Transaction.DeadlockDetected" );
     }
 
@@ -236,7 +253,7 @@ public class BoltMessageLoggerImplTest
         boltMessageLogger.clientEvent( "TEST", () -> "details" );
 
         // then
-        verify( boltMessageLog ).info( REMOTE_ADDRESS, CORRELATION_ID, "C: TEST details" );
+        verify( boltMessageLog ).info( REMOTE_ADDRESS, CORRELATION_ID, "C TEST details" );
     }
 
     @Test
@@ -251,7 +268,7 @@ public class BoltMessageLoggerImplTest
 
         // then
         verify( correlationIdAttribute ).set( anyString() );
-        verify( boltMessageLog ).info( REMOTE_ADDRESS, CORRELATION_ID, "C: TEST -" );
+        verify( boltMessageLog ).info( REMOTE_ADDRESS, CORRELATION_ID, "C TEST -" );
     }
 
     @Test
@@ -266,6 +283,6 @@ public class BoltMessageLoggerImplTest
 
         // then
         verify( correlationIdAttribute ).set( anyString() );
-        verify( boltMessageLog ).error( REMOTE_ADDRESS, CORRELATION_ID, "S: <TEST>", "errorMessage" );
+        verify( boltMessageLog ).error( REMOTE_ADDRESS, CORRELATION_ID, "S TEST", "errorMessage" );
     }
 }

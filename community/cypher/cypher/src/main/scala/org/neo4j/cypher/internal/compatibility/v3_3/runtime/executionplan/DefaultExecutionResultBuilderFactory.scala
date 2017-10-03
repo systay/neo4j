@@ -24,19 +24,18 @@ import org.neo4j.cypher.internal.compatibility.v3_3.runtime._
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.helpers.InternalWrapping._
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes._
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription.InternalPlanDescription.Arguments.{Runtime, RuntimeImpl}
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription.{Id, InternalPlanDescription, LogicalPlan2PlanDescription}
-import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans.LogicalPlan
-import org.neo4j.cypher.internal.frontend.v3_3.{CypherException, ProfilerStatisticsNotReadyException}
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription.{InternalPlanDescription, LogicalPlan2PlanDescription}
 import org.neo4j.cypher.internal.frontend.v3_3.phases.InternalNotificationLogger
+import org.neo4j.cypher.internal.frontend.v3_3.{CypherException, ProfilerStatisticsNotReadyException}
 import org.neo4j.cypher.internal.spi.v3_3.{CSVResources, QueryContext}
+import org.neo4j.cypher.internal.v3_3.logical.plans.LogicalPlan
 import org.neo4j.values.virtual.MapValue
 
 import scala.collection.mutable
 
 case class DefaultExecutionResultBuilderFactory(pipeInfo: PipeInfo,
                                                 columns: List[String],
-                                                logicalPlan: LogicalPlan,
-                                                idMap: Map[LogicalPlan, Id]) extends ExecutionResultBuilderFactory {
+                                                logicalPlan: LogicalPlan) extends ExecutionResultBuilderFactory {
   def create(): ExecutionResultBuilder =
     ExecutionWorkflowBuilder()
 
@@ -91,7 +90,7 @@ case class DefaultExecutionResultBuilderFactory(pipeInfo: PipeInfo,
                               runtimeName: RuntimeName): InternalExecutionResult = {
       val queryType: InternalQueryType = getQueryType
       val planDescription: InternalPlanDescription =
-        LogicalPlan2PlanDescription(logicalPlan, idMap, pipeInfo.plannerUsed)
+        LogicalPlan2PlanDescription(logicalPlan, pipeInfo.plannerUsed)
           .addArgument(Runtime(runtimeName.toTextOutput))
           .addArgument(RuntimeImpl(runtimeName.name))
       if (planType == ExplainMode) {

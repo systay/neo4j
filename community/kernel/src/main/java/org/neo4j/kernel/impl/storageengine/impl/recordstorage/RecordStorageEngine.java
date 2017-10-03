@@ -40,16 +40,17 @@ import org.neo4j.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.kernel.api.exceptions.schema.CreateConstraintFailureException;
 import org.neo4j.kernel.api.labelscan.LabelScanStore;
 import org.neo4j.kernel.api.labelscan.LabelScanWriter;
+import org.neo4j.kernel.api.labelscan.LoggingMonitor;
 import org.neo4j.kernel.api.txstate.TransactionCountingStateVisitor;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.api.BatchTransactionApplier;
 import org.neo4j.kernel.impl.api.BatchTransactionApplierFacade;
 import org.neo4j.kernel.impl.api.CountsRecordState;
 import org.neo4j.kernel.impl.api.CountsStoreBatchTransactionApplier;
+import org.neo4j.kernel.impl.api.ExplicitBatchIndexApplier;
+import org.neo4j.kernel.impl.api.ExplicitIndexApplierLookup;
+import org.neo4j.kernel.impl.api.ExplicitIndexProviderLookup;
 import org.neo4j.kernel.impl.api.IndexReaderFactory;
-import org.neo4j.kernel.impl.api.LegacyBatchIndexApplier;
-import org.neo4j.kernel.impl.api.LegacyIndexApplierLookup;
-import org.neo4j.kernel.impl.api.LegacyIndexProviderLookup;
 import org.neo4j.kernel.impl.api.SchemaState;
 import org.neo4j.kernel.impl.api.TransactionApplier;
 import org.neo4j.kernel.impl.api.TransactionApplierFacade;
@@ -62,7 +63,6 @@ import org.neo4j.kernel.impl.api.index.SchemaIndexProviderMap;
 import org.neo4j.kernel.impl.api.scan.FullLabelStream;
 import org.neo4j.kernel.impl.api.store.SchemaCache;
 import org.neo4j.kernel.impl.api.store.StorageLayer;
-import org.neo4j.kernel.impl.api.store.StoreStatement;
 import org.neo4j.kernel.impl.cache.BridgingCacheAccess;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
 import org.neo4j.kernel.impl.core.CacheAccessBackDoor;
@@ -90,14 +90,6 @@ import org.neo4j.kernel.impl.transaction.command.IndexUpdatesWork;
 import org.neo4j.kernel.impl.transaction.command.LabelUpdateWork;
 import org.neo4j.kernel.impl.transaction.command.NeoStoreBatchTransactionApplier;
 import org.neo4j.kernel.impl.transaction.state.IntegrityValidator;
-import org.neo4j.kernel.impl.transaction.state.Loaders;
-import org.neo4j.kernel.impl.transaction.state.PropertyCreator;
-import org.neo4j.kernel.impl.transaction.state.PropertyDeleter;
-import org.neo4j.kernel.impl.transaction.state.PropertyTraverser;
-import org.neo4j.kernel.impl.transaction.state.RecordChangeSet;
-import org.neo4j.kernel.impl.transaction.state.RelationshipCreator;
-import org.neo4j.kernel.impl.transaction.state.RelationshipDeleter;
-import org.neo4j.kernel.impl.transaction.state.RelationshipGroupGetter;
 import org.neo4j.kernel.impl.transaction.state.TransactionRecordState;
 import org.neo4j.kernel.impl.transaction.state.storeview.DynamicIndexStoreView;
 import org.neo4j.kernel.impl.transaction.state.storeview.NeoStoreIndexStoreView;
@@ -107,7 +99,7 @@ import org.neo4j.kernel.info.DiagnosticsManager;
 import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.monitoring.Monitors;
-import org.neo4j.kernel.spi.legacyindex.IndexImplementation;
+import org.neo4j.kernel.spi.explicitindex.IndexImplementation;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.CommandReaderFactory;
@@ -146,27 +138,22 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     private final CacheAccessBackDoor cacheAccess;
     private final LabelScanStore labelScanStore;
     private final SchemaIndexProviderMap schemaIndexProviderMap;
-    private final LegacyIndexApplierLookup legacyIndexApplierLookup;
+    private final ExplicitIndexApplierLookup explicitIndexApplierLookup;
     private final SchemaState schemaState;
     private final SchemaStorage schemaStorage;
     private final ConstraintSemantics constraintSemantics;
-    private final IdOrderingQueue legacyIndexTransactionOrdering;
+    private final IdOrderingQueue explicitIndexTransactionOrdering;
     private final LockService lockService;
     private final WorkSync<Supplier<LabelScanWriter>,LabelUpdateWork> labelScanStoreSync;
     private final CommandReaderFactory commandReaderFactory;
     private final WorkSync<IndexingUpdateService,IndexUpdatesWork> indexUpdatesSync;
     private final IndexStoreView indexStoreView;
-    private final LegacyIndexProviderLookup legacyIndexProviderLookup;
+    private final ExplicitIndexProviderLookup explicitIndexProviderLookup;
     private final PropertyPhysicalToLogicalConverter indexUpdatesConverter;
     private final Supplier<StorageStatement> storeStatementSupplier;
     private final IdController idController;
-
-    // Immutable state for creating/applying commands
-    private final Loaders loaders;
-    private final RelationshipCreator relationshipCreator;
-    private final RelationshipDeleter relationshipDeleter;
-    private final PropertyCreator propertyCreator;
-    private final PropertyDeleter propertyDeleter;
+    private final int denseNodeThreshold;
+    private final int recordIdBatchSize;
 
     public RecordStorageEngine(
             File storeDir,
@@ -185,9 +172,9 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
             SchemaIndexProviderMap indexProviderMap,
             IndexingService.Monitor indexingServiceMonitor,
             DatabaseHealth databaseHealth,
-            LegacyIndexProviderLookup legacyIndexProviderLookup,
+            ExplicitIndexProviderLookup explicitIndexProviderLookup,
             IndexConfigStore indexConfigStore,
-            IdOrderingQueue legacyIndexTransactionOrdering,
+            IdOrderingQueue explicitIndexTransactionOrdering,
             IdGeneratorFactory idGeneratorFactory,
             IdController idController,
             Monitors monitors,
@@ -200,10 +187,10 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
         this.schemaState = schemaState;
         this.lockService = lockService;
         this.databaseHealth = databaseHealth;
-        this.legacyIndexProviderLookup = legacyIndexProviderLookup;
+        this.explicitIndexProviderLookup = explicitIndexProviderLookup;
         this.indexConfigStore = indexConfigStore;
         this.constraintSemantics = constraintSemantics;
-        this.legacyIndexTransactionOrdering = legacyIndexTransactionOrdering;
+        this.explicitIndexTransactionOrdering = explicitIndexTransactionOrdering;
 
         this.idController = idController;
         StoreFactory factory = new StoreFactory( storeDir, config, idGeneratorFactory, pageCache, fs, logProvider );
@@ -217,6 +204,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
 
             NeoStoreIndexStoreView neoStoreIndexStoreView = new NeoStoreIndexStoreView( lockService, neoStores );
             Boolean readOnly = config.get( GraphDatabaseSettings.read_only ) && operationalMode == OperationalMode.single;
+            monitors.addMonitorListener( new LoggingMonitor( logProvider.getLog( NativeLabelScanStore.class ) ) );
             labelScanStore = new NativeLabelScanStore( pageCache, storeDir, new FullLabelStream( neoStoreIndexStoreView ),
                     readOnly, monitors, recoveryCleanupWorkCollector );
 
@@ -237,23 +225,15 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
                     schemaStorage, neoStores, indexingService,
                     storeStatementSupplier, schemaCache );
 
-            legacyIndexApplierLookup = new LegacyIndexApplierLookup.Direct( legacyIndexProviderLookup );
+            explicitIndexApplierLookup = new ExplicitIndexApplierLookup.Direct( explicitIndexProviderLookup );
 
             labelScanStoreSync = new WorkSync<>( labelScanStore::newWriter );
 
             commandReaderFactory = new RecordStorageCommandReaderFactory();
             indexUpdatesSync = new WorkSync<>( indexingService );
 
-            // Immutable state for creating/applying commands
-            loaders = new Loaders( neoStores );
-            RelationshipGroupGetter relationshipGroupGetter =
-                    new RelationshipGroupGetter( neoStores.getRelationshipGroupStore() );
-            relationshipCreator = new RelationshipCreator( relationshipGroupGetter,
-                    config.get( GraphDatabaseSettings.dense_node_threshold ) );
-            PropertyTraverser propertyTraverser = new PropertyTraverser();
-            propertyDeleter = new PropertyDeleter( propertyTraverser );
-            relationshipDeleter = new RelationshipDeleter( relationshipGroupGetter, propertyDeleter );
-            propertyCreator = new PropertyCreator( neoStores.getPropertyStore(), propertyTraverser );
+            denseNodeThreshold = config.get( GraphDatabaseSettings.dense_node_threshold );
+            recordIdBatchSize = config.get( GraphDatabaseSettings.record_id_batch_size );
         }
         catch ( Throwable failure )
         {
@@ -267,13 +247,20 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
         Supplier<IndexReaderFactory> indexReaderFactory = () -> new IndexReaderFactory.Caching( indexingService );
         LockService lockService = takePropertyReadLocks ? this.lockService : NO_LOCK_SERVICE;
 
-        return () -> new StoreStatement( neoStores, indexReaderFactory, labelScanStore::newReader, lockService );
+        return () -> new StoreStatement( neoStores, indexReaderFactory, labelScanStore::newReader, lockService,
+                allocateCommandCreationContext() );
     }
 
     @Override
     public StoreReadLayer storeReadLayer()
     {
         return storeLayer;
+    }
+
+    @Override
+    public RecordStorageCommandCreationContext allocateCommandCreationContext()
+    {
+        return new RecordStorageCommandCreationContext( neoStores, denseNodeThreshold, recordIdBatchSize );
     }
 
     @Override
@@ -294,10 +281,13 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     {
         if ( txState != null )
         {
-            RecordChangeSet recordChangeSet = new RecordChangeSet( loaders );
-            TransactionRecordState recordState = new TransactionRecordState( neoStores, integrityValidator,
-                    recordChangeSet, lastTransactionIdWhenStarted, locks,
-                    relationshipCreator, relationshipDeleter, propertyCreator, propertyDeleter );
+            // We can make this cast here because we expected that the storageStatement passed in here comes from
+            // this storage engine itself, anything else is considered a bug. And we do know the inner workings
+            // of the storage statements that we create.
+            RecordStorageCommandCreationContext creationContext =
+                    ((StoreStatement) storageStatement).getCommandCreationContext();
+            TransactionRecordState recordState =
+                    creationContext.createTransactionRecordState( integrityValidator, lastTransactionIdWhenStarted, locks );
 
             // Visit transaction state and populate these record state objects
             TxStateVisitor txStateVisitor = new TransactionToRecordStateVisitor( recordState, schemaState,
@@ -378,9 +368,10 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
                     neoStores.getNodeStore(),
                     indexUpdatesConverter ) );
 
-            // Legacy index application
+            // Explicit index application
             appliers.add(
-                    new LegacyBatchIndexApplier( indexConfigStore, legacyIndexApplierLookup, legacyIndexTransactionOrdering,
+                    new ExplicitBatchIndexApplier( indexConfigStore, explicitIndexApplierLookup,
+                            explicitIndexTransactionOrdering,
                             mode ) );
         }
 
@@ -396,7 +387,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
 
     public void satisfyDependencies( DependencySatisfier satisfier )
     {
-        satisfier.satisfyDependency( legacyIndexApplierLookup );
+        satisfier.satisfyDependency( explicitIndexApplierLookup );
         satisfier.satisfyDependency( cacheAccess );
         satisfier.satisfyDependency( schemaIndexProviderMap );
         satisfier.satisfyDependency( integrityValidator );
@@ -467,7 +458,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     {
         indexingService.forceAll();
         labelScanStore.force( limiter );
-        for ( IndexImplementation index : legacyIndexProviderLookup.all() )
+        for ( IndexImplementation index : explicitIndexProviderLookup.all() )
         {
             index.force();
         }

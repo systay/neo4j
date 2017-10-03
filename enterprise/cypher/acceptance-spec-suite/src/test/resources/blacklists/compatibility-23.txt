@@ -53,6 +53,20 @@ Ordering is well defined across all types, ascending
 Ordering is well defined across all types, descending
 Ordering for lists, ascending
 Ordering for lists, descending
+ORDER BY node problem
 
 //SkipLimitAcceptance.feature - Unsupported limit syntax
 Negative parameter for LIMIT should not generate errors
+
+// ReturnAcceptance.feature
+LIMIT 0 should stop side effects
+
+//AggregationAcceptance.feature
+max() over strings
+min() over strings
+max() over mixed numeric values
+min() over mixed numeric values
+max() over mixed values
+min() over mixed values
+max() over list values
+min() over list values

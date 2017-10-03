@@ -21,13 +21,13 @@ package org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes
 
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.ExecutionContext
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.predicates.Predicate
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription.Id
+import org.neo4j.cypher.internal.v3_3.logical.plans.LogicalPlanId
 
 case class FilterPipe(source: Pipe, predicate: Predicate)
-                     (val id: Id = new Id) extends PipeWithSource(source) {
+                     (val id: LogicalPlanId = LogicalPlanId.DEFAULT) extends PipeWithSource(source) {
 
   predicate.registerOwningPipe(this)
 
-  protected def internalCreateResults(input: Iterator[ExecutionContext],state: QueryState) =
-    input.filter(ctx => predicate.isTrue(ctx)(state))
+  protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] =
+    input.filter(ctx => predicate.isTrue(ctx, state))
 }

@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.IntFunction;
 
-import org.neo4j.backup.OnlineBackupSettings;
 import org.neo4j.causalclustering.catchup.tx.CatchupPollingProcess;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.identity.MemberId;
@@ -37,6 +36,7 @@ import org.neo4j.kernel.configuration.BoltConnector;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.HttpConnector;
 import org.neo4j.kernel.configuration.HttpConnector.Encryption;
+import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Level;
 
@@ -48,14 +48,14 @@ import static org.neo4j.helpers.collection.MapUtil.stringMap;
 
 public class ReadReplica implements ClusterMember
 {
-    private final Map<String,String> config = stringMap();
-    private final DiscoveryServiceFactory discoveryServiceFactory;
+    protected final Map<String,String> config = stringMap();
+    protected final DiscoveryServiceFactory discoveryServiceFactory;
     private final File neo4jHome;
-    private final File storeDir;
+    protected final File storeDir;
     private final int serverId;
     private final String boltAdvertisedSocketAddress;
-    private ReadReplicaGraphDatabase database;
-    private Monitors monitors;
+    protected ReadReplicaGraphDatabase database;
+    protected Monitors monitors;
 
     public ReadReplica( File parentDir, int serverId, int boltPort, int httpPort, int txPort, int backupPort,
                         DiscoveryServiceFactory discoveryServiceFactory,

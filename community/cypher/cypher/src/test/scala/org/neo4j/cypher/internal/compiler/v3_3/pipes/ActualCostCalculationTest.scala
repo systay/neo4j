@@ -21,7 +21,6 @@ package org.neo4j.cypher.internal.compiler.v3_3.pipes
 
 import java.io.File
 import java.nio.file.Files
-import java.util.Collections
 import java.util.concurrent.TimeUnit
 
 import org.apache.commons.math3.stat.regression.{OLSMultipleLinearRegression, SimpleRegression}
@@ -29,12 +28,12 @@ import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.expressions
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.predicates.Equals
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.values.TokenType.PropertyKey
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes._
-import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans.SingleQueryExpression
 import org.neo4j.cypher.internal.frontend.v3_3.phases.devNullLogger
 import org.neo4j.cypher.internal.frontend.v3_3.test_helpers.CypherFunSuite
 import org.neo4j.cypher.internal.frontend.v3_3.{LabelId, PropertyKeyId, SemanticDirection, ast}
 import org.neo4j.cypher.internal.spi.v3_3.TransactionBoundQueryContext.IndexSearchMonitor
 import org.neo4j.cypher.internal.spi.v3_3.{TransactionBoundPlanContext, TransactionBoundQueryContext, TransactionalContextWrapper}
+import org.neo4j.cypher.internal.v3_3.logical.plans.SingleQueryExpression
 import org.neo4j.cypher.javacompat.internal.GraphDatabaseCypherService
 import org.neo4j.graphdb._
 import org.neo4j.kernel.GraphDatabaseQueryService
@@ -45,6 +44,7 @@ import org.neo4j.kernel.impl.coreapi.{InternalTransaction, PropertyContainerLock
 import org.neo4j.kernel.impl.query.Neo4jTransactionalContextFactory
 import org.neo4j.kernel.impl.query.clientconnection.ClientConnectionInfo
 import org.neo4j.test.TestGraphDatabaseFactory
+import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -231,7 +231,7 @@ class ActualCostCalculationTest extends CypherFunSuite {
 
   private def transactionContext(graph: GraphDatabaseQueryService, tx: InternalTransaction) = {
     val contextFactory = Neo4jTransactionalContextFactory.create(graph, new PropertyContainerLocker)
-    contextFactory.newContext(ClientConnectionInfo.EMBEDDED_CONNECTION, tx, "X", Collections.emptyMap())
+    contextFactory.newContext(ClientConnectionInfo.EMBEDDED_CONNECTION, tx, "X", EMPTY_MAP)
   }
 
   //executes the provided pipes and returns execution times

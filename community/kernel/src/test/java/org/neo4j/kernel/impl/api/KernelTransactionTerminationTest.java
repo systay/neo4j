@@ -34,7 +34,7 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.exceptions.TransactionFailureException;
-import org.neo4j.kernel.api.txstate.LegacyIndexTransactionState;
+import org.neo4j.kernel.api.txstate.ExplicitIndexTransactionState;
 import org.neo4j.kernel.impl.api.state.ConstraintIndexCreator;
 import org.neo4j.kernel.impl.factory.CanWrite;
 import org.neo4j.kernel.impl.locking.LockTracer;
@@ -63,7 +63,7 @@ public class KernelTransactionTerminationTest
 {
     private static final int TEST_RUN_TIME_MS = 5_000;
 
-    @Test( timeout = TEST_RUN_TIME_MS * 2 )
+    @Test( timeout = TEST_RUN_TIME_MS * 20 )
     public void transactionCantBeTerminatedAfterItIsClosed() throws Throwable
     {
         runTwoThreads(
@@ -77,7 +77,7 @@ public class KernelTransactionTerminationTest
         );
     }
 
-    @Test( timeout = TEST_RUN_TIME_MS * 2 )
+    @Test( timeout = TEST_RUN_TIME_MS * 20 )
     public void closeTransaction() throws Throwable
     {
         BlockingQueue<Boolean> committerToTerminator = new LinkedBlockingQueue<>( 1 );
@@ -334,7 +334,7 @@ public class KernelTransactionTerminationTest
         {
             super( mock( StatementOperationParts.class ), mock( SchemaWriteGuard.class ), new TransactionHooks(),
                     mock( ConstraintIndexCreator.class ), new Procedures(), TransactionHeaderInformationFactory.DEFAULT,
-                    mock( TransactionCommitProcess.class ), monitor, () -> mock( LegacyIndexTransactionState.class ),
+                    mock( TransactionCommitProcess.class ), monitor, () -> mock( ExplicitIndexTransactionState.class ),
                     mock( Pool.class ), Clocks.fakeClock(), TransactionTracer.NULL,
                     LockTracer.NONE, PageCursorTracerSupplier.NULL,
                             mock( StorageEngine.class, RETURNS_MOCKS ), new CanWrite() );

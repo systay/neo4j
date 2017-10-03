@@ -118,7 +118,7 @@ class InMemoryIndex
         public void add( Collection<? extends IndexEntryUpdate<?>> updates )
                 throws IndexEntryConflictException, IOException
         {
-            for ( IndexEntryUpdate update : updates )
+            for ( IndexEntryUpdate<?> update : updates )
             {
                 InMemoryIndex.this.add( update.getEntityId(), update.values(), false );
             }
@@ -159,14 +159,8 @@ class InMemoryIndex
         }
 
         @Override
-        public void includeSample( IndexEntryUpdate update )
+        public void includeSample( IndexEntryUpdate<?> update )
         {
-        }
-
-        @Override
-        public void configureSampling( boolean onlineSampling )
-        {
-            //nothing
         }
 
         @Override
@@ -252,7 +246,7 @@ class InMemoryIndex
         }
 
         @Override
-        public void process( IndexEntryUpdate update ) throws IOException, IndexEntryConflictException
+        public void process( IndexEntryUpdate<?> update ) throws IOException, IndexEntryConflictException
         {
             switch ( update.updateMode() )
             {

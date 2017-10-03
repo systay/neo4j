@@ -38,13 +38,13 @@ import org.neo4j.cypher.internal.frontend.v3_2.PlannerName
 import org.neo4j.cypher.internal.frontend.v3_2.SemanticDirection.{BOTH, INCOMING, OUTGOING}
 import org.neo4j.cypher.internal.frontend.v3_2.notification.{DeprecatedPlannerNotification, InternalNotification, PlannerUnsupportedNotification, RuntimeUnsupportedNotification, _}
 import org.neo4j.cypher.internal.frontend.v3_3
-import org.neo4j.cypher.internal.javacompat.ValueUtils
 import org.neo4j.cypher.result.QueryResult
 import org.neo4j.cypher.result.QueryResult.Record
 import org.neo4j.graphdb
 import org.neo4j.graphdb.Result.{ResultRow, ResultVisitor}
 import org.neo4j.graphdb.impl.notification.{NotificationCode, NotificationDetail}
 import org.neo4j.graphdb.{Notification, ResourceIterator}
+import org.neo4j.helpers.ValueUtils
 import org.neo4j.values.AnyValue
 
 import scala.collection.JavaConverters._
@@ -177,7 +177,7 @@ class ExecutionResultWrapper(val inner: InternalExecutionResult, val planner: Pl
       InternalPlanDescription3_3.Arguments.ExpandExpression(from, relName,relTypes,to, dir3_3, min, max)
 
     case Arguments.Index(label, propertyKey) => InternalPlanDescription3_3.Arguments.Index(label, propertyKey)
-    case Arguments.LegacyIndex(value) => InternalPlanDescription3_3.Arguments.LegacyIndex(value)
+    case Arguments.LegacyIndex(value) => InternalPlanDescription3_3.Arguments.ExplicitIndex(value)
     case Arguments.InequalityIndex(label, propertyKey, bounds) => InternalPlanDescription3_3.Arguments.InequalityIndex(label, propertyKey, bounds)
     case Arguments.Planner(value) => InternalPlanDescription3_3.Arguments.Planner(value)
     case Arguments.PlannerImpl(value) => InternalPlanDescription3_3.Arguments.PlannerImpl(value)

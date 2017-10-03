@@ -22,16 +22,16 @@ package org.neo4j.cypher.internal.compatibility.v3_3.runtime.slotted.pipes
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.expressions.AggregationExpression
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.aggregation.AggregationFunction
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.{Pipe, PipeWithSource, QueryState}
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription.Id
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.slotted.PrimitiveExecutionContext
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.{ExecutionContext, PipelineInformation}
+import org.neo4j.cypher.internal.v3_3.logical.plans.LogicalPlanId
 
 /*
 This pipe can be used whenever we are aggregating and not grouping on anything
  */
 case class EagerAggregationWithoutGroupingSlottedPipe(source: Pipe,
                                                       pipelineInformation: PipelineInformation,
-                                                      aggregations: Map[Int, AggregationExpression])(val id: Id = new Id)
+                                                      aggregations: Map[Int, AggregationExpression])(val id: LogicalPlanId = LogicalPlanId.DEFAULT)
   extends PipeWithSource(source) {
 
   aggregations.values.foreach(_.registerOwningPipe(this))
@@ -44,8 +44,6 @@ case class EagerAggregationWithoutGroupingSlottedPipe(source: Pipe,
   protected def internalCreateResults(input: Iterator[ExecutionContext],
                                       state: QueryState): Iterator[ExecutionContext] = {
 
-    implicit val s = state
-
     val aggregationAccumulators: Seq[AggregationFunction] = aggregationFunctions.map(_.createAggregationFunction)
 
     if (input.isEmpty)
@@ -53,13 +51,13 @@ case class EagerAggregationWithoutGroupingSlottedPipe(source: Pipe,
     else {
       // Consume input
       input.foreach { ctx =>
-        aggregationAccumulators.foreach(f => f.apply(ctx))
+        aggregationAccumulators.foreach(f => f.apply(ctx, state))
       }
 
       // Present result
       val context = PrimitiveExecutionContext(pipelineInformation)
       (aggregationOffsets zip aggregationAccumulators).foreach {
-        case (offset, value) => context.setRefAt(offset, value.result)
+        case (offset, value) => context.setRefAt(offset, value.result(state))
       }
       Iterator(context)
     }

@@ -1,12 +1,7 @@
 Directed match of a simple relationship, count
 Directed match on self-relationship graph, count
 
-Handle ORDER BY with LIMIT 1
 Keeping used expression 1
-Matching and returning ordered results, with LIMIT
-ORDER BY and LIMIT can be used
-ORDER BY with LIMIT 0 should not generate errors
-ORDER BY with negative parameter for LIMIT should not generate errors
 Simple counting of nodes
 Support column renaming for aggregates as well
 Support multiple divisions in aggregate function
@@ -70,7 +65,6 @@ Optionally matching named paths
 Optionally matching named paths with single and variable length patterns
 Optionally matching named paths with variable length patterns
 Variable length relationship in OPTIONAL MATCH
-ORDER BY with LIMIT
 Handling direction of named paths
 Zero-length named path
 Variable-length named path
@@ -323,3 +317,37 @@ In-query call to procedure with argument of type FLOAT accepts value of type INT
 Standalone call to procedure with argument of type INTEGER accepts value of type FLOAT
 In-query call to procedure with argument of type INTEGER accepts value of type FLOAT
 In-query call to procedure with null argument
+
+// TCK side effects are incorrectly specified -- need update
+In-query call to procedure with explicit arguments
+Standalone call to procedure with explicit arguments
+Detach deleting connected nodes and relationships
+Detach deleting paths
+Create and delete in same query
+Delete nodes from a map
+Delete paths from nested map/list
+Delete relationship with bidirectional matching
+Generate the movie graph correctly
+Many CREATE clauses
+Copying properties from literal map with ON MATCH
+Merge node should create when it doesn't match, properties and label
+Should work when finding multiple elements
+Should be able to use properties from match in ON MATCH and ON CREATE
+Should support updates while merging
+Merge must properly handle multiple labels
+UNWIND with multiple merges
+Do not match on deleted entities
+Do not match on deleted relationships
+In-query call to procedure with explicit arguments
+In-query call to procedure with explicit arguments that drops all result fields
+Standalone call to procedure with explicit arguments
+Set a property
+Set a property to an expression
+Concatenate elements onto a list property
+Concatenate elements in reverse onto a list property
+Overwrite values when using +=
+Non-existent values in a property map are removed with SET =
+Creating nodes from an unwound parameter list
+Unwind with merge
+Should be able to merge using property from match
+Merges should not be able to match on deleted nodes

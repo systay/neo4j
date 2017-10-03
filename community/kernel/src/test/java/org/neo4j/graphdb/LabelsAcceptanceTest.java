@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 
@@ -702,7 +703,7 @@ public class LabelsAcceptanceTest
                     idTypeConfigurationProvider = new CommunityIdTypeConfigurationProvider();
 
             @Override
-            public IdGenerator open( File fileName, int grabSize, IdType idType, long highId, long maxId )
+            public IdGenerator open( File fileName, int grabSize, IdType idType, Supplier<Long> highId, long maxId )
             {
                 if ( idType == IdType.LABEL_TOKEN )
                 {
@@ -724,7 +725,7 @@ public class LabelsAcceptanceTest
                     }
                     return generator;
                 }
-                return super.open( fileName, grabSize, idType, Long.MAX_VALUE, Long.MAX_VALUE );
+                return super.open( fileName, grabSize, idType, () -> Long.MAX_VALUE, Long.MAX_VALUE );
             }
         };
 
@@ -755,7 +756,7 @@ public class LabelsAcceptanceTest
                                     GraphDatabaseFacadeFactory.Dependencies dependencies )
                             {
                                 Function<PlatformModule,EditionModule> factory =
-                                        ( platformModule ) -> new CommunityEditionModule( platformModule )
+                                        platformModule -> new CommunityEditionModule( platformModule )
                                         {
                                             @Override
                                             protected IdGeneratorFactory createIdGeneratorFactory(

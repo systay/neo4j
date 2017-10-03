@@ -19,10 +19,10 @@
  */
 package org.neo4j.bolt.logging;
 
-import java.util.Map;
 import java.util.function.Supplier;
 
 import org.neo4j.kernel.api.exceptions.Status;
+import org.neo4j.values.virtual.MapValue;
 
 public interface BoltMessageLogger
 {
@@ -40,9 +40,9 @@ public interface BoltMessageLogger
 
     void serverError( String eventName, Status status );
 
-    void logInit( String userAgent, Map<String,Object> authToken );
+    void logInit( String userAgent );
 
-    void logRun( String statement, Supplier<Map<String, Object>> parametersSupplier );
+    void logRun();
 
     void logPullAll();
 
@@ -52,7 +52,7 @@ public interface BoltMessageLogger
 
     void logReset();
 
-    void logSuccess( Supplier<String> metadataSupplier );
+    void logSuccess( Supplier<MapValue> metadataSupplier );
 
     void logFailure( Status status );
 

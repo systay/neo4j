@@ -97,8 +97,7 @@ public class DatabaseCompositeIndexAccessorTest
                     SchemaIndex index = LuceneSchemaIndexBuilder.create( indexDescriptor )
                             .withFileSystem( fileSystemRule.get() )
                             .withDirectoryFactory( dirFactory1 )
-                            .withIndexRootFolder( dir )
-                            .withIndexIdentifier( "1" )
+                            .withIndexRootFolder( new File( dir, "1" ) )
                             .build();
 
                     index.create();
@@ -110,8 +109,7 @@ public class DatabaseCompositeIndexAccessorTest
                     SchemaIndex index = LuceneSchemaIndexBuilder.create( uniqueIndexDescriptor )
                             .withFileSystem( fileSystemRule.get() )
                             .withDirectoryFactory( dirFactory1 )
-                            .withIndexRootFolder( dir )
-                            .withIndexIdentifier( "testIndex" )
+                            .withIndexRootFolder( new File( dir, "testIndex" ) )
                             .build();
 
                     index.create();
@@ -121,6 +119,7 @@ public class DatabaseCompositeIndexAccessorTest
         );
     }
 
+    @SuppressWarnings( "unchecked" )
     private static IOFunction<DirectoryFactory,LuceneIndexAccessor>[] arg(
             IOFunction<DirectoryFactory,LuceneIndexAccessor> foo )
     {
@@ -260,31 +259,30 @@ public class DatabaseCompositeIndexAccessorTest
         }
     }
 
-    private IndexEntryUpdate add( long nodeId, Object... values )
+    private IndexEntryUpdate<?> add( long nodeId, Object... values )
     {
         return IndexQueryHelper.add( nodeId, indexDescriptor.schema(), values );
     }
 
-    private IndexEntryUpdate remove( long nodeId, Object... values )
+    private IndexEntryUpdate<?> remove( long nodeId, Object... values )
     {
         return IndexQueryHelper.remove( nodeId, indexDescriptor.schema(), values );
     }
 
-    private IndexEntryUpdate change( long nodeId, Object[] valuesBefore, Object[] valuesAfter )
+    private IndexEntryUpdate<?> change( long nodeId, Object[] valuesBefore, Object[] valuesAfter )
     {
         return IndexQueryHelper.change( nodeId, indexDescriptor.schema(), valuesBefore, valuesAfter );
     }
 
-    private void updateAndCommit( List<IndexEntryUpdate> nodePropertyUpdates )
+    private void updateAndCommit( List<IndexEntryUpdate<?>> nodePropertyUpdates )
             throws IOException, IndexEntryConflictException
     {
         try ( IndexUpdater updater = accessor.newUpdater( IndexUpdateMode.ONLINE ) )
         {
-            for ( IndexEntryUpdate update : nodePropertyUpdates )
+            for ( IndexEntryUpdate<?> update : nodePropertyUpdates )
             {
                 updater.process( update );
             }
         }
     }
-
 }

@@ -20,13 +20,13 @@
 package org.neo4j.causalclustering.readreplica;
 
 import java.io.File;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-import org.neo4j.backup.OnlineBackupKernelExtension;
-import org.neo4j.backup.OnlineBackupSettings;
 import org.neo4j.causalclustering.catchup.CatchUpClient;
 import org.neo4j.causalclustering.catchup.CatchupServer;
 import org.neo4j.causalclustering.catchup.CheckpointerSupplier;
@@ -48,6 +48,9 @@ import org.neo4j.causalclustering.discovery.TopologyService;
 import org.neo4j.causalclustering.discovery.TopologyServiceMultiRetryStrategy;
 import org.neo4j.causalclustering.discovery.TopologyServiceRetryStrategy;
 import org.neo4j.causalclustering.discovery.procedures.ReadReplicaRoleProcedure;
+import org.neo4j.causalclustering.handlers.NoOpPipelineHandlerAppenderFactory;
+import org.neo4j.causalclustering.handlers.PipelineHandlerAppender;
+import org.neo4j.causalclustering.handlers.PipelineHandlerAppenderFactory;
 import org.neo4j.causalclustering.helper.ExponentialBackoffStrategy;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.com.storecopy.StoreUtil;
@@ -57,10 +60,10 @@ import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.DatabaseAvailability;
-import org.neo4j.kernel.NeoStoreDataSource;
 import org.neo4j.kernel.api.bolt.BoltConnectionTracker;
 import org.neo4j.kernel.api.exceptions.KernelException;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.configuration.ssl.SslPolicyLoader;
 import org.neo4j.kernel.enterprise.builtinprocs.EnterpriseBuiltInDbmsProcedures;
 import org.neo4j.kernel.impl.api.CommitProcessFactory;
@@ -75,6 +78,7 @@ import org.neo4j.kernel.impl.coreapi.CoreAPIAvailabilityGuard;
 import org.neo4j.kernel.impl.enterprise.EnterpriseConstraintSemantics;
 import org.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
 import org.neo4j.kernel.impl.enterprise.StandardBoltConnectionTracker;
+import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.impl.enterprise.id.EnterpriseIdTypeConfigurationProvider;
 import org.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOLimiter;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
@@ -95,6 +99,7 @@ import org.neo4j.kernel.impl.transaction.log.PhysicalLogFile;
 import org.neo4j.kernel.impl.transaction.log.TransactionAppender;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.impl.transaction.state.DataSourceManager;
+import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.kernel.internal.DefaultKernelData;
 import org.neo4j.kernel.lifecycle.LifeSupport;
@@ -102,7 +107,6 @@ import org.neo4j.kernel.lifecycle.LifecycleStatus;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.ssl.SslPolicy;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.time.Clocks;
 import org.neo4j.udc.UsageData;
@@ -115,7 +119,8 @@ import static org.neo4j.causalclustering.discovery.ResolutionResolverFactory.cho
  */
 public class EnterpriseReadReplicaEditionModule extends EditionModule
 {
-    EnterpriseReadReplicaEditionModule( final PlatformModule platformModule, final DiscoveryServiceFactory discoveryServiceFactory, MemberId myself )
+    EnterpriseReadReplicaEditionModule( final PlatformModule platformModule,
+                                        final DiscoveryServiceFactory discoveryServiceFactory, MemberId myself )
     {
         LogService logging = platformModule.logging;
 
@@ -123,6 +128,7 @@ public class EnterpriseReadReplicaEditionModule extends EditionModule
 
         org.neo4j.kernel.impl.util.Dependencies dependencies = platformModule.dependencies;
         Config config = platformModule.config;
+        config.augment( backupDisabledSettings() );
         FileSystemAbstraction fileSystem = platformModule.fileSystem;
         PageCache pageCache = platformModule.pageCache;
         File storeDir = platformModule.storeDir;
@@ -177,19 +183,25 @@ public class EnterpriseReadReplicaEditionModule extends EditionModule
 
         logProvider.getLog( getClass() ).info( String.format( "Generated new id: %s", myself ) );
 
-        SslPolicyLoader sslPolicyFactory = dependencies.satisfyDependency( SslPolicyLoader.create( config, logProvider ) );
-        SslPolicy clusterSslPolicy = sslPolicyFactory.getPolicy( config.get( CausalClusteringSettings.ssl_policy ) );
         HostnameResolver hostnameResolver = chooseResolver( config, logProvider, userLogProvider );
 
+        configureDiscoveryService( discoveryServiceFactory, dependencies, config, logProvider );
+
         TopologyService topologyService =
-                discoveryServiceFactory.topologyService( config, clusterSslPolicy, logProvider, platformModule.jobScheduler, myself,
+                discoveryServiceFactory.topologyService( config, logProvider, platformModule.jobScheduler, myself,
                         hostnameResolver, resolveStrategy( config ) );
 
         life.add( dependencies.satisfyDependency( topologyService ) );
 
+        // We need to satisfy the dependency here to keep users of it, such as BoltKernelExtension, happy.
+        dependencies.satisfyDependency( SslPolicyLoader.create( config, logProvider ) );
+
+        PipelineHandlerAppenderFactory appenderFactory = appenderFactory();
+        PipelineHandlerAppender handlerAppender = appenderFactory.create( config, dependencies, logProvider );
+
         long inactivityTimeoutMillis = config.get( CausalClusteringSettings.catch_up_client_inactivity_timeout ).toMillis();
         CatchUpClient catchUpClient =
-                life.add( new CatchUpClient( logProvider, Clocks.systemClock(), inactivityTimeoutMillis, monitors, clusterSslPolicy ) );
+                life.add( new CatchUpClient( logProvider, Clocks.systemClock(), inactivityTimeoutMillis, monitors, handlerAppender ) );
 
         final Supplier<DatabaseHealth> databaseHealthSupplier = dependencies.provideDependency( DatabaseHealth.class );
 
@@ -220,28 +232,6 @@ public class EnterpriseReadReplicaEditionModule extends EditionModule
         txPulling.add( copiedStoreRecovery );
 
         LifeSupport servicesToStopOnStoreCopy = new LifeSupport();
-        if ( config.get( OnlineBackupSettings.online_backup_enabled ) )
-        {
-            platformModule.dataSourceManager.addListener( new DataSourceManager.Listener()
-            {
-                @Override
-                public void registered( NeoStoreDataSource dataSource )
-                {
-                    servicesToStopOnStoreCopy.add( pickBackupExtension( dataSource ) );
-                }
-
-                @Override
-                public void unregistered( NeoStoreDataSource dataSource )
-                {
-                    servicesToStopOnStoreCopy.remove( pickBackupExtension( dataSource ) );
-                }
-
-                private OnlineBackupKernelExtension pickBackupExtension( NeoStoreDataSource dataSource )
-                {
-                    return dataSource.getDependencyResolver().resolveDependency( OnlineBackupKernelExtension.class );
-                }
-            } );
-        }
 
         StoreCopyProcess storeCopyProcess = new StoreCopyProcess( fileSystem, pageCache, localDatabase, copiedStoreRecovery, remoteStore, logProvider );
 
@@ -282,13 +272,23 @@ public class EnterpriseReadReplicaEditionModule extends EditionModule
                         platformModule.dependencies.provideDependency( TransactionIdStore.class ),
                         platformModule.dependencies.provideDependency( LogicalTransactionStore.class ), localDatabase::dataSource, localDatabase::isAvailable,
                         null, config, platformModule.monitors, new CheckpointerSupplier( platformModule.dependencies ), fileSystem, pageCache,
-                        platformModule.storeCopyCheckPointMutex, clusterSslPolicy );
+                        platformModule.storeCopyCheckPointMutex, handlerAppender );
 
         servicesToStopOnStoreCopy.add( catchupServer );
 
         dependencies.satisfyDependency( createSessionTracker() );
 
         life.add( catchupServer ); // must start last and stop first, since it handles external requests
+    }
+
+    protected void configureDiscoveryService( DiscoveryServiceFactory discoveryServiceFactory, Dependencies dependencies,
+                                              Config config, LogProvider logProvider )
+    {
+    }
+
+    protected PipelineHandlerAppenderFactory appenderFactory()
+    {
+        return new NoOpPipelineHandlerAppenderFactory();
     }
 
     static Predicate<String> fileWatcherFileNameFilter()
@@ -367,5 +367,12 @@ public class EnterpriseReadReplicaEditionModule extends EditionModule
         int numberOfRetries =
                 pollingFrequencyWithinRefreshWindow + 1; // we want to have more retries at the given frequency than there is time in a refresh period
         return new TopologyServiceMultiRetryStrategy( refreshPeriodMillis / pollingFrequencyWithinRefreshWindow, numberOfRetries );
+    }
+
+    private static Map<String,String> backupDisabledSettings()
+    {
+        Map<String,String> overrideBackupSettings = new HashMap<>(  );
+        overrideBackupSettings.put( OnlineBackupSettings.online_backup_enabled.name(), Settings.FALSE );
+        return overrideBackupSettings;
     }
 }

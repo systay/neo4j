@@ -23,10 +23,9 @@ import java.util
 
 import org.neo4j.cypher.internal.compatibility.v3_3.exceptionHandler
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription.InternalPlanDescription.Arguments._
-import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans.SeekableArgs
-import org.neo4j.cypher.internal.compiler.v3_3.spi.QualifiedName
 import org.neo4j.cypher.internal.frontend.v3_3.symbols.CypherType
 import org.neo4j.cypher.internal.frontend.v3_3.{InternalException, SemanticDirection, ast}
+import org.neo4j.cypher.internal.v3_3.logical.plans.{LogicalPlanId, QualifiedName, SeekableArgs}
 import org.neo4j.graphdb.ExecutionPlanDescription
 import org.neo4j.graphdb.ExecutionPlanDescription.ProfilerStatistics
 
@@ -38,7 +37,7 @@ sealed trait InternalPlanDescription extends org.neo4j.graphdb.ExecutionPlanDesc
 
   def arguments: Seq[Argument]
 
-  def id: Id
+  def id: LogicalPlanId
 
   def name: String
 
@@ -111,8 +110,6 @@ sealed trait InternalPlanDescription extends org.neo4j.graphdb.ExecutionPlanDesc
 
 }
 
-class Id
-
 sealed abstract class Argument extends Product {
 
   def name = productPrefix
@@ -144,7 +141,7 @@ object InternalPlanDescription {
 
     case class MergePattern(startPoint: String) extends Argument
 
-    case class LegacyIndex(value: String) extends Argument
+    case class ExplicitIndex(value: String) extends Argument
 
     case class Index(label: String, propertyKeys: Seq[String]) extends Argument
 
@@ -253,7 +250,7 @@ final case class TwoChildren(lhs: InternalPlanDescription, rhs: InternalPlanDesc
   def map(f: InternalPlanDescription => InternalPlanDescription) = TwoChildren(lhs = lhs.map(f), rhs = rhs.map(f))
 }
 
-final case class PlanDescriptionImpl(id: Id,
+final case class PlanDescriptionImpl(id: LogicalPlanId,
                                      name: String,
                                      children: Children,
                                      arguments: Seq[Argument],
@@ -350,7 +347,7 @@ final case class CompactedPlanDescription(similar: Seq[InternalPlanDescription])
 
   override def find(name: String): Seq[InternalPlanDescription] = similar.last.find(name)
 
-  override def id: Id = similar.last.id
+  override def id: LogicalPlanId = similar.last.id
 
   override def addArgument(argument: Argument): InternalPlanDescription = ???
 
@@ -360,7 +357,9 @@ final case class CompactedPlanDescription(similar: Seq[InternalPlanDescription])
 
 }
 
-final case class SingleRowPlanDescription(id: Id, arguments: Seq[Argument] = Seq.empty, variables: Set[String])
+final case class SingleRowPlanDescription(id: LogicalPlanId,
+                                          arguments: Seq[Argument] = Seq.empty,
+                                          variables: Set[String])
   extends InternalPlanDescription {
 
   def children = NoChildren
@@ -386,7 +385,7 @@ final case class LegacyPlanDescription(name: String,
                                        stringRep: String
                                       ) extends InternalPlanDescription {
 
-  override def id: Id = new Id
+  override def id: LogicalPlanId = LogicalPlanId.DEFAULT
 
   override def children: Children = NoChildren
 

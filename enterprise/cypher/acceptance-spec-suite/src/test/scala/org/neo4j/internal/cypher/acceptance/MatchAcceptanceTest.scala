@@ -24,6 +24,7 @@ import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.expressions
 import org.neo4j.graphdb.Result.ResultVisitor
 import org.neo4j.graphdb._
 import org.neo4j.helpers.collection.Iterators.single
+import org.neo4j.internal.cypher.acceptance.CypherComparisonSupport.Configs
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
@@ -107,7 +108,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     createNode()
     createNode()
 
-    val result = succeedWith(Configs.All, "MATCH (n) RETURN count(n.name)")
+    val result = executeWith(Configs.All, "MATCH (n) RETURN count(n.name)")
     result.toList should equal(List(Map("count(n.name)" -> 3)))
   }
 
@@ -124,7 +125,6 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   }
 
   test("Should not use both pruning var expand and projections that need path info") {
-
     val n1 = createLabeledNode("Neo")
     val n2 = createLabeledNode()
     createLabeledNode()
@@ -135,7 +135,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |MATCH p=(source:Neo)-[rel *0..1]->(dest)
         |WITH nodes(p) as d
         |RETURN DISTINCT d""".stripMargin
-    val result = succeedWith(Configs.CommunityInterpreted, query)
+    val result = executeWith(Configs.CommunityInterpreted, query)
 
     result.toSet should equal(Set(Map("d" -> ArrayBuffer(n1)), Map("d" -> ArrayBuffer(n1, n2))))
   }
@@ -143,7 +143,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   test("OPTIONAL MATCH, DISTINCT and DELETE in an unfortunate combination") {
     val start = createLabeledNode("Start")
     createLabeledNode("End")
-    val result = updateWith(Configs.CommunityInterpreted - Configs.Cost2_3,
+    val result = executeWith(Configs.CommunityInterpreted - Configs.Cost2_3,
       """
         |MATCH (start:Start),(end:End)
         |OPTIONAL MATCH (start)-[rel]->(end)
@@ -163,7 +163,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |RETURN a, b, COLLECT( DISTINCT c) as c
       """.stripMargin
 
-    val result = succeedWith(Configs.CommunityInterpreted, query)
+    val result = executeWith(Configs.CommunityInterpreted, query)
     result.size should be(0)
     result.hasNext should be(false)
 
@@ -177,9 +177,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val n4 = createNode(Map("x" -> 50d))
     val n5 = createNode(Map("x" -> 50.toByte))
 
-    val result = succeedWith(Configs.Interpreted,
-      s"match (n) where n.x < 100 return n"
-    )
+    val result = executeWith(Configs.Interpreted, s"match (n) where n.x < 100 return n")
 
     result.columnAs[Node]("n").toList should equal(List(n1, n2, n3, n4, n5))
   }
@@ -191,9 +189,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     createNode(Map("x" -> "Zzing"))
     createNode(Map("x" -> 'Ä'))
 
-    val result = succeedWith(Configs.CommunityInterpreted,
-      s"match (n) where n.x < 'Z' AND n.x < 'z' return n"
-    )
+    val result = executeWith(Configs.CommunityInterpreted, s"match (n) where n.x < 'Z' AND n.x < 'z' return n")
 
     result.columnAs("n").toList should equal(List(n1, n2))
   }
@@ -203,7 +199,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     createNodes("A", "B")
     val r1 = relate("A" -> "KNOWS" -> "B")
 
-    val result = succeedWith(Configs.CommunityInterpreted, "match p = shortestPath((a {name:'A'})-[*..15]-(b {name:'B'})) return p").
+    val result = executeWith(Configs.CommunityInterpreted, "match p = shortestPath((a {name:'A'})-[*..15]-(b {name:'B'})) return p").
 
       toList.head("p").asInstanceOf[Path]
 
@@ -221,7 +217,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     relate("A" -> "KNOWS" -> "B")
 
     //Checking that we don't get an exception
-    succeedWith(Configs.CommunityInterpreted, "match p = shortestPath((a {name:'A'})-[*]-(b {name:'B'})) return p").toList
+    executeWith(Configs.CommunityInterpreted, "match p = shortestPath((a {name:'A'})-[*]-(b {name:'B'})) return p").toList
   }
 
   test("should not traverse same relationship twice in shortest path") {
@@ -230,7 +226,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     relate("A" -> "KNOWS" -> "B")
 
     // when
-    val result = succeedWith(Configs.CommunityInterpreted, "MATCH (a{name:'A'}), (b{name:'B'}) MATCH p=allShortestPaths((a)-[:KNOWS|KNOWS*]->(b)) RETURN p").
+    val result = executeWith(Configs.CommunityInterpreted, "MATCH (a{name:'A'}), (b{name:'B'}) MATCH p=allShortestPaths((a)-[:KNOWS|KNOWS*]->(b)) RETURN p").
       toList
 
     // then
@@ -250,7 +246,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         | RETURN n, rel1, n1, rel2, n2;
         |""".stripMargin
 
-    val result = succeedWith(Configs.Interpreted, query)
+    val result = executeWith(Configs.Interpreted, query)
     result.toList should equal(List(Map("n" -> n, "rel1" -> null, "rel2" -> null, "n1" -> null, "n2" -> null)))
   }
 
@@ -260,10 +256,11 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val c = createNode("C")
     val r = relate(a, b, "X")
 
-    val result = succeedWith(Configs.CommunityInterpreted,  """
-match (a {name:'A'}), (x) where x.name in ['B', 'C']
-optional match p = shortestPath((a)-[*]->(x))
-return x, p""").toSet
+    val result = executeWith(Configs.CommunityInterpreted,
+      """
+    match (a {name:'A'}), (x) where x.name in ['B', 'C']
+    optional match p = shortestPath((a)-[*]->(x))
+    return x, p""").toSet
 
     graph.inTx(assert(Set(
       Map("x" -> b, "p" -> PathImpl(a, r, b)),
@@ -272,12 +269,13 @@ return x, p""").toSet
   }
 
   test("should handle all shortest paths") {
-    createDiamond()
+    val (a, b, c, d) = createDiamond()
 
-    val result = succeedWith(Configs.CommunityInterpreted,  """
-match (a), (d) where id(a) = 0 and id(d) = 3
-match p = allShortestPaths( (a)-[*]->(d) )
-return p""")
+    val result = executeWith(Configs.CommunityInterpreted,
+      """
+    match (a), (d) where id(a) = %d and id(d) = %d
+    match p = allShortestPaths( (a)-[*]->(d) )
+    return p""".format(a.getId, d.getId))
 
     result.toList.size should equal(2)
   }
@@ -286,7 +284,7 @@ return p""")
     val a = createNode()
     val b = createNode()
     relate(a, b)
-    val result = succeedWith(Configs.CommunityInterpreted, "match (a), (b) where id(a) = 0 and id(b) = 1 match p=shortestPath((b)<-[*]-(a)) return p").toList.head("p").asInstanceOf[Path]
+    val result = executeWith(Configs.CommunityInterpreted, "match (a), (b) where id(a) = 0 and id(b) = 1 match p=shortestPath((b)<-[*]-(a)) return p").toList.head("p").asInstanceOf[Path]
 
     result.startNode() should equal(b)
     result.endNode() should equal(a)
@@ -297,7 +295,7 @@ return p""")
     val b = createLabeledNode("B")
     val r1 = relate(a, b)
 
-    val result = succeedWith(Configs.CommunityInterpreted, "match (a:A) match p = shortestPath( (a)-[*]->(b:B) ) return p").toList.head("p").asInstanceOf[Path]
+    val result = executeWith(Configs.CommunityInterpreted, "match (a:A) match p = shortestPath( (a)-[*]->(b:B) ) return p").toList.head("p").asInstanceOf[Path]
 
 
     graph.inTx {
@@ -313,13 +311,16 @@ return p""")
     val node2 = createNode()
     val r = relate(node1, node2)
 
-    val query = """WITH [{0}, {1}] AS x, count(*) as y
-                  |MATCH (n) WHERE ID(n) IN x
-                  |MATCH (m) WHERE ID(m) IN x
-                  |MATCH paths = (n)-[*..1]-(m)
-                  |RETURN paths""".stripMargin
+    val query =
+      """WITH [{0}, {1}] AS x, count(*) as y
+        |MATCH (n) WHERE ID(n) IN x
+        |MATCH (m) WHERE ID(m) IN x
+        |MATCH paths = (n)-[*..1]-(m)
+        |RETURN paths""".stripMargin
 
-    val result = succeedWith(Configs.CommunityInterpreted, query, "0" -> node1.getId, "1" -> node2.getId)
+    val result = executeWith(Configs.CommunityInterpreted, query,
+      //      expectedDifferentPlans = Configs.AbsolutelyAll,
+      params = Map("0" -> node1.getId, "1" -> node2.getId))
     graph.inTx(
       result.toSet should equal(
         Set(Map("paths" -> PathImpl(node1, r, node2)), Map("paths" -> PathImpl(node2, r, node1))))
@@ -332,7 +333,8 @@ return p""")
   test("length on filter") {
     val q = "match (n) optional match (n)-[r]->(m) return length(filter(x in collect(r) WHERE x <> null)) as cn"
 
-    succeedWith(Configs.CommunityInterpreted, q).toList should equal (List(Map("cn" -> 0)))
+    executeWith(Configs.CommunityInterpreted, q)
+      .toList should equal(List(Map("cn" -> 0)))
   }
 
   // Not TCK material -- index hints
@@ -347,7 +349,7 @@ return p""")
     graph.createIndex("Person", "name")
 
     // when
-    val result = succeedWith(Configs.All, "MATCH (n:Person)-->() USING INDEX n:Person(name) WHERE n.name = 'Jacob' RETURN n")
+    val result = executeWith(Configs.All, "MATCH (n:Person)-->() USING INDEX n:Person(name) WHERE n.name = 'Jacob' RETURN n")
 
     // then
     result.toList should equal(List(Map("n" -> jake)))
@@ -365,7 +367,8 @@ return p""")
     graph.createIndex("Person", "name")
 
     // when
-    val result = succeedWith(Configs.Interpreted, "MATCH (n:Person)-->() USING INDEX n:Person(name) WHERE n.name STARTS WITH 'Jac' RETURN n")
+    val result = executeWith(Configs.Interpreted,
+      "MATCH (n:Person)-->() USING INDEX n:Person(name) WHERE n.name STARTS WITH 'Jac' RETURN n")
 
     // then
     result.toList should equal(List(Map("n" -> jake)))
@@ -382,7 +385,7 @@ return p""")
     graph.createIndex("Person", "name")
 
     // when
-    val result = succeedWith(Configs.Interpreted, "MATCH (n:Person)-->() USING INDEX n:Person(name) WHERE n.name > 'Jac' RETURN n")
+    val result = executeWith(Configs.Interpreted, "MATCH (n:Person)-->() USING INDEX n:Person(name) WHERE n.name > 'Jac' RETURN n")
 
     // then
     result.toList should equal(List(Map("n" -> jake)))
@@ -399,7 +402,7 @@ return p""")
     val r1 = relate(node1, node2, "prop" -> 10)
     val r2 = relate(node1, node2, "prop" -> 0)
 
-    val result = succeedWith(Configs.All - Configs.Compiled, query)
+    val result = executeWith(Configs.All - Configs.Compiled, query)
 
     result.toList should equal(List(Map("r" -> r1)))
   }
@@ -407,22 +410,23 @@ return p""")
   // Not TCK material -- id()
   test("id in where leads to empty result") {
     // when
-    val result = succeedWith(Configs.All, "MATCH (n) WHERE id(n)=1337 RETURN n")
+    val result = executeWith(Configs.All, "MATCH (n) WHERE id(n)=1337 RETURN n")
 
     // then DOESN'T THROW EXCEPTION
     result shouldBe empty
   }
 
   test("should not fail if asking for a non existent node id with WHERE") {
-    succeedWith(Configs.Interpreted, "match (n) where id(n) in [0,1] return n").toList
+    executeWith(Configs.Interpreted, "match (n) where id(n) in [0,1] return n")
+      .toList
     // should not throw an exception
   }
 
   test("should be able to set properties with a literal map twice in the same transaction") {
     val node = createLabeledNode("FOO")
 
-    succeedWith(Configs.CommunityInterpreted - Configs.Cost2_3, "MATCH (n:FOO) SET n = { first: 'value' }")
-    succeedWith(Configs.CommunityInterpreted - Configs.Cost2_3, "MATCH (n:FOO) SET n = { second: 'value' }")
+    executeWith(Configs.CommunityInterpreted - Configs.Cost2_3, "MATCH (n:FOO) SET n = { first: 'value' }")
+    executeWith(Configs.CommunityInterpreted - Configs.Cost2_3, "MATCH (n:FOO) SET n = { second: 'value' }")
 
     graph.inTx {
       node.getProperty("first", null) should equal(null)
@@ -444,7 +448,7 @@ return p""")
     graph.createIndex("Label", "property")
 
     // when
-    val result = succeedWith(Configs.All, "match (a:Label)-->(b:Label) where a.property = b.property return a, b")
+    val result = executeWith(Configs.All, "match (a:Label)-->(b:Label) where a.property = b.property return a, b")
 
     // then does not throw exceptions
     result.toList should equal(List(Map("a" -> a, "b" -> b)))
@@ -459,7 +463,8 @@ return p""")
     graph.createIndex("Label", "property")
 
     // when
-    val result = succeedWith(Configs.Interpreted, "match (a:Label), (b:Label) where a.property = b.property return *")
+    val result = executeWith(Configs.Interpreted,
+      "match (a:Label), (b:Label) where a.property = b.property return *")
 
     // then does not throw exceptions
     assert(result.toSet === Set(
@@ -479,7 +484,7 @@ return p""")
     graph.createIndex("User", "email")
 
     // when
-    val result = succeedWith(Configs.Interpreted, "MATCH (n:User) USING INDEX n:User(email) WHERE exists(n.email) RETURN n")
+    val result = executeWith(Configs.Interpreted, "MATCH (n:User) USING INDEX n:User(email) WHERE exists(n.email) RETURN n")
 
     // then
     result.toList should equal(List(Map("n" -> n), Map("n" -> m)))
@@ -494,7 +499,7 @@ return p""")
     graph.createIndex("User", "email")
 
     // when
-    val result = succeedWith(Configs.Interpreted, "MATCH (n:User) USING INDEX n:User(email) WHERE n.email IS NOT NULL RETURN n")
+    val result = executeWith(Configs.Interpreted, "MATCH (n:User) USING INDEX n:User(email) WHERE n.email IS NOT NULL RETURN n")
 
     // then
     result.toList should equal(List(Map("n" -> n), Map("n" -> m)))
@@ -518,10 +523,10 @@ return p""")
     val nodes = setupIndexScanTest()
 
     // when
-    val result = succeedWith(Configs.Interpreted, "MATCH (n:User) WHERE exists(n.email) RETURN n")
+    val result = executeWith(Configs.Interpreted, "MATCH (n:User) WHERE exists(n.email) RETURN n")
 
     // then
-    result.toList should equal(List(Map("n" -> nodes.head), Map("n" -> nodes(1))))
+    result.toSet should equal(Set(Map("n" -> nodes.head), Map("n" -> nodes(1))))
     result.executionPlanDescription().toString should include("NodeIndexScan")
   }
 
@@ -530,7 +535,7 @@ return p""")
     val nodes = setupIndexScanTest()
 
     // when
-    val result = succeedWith(Configs.Interpreted, "MATCH (n:User) WHERE exists(n.email) AND n.email = 'me@mine' RETURN n")
+    val result = executeWith(Configs.Interpreted, "MATCH (n:User) WHERE exists(n.email) AND n.email = 'me@mine' RETURN n")
 
     // then
     result.toList should equal(List(Map("n" -> nodes.head)))
@@ -557,7 +562,7 @@ return p""")
         |RETURN host""".stripMargin
 
     //WHEN
-    val result = succeedWith(Configs.Interpreted, query)
+    val result = executeWith(Configs.Interpreted, query)
     //THEN
     result.toList should equal(List(Map("host" -> host), Map("host" -> null)))
   }
@@ -586,26 +591,29 @@ return p""")
     //GIVEN
     createLabeledNode("User")
 
-    val query = """MATCH (user:User)
-                  |MERGE (project:Project {p: 'Test'})
-                  |MERGE (user)-[:HAS_PROJECT]->(project)
-                  |WITH project
-                  |    // delete the current relations to be able to replace them with new ones
-                  |OPTIONAL MATCH (project)-[hasFolder:HAS_FOLDER]->(:Folder)
-                  |OPTIONAL MATCH (project)-[:HAS_FOLDER]->(folder:Folder)
-                  |DELETE folder, hasFolder
-                  |WITH project
-                  |   // add the new relations and objects
-                  |FOREACH (el in[{name:"Dir1"}, {name:"Dir2"}] |
-                  |  MERGE (folder:Folder{ name: el.name })
-                  |  MERGE (project)–[:HAS_FOLDER]->(folder))
-                  |WITH DISTINCT project
-                  |RETURN project.p""".stripMargin
+    val query =
+      """MATCH (user:User)
+        |MERGE (project:Project {p: 'Test'})
+        |MERGE (user)-[:HAS_PROJECT]->(project)
+        |WITH project
+        |    // delete the current relations to be able to replace them with new ones
+        |OPTIONAL MATCH (project)-[hasFolder:HAS_FOLDER]->(:Folder)
+        |OPTIONAL MATCH (project)-[:HAS_FOLDER]->(folder:Folder)
+        |DELETE folder, hasFolder
+        |WITH project
+        |   // add the new relations and objects
+        |FOREACH (el in[{name:"Dir1"}, {name:"Dir2"}] |
+        |  MERGE (folder:Folder{ name: el.name })
+        |  MERGE (project)–[:HAS_FOLDER]->(folder))
+        |WITH DISTINCT project
+        |RETURN project.p""".stripMargin
 
     //WHEN
-    val first = updateWith(Configs.CommunityInterpreted - Configs.Cost2_3, query).length
-    val second = updateWith(Configs.CommunityInterpreted - Configs.Cost2_3, query).length
-    val check = succeedWith(Configs.All, "MATCH (f:Folder) RETURN f.name").toSet
+    val first = executeWith(Configs.CommunityInterpreted - Configs.Cost2_3, query)
+      .length
+    val second = executeWith(Configs.CommunityInterpreted - Configs.Cost2_3, query)
+      .length
+    val check = executeWith(Configs.All, "MATCH (f:Folder) RETURN f.name").toSet
 
     //THEN
     first should equal(second)
@@ -618,28 +626,31 @@ return p""")
     createLabeledNode("User")
 
 
-    val query = """MATCH (user:User)
-                  |MERGE (project:Project {p: 'Test'})
-                  |MERGE (user)-[:HAS_PROJECT]->(project)
-                  |WITH project
-                  |    // delete the current relations to be able to replace them with new ones
-                  |OPTIONAL MATCH (project)-[hasFolder:HAS_FOLDER]->({name: "Dir2"})
-                  |OPTIONAL MATCH (project)-[hasFolder2:HAS_FOLDER]->({name: "Dir1"})
-                  |OPTIONAL MATCH (project)-[:HAS_FOLDER]->(folder {name: "Dir1"})
-                  |DELETE folder, hasFolder, hasFolder2
-                  |WITH project
-                  |   // add the new relations and objects
-                  |FOREACH (el in[{name:"Dir1"}, {name:"Dir2"}] |
-                  |  MERGE (folder:Folder{ name: el.name })
-                  |  MERGE (project)–[:HAS_FOLDER]->(folder))
-                  |WITH DISTINCT project
-                  |RETURN project.p""".stripMargin
+    val query =
+      """MATCH (user:User)
+        |MERGE (project:Project {p: 'Test'})
+        |MERGE (user)-[:HAS_PROJECT]->(project)
+        |WITH project
+        |    // delete the current relations to be able to replace them with new ones
+        |OPTIONAL MATCH (project)-[hasFolder:HAS_FOLDER]->({name: "Dir2"})
+        |OPTIONAL MATCH (project)-[hasFolder2:HAS_FOLDER]->({name: "Dir1"})
+        |OPTIONAL MATCH (project)-[:HAS_FOLDER]->(folder {name: "Dir1"})
+        |DELETE folder, hasFolder, hasFolder2
+        |WITH project
+        |   // add the new relations and objects
+        |FOREACH (el in[{name:"Dir1"}, {name:"Dir2"}] |
+        |  MERGE (folder:Folder{ name: el.name })
+        |  MERGE (project)–[:HAS_FOLDER]->(folder))
+        |WITH DISTINCT project
+        |RETURN project.p""".stripMargin
 
     //WHEN
 
-    val first = updateWith(Configs.CommunityInterpreted - Configs.Cost2_3, query).length
-    val second = updateWith(Configs.CommunityInterpreted - Configs.Cost2_3, query).length
-    val check = succeedWith(Configs.All, "MATCH (f:Folder) RETURN f.name").toSet
+    val first = executeWith(Configs.CommunityInterpreted - Configs.Cost2_3, query)
+ .length
+    val second = executeWith(Configs.CommunityInterpreted - Configs.Cost2_3, query)
+ .length
+    val check = executeWith(Configs.All, "MATCH (f:Folder) RETURN f.name").toSet
 
     //THEN
     first should equal(second)
@@ -648,9 +659,9 @@ return p""")
 
   // Not TCK material -- id()
   test("should return empty result when there are no relationship with the given id") {
-    succeedWith(Configs.All, "MATCH ()-[r]->() WHERE id(r) = 42 RETURN r") shouldBe empty
-    succeedWith(Configs.All, "MATCH ()<-[r]-() WHERE id(r) = 42 RETURN r") shouldBe empty
-    succeedWith(Configs.All, "MATCH ()-[r]-() WHERE id(r) = 42 RETURN r") shouldBe empty
+    executeWith(Configs.All, "MATCH ()-[r]->() WHERE id(r) = 42 RETURN r") shouldBe empty
+    executeWith(Configs.All, "MATCH ()<-[r]-() WHERE id(r) = 42 RETURN r") shouldBe empty
+    executeWith(Configs.All, "MATCH ()-[r]-() WHERE id(r) = 42 RETURN r") shouldBe empty
   }
 
   // Not TCK material -- id()
@@ -663,7 +674,7 @@ return p""")
     1.to(1000).foreach(_ => createNode())
 
     // when
-    val result = succeedWith(Configs.CommunityInterpreted, s"profile WITH [$a,$b,$d] AS arr MATCH (n) WHERE id(n) IN arr return count(*)")
+    val result = executeWith(Configs.CommunityInterpreted, s"profile WITH [$a,$b,$d] AS arr MATCH (n) WHERE id(n) IN arr return count(*)")
 
     // then
     result.toList should equal(List(Map("count(*)" -> 3)))
@@ -671,7 +682,7 @@ return p""")
 
   // Not sure if TCK material -- is this test just for `columns()`?
   test("columns should be in the provided order") {
-    val result = succeedWith(Configs.All, "MATCH (p),(o),(n),(t),(u),(s) RETURN p,o,n,t,u,s")
+    val result = executeWith(Configs.All, "MATCH (p),(o),(n),(t),(u),(s) RETURN p,o,n,t,u,s")
 
     result.columns should equal(List("p", "o", "n", "t", "u", "s"))
   }
@@ -684,7 +695,7 @@ return p""")
 
     val query = "MATCH (a) MERGE (b) WITH * OPTIONAL MATCH (a)--(b) RETURN count(*)"
 
-    val result = succeedWith(Configs.CommunityInterpreted - Configs.Cost2_3, query)
+    val result = executeWith(Configs.Interpreted - Configs.Cost2_3, query)
 
     result.columnAs[Long]("count(*)").next shouldBe 6
   }
@@ -696,13 +707,13 @@ return p""")
     createNode()
     createNode()
 
-    succeedWith(Configs.All, "MATCH (n) RETURN n SKIP 0") should have size 5
-    succeedWith(Configs.All, "MATCH (n) RETURN n SKIP 1") should have size 4
-    succeedWith(Configs.All, "MATCH (n) RETURN n SKIP 2") should have size 3
-    succeedWith(Configs.All, "MATCH (n) RETURN n SKIP 3") should have size 2
-    succeedWith(Configs.All, "MATCH (n) RETURN n SKIP 4") should have size 1
-    succeedWith(Configs.All, "MATCH (n) RETURN n SKIP 5") should have size 0
-    succeedWith(Configs.All, "MATCH (n) RETURN n SKIP 6") should have size 0
+    executeWith(Configs.All, "MATCH (n) RETURN n SKIP 0") should have size 5
+    executeWith(Configs.All, "MATCH (n) RETURN n SKIP 1") should have size 4
+    executeWith(Configs.All, "MATCH (n) RETURN n SKIP 2") should have size 3
+    executeWith(Configs.All, "MATCH (n) RETURN n SKIP 3") should have size 2
+    executeWith(Configs.All, "MATCH (n) RETURN n SKIP 4") should have size 1
+    executeWith(Configs.All, "MATCH (n) RETURN n SKIP 5") should have size 0
+    executeWith(Configs.All, "MATCH (n) RETURN n SKIP 6") should have size 0
 
   }
 
@@ -747,7 +758,7 @@ return p""")
 
     // When
     val res =
-      succeedWith(Configs.AllExceptSlotted, "UNWIND {p} AS n MATCH (n)<-[:PING_DAY]-(p:Ping) RETURN count(p) as c", "p" -> List(node1, node2))
+      executeWith(Configs.AllExceptSlotted, "UNWIND {p} AS n MATCH (n)<-[:PING_DAY]-(p:Ping) RETURN count(p) as c", params = Map("p" -> List(node1, node2)))
 
     //Then
     res.toList should equal(List(Map("c" -> 2)))
@@ -764,11 +775,11 @@ return p""")
 
     // When
     val res =
-      succeedWith(Configs.AllExceptSlotted,
+      executeWith(Configs.AllExceptSlotted,
         """UNWIND {p1} AS n1
           |UNWIND {p2} AS n2
           |MATCH (n1)<-[:PING_DAY]-(n2) RETURN n1.prop, n2.prop""".stripMargin,
-        "p1" -> List(node1), "p2" -> List(node2))
+        params = Map("p1" -> List(node1), "p2" -> List(node2)))
 
     //Then
     res.toList should equal(List(Map("n1.prop" -> 1, "n2.prop" -> 2)))
@@ -785,7 +796,7 @@ return p""")
         |         RETURN candidate
       """.stripMargin
 
-    val res = succeedWith(Configs.All - Configs.Compiled, query)
+    val res = executeWith(Configs.All - Configs.Compiled, query)
 
     //Then
     res.toList should equal(List(Map("candidate" -> "John"), Map("candidate" -> "Jonathan")))
@@ -802,7 +813,7 @@ return p""")
         |         RETURN candidate
       """.stripMargin
 
-    val res = succeedWith(Configs.All - Configs.Compiled, query)
+    val res = executeWith(Configs.All - Configs.Compiled, query)
 
     //Then
     res.toList should equal(List(Map("candidate" -> "John"), Map("candidate" -> "Jonathan")))
@@ -819,7 +830,7 @@ return p""")
     relate(node2, node4, "T", Map("roles" -> "NEO"))
 
     // When
-    val res = succeedWith(Configs.Interpreted, "MATCH (n)-[r:T*2]->() WHERE last(r).roles = 'NEO' RETURN DISTINCT n")
+    val res = executeWith(Configs.Interpreted, "MATCH (n)-[r:T*2]->() WHERE last(r).roles = 'NEO' RETURN DISTINCT n")
 
     // Then
     res.toSet should equal(Set(Map("n" -> node1)))
@@ -834,7 +845,7 @@ return p""")
     relate(n3, createNode())
 
     // When
-    val result = succeedWith(Configs.CommunityInterpreted, "MATCH p=(n)-[*0..3]-() RETURN size(COLLECT(DISTINCT p)) AS size")
+    val result = executeWith(Configs.CommunityInterpreted, "MATCH p=(n)-[*0..3]-() RETURN size(COLLECT(DISTINCT p)) AS size")
 
     // Then
     result.toList should equal(List(Map("size" -> 8)))

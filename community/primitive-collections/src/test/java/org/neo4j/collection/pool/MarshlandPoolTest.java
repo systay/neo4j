@@ -24,7 +24,7 @@ import org.junit.Test;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.fail;
-import static org.mockito.Mockito.any;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -56,7 +56,7 @@ public class MarshlandPoolTest
     {
         // Given
         Pool<Object> delegatePool = mock( Pool.class );
-        when( delegatePool.acquire() ).thenReturn( 1337 );
+        when(delegatePool.acquire()).thenReturn( 1337 );
 
         final MarshlandPool<Object> pool = new MarshlandPool<>( delegatePool );
 

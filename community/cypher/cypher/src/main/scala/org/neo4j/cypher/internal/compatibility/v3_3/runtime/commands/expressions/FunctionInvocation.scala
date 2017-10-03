@@ -23,17 +23,17 @@ import org.neo4j.cypher.internal.compatibility.v3_3.runtime.ExecutionContext
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.helpers.ValueConversion
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.mutation.GraphElementPropertyFunctions
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.QueryState
-import org.neo4j.cypher.internal.compiler.v3_3.spi.UserFunctionSignature
+import org.neo4j.cypher.internal.v3_3.logical.plans.UserFunctionSignature
 import org.neo4j.values._
 
 case class FunctionInvocation(signature: UserFunctionSignature, arguments: IndexedSeq[Expression])
   extends Expression with GraphElementPropertyFunctions {
   private val valueConverter = ValueConversion.getValueConverter(signature.outputType)
 
-  override def apply(ctx: ExecutionContext)(implicit state: QueryState): AnyValue = {
+  override def apply(ctx: ExecutionContext, state: QueryState): AnyValue = {
     val query = state.query
     val argValues = arguments.map(arg => {
-      query.asObject(arg(ctx)(state))
+      query.asObject(arg(ctx, state))
     })
     val result = query.callFunction(signature.name, argValues, signature.allowed)
     valueConverter(result)

@@ -24,9 +24,9 @@ import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.expressions
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.helpers.IsList
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.mutation.{GraphElementPropertyFunctions, makeValueNeoSafe}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.QueryState
-import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans._
 import org.neo4j.cypher.internal.frontend.v3_3.helpers.SeqCombiner.combine
 import org.neo4j.cypher.internal.frontend.v3_3.{CypherTypeException, InternalException}
+import org.neo4j.cypher.internal.v3_3.logical.plans._
 import org.neo4j.graphdb.Node
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
@@ -44,12 +44,12 @@ object indexQuery extends GraphElementPropertyFunctions {
 
     // Index exact value seek on single value
     case SingleQueryExpression(inner) =>
-      val value: AnyValue = inner(m)(state)
+      val value: AnyValue = inner(m, state)
       lookupNodes(Seq(value), index)
 
     // Index exact value seek on multiple values, by combining the results of multiple index seeks
     case ManyQueryExpression(inner) =>
-      inner(m)(state) match {
+      inner(m, state) match {
         case IsList(coll) => coll.iterator().asScala.toSet.toIndexedSeq.flatMap {
           value: AnyValue => lookupNodes(Seq(value), index)
         }.iterator
@@ -74,10 +74,10 @@ object indexQuery extends GraphElementPropertyFunctions {
     case RangeQueryExpression(rangeWrapper) =>
       val range = rangeWrapper match {
         case s: PrefixSeekRangeExpression =>
-          s.range.map(expression => makeValueNeoSafe(expression(m)(state)).asObject())
+          s.range.map(expression => makeValueNeoSafe(expression(m, state)).asObject())
 
         case InequalitySeekRangeExpression(innerRange) =>
-          innerRange.mapBounds(expression => makeValueNeoSafe(expression(m)(state)).asObject())
+          innerRange.mapBounds(expression => makeValueNeoSafe(expression(m, state)).asObject())
       }
       index(Seq(range)).toIterator
   }
@@ -97,10 +97,10 @@ object indexQuery extends GraphElementPropertyFunctions {
     queryExpression match {
 
       case SingleQueryExpression(inner) =>
-        Seq(inner(m)(state))
+        Seq(inner(m, state))
 
       case ManyQueryExpression(inner) =>
-        inner(m)(state) match {
+        inner(m, state) match {
           case IsList(coll) => coll.asArray()
           case null => Seq.empty
           case _ => throw new CypherTypeException(s"Expected the value for $inner to be a collection but it was not.")

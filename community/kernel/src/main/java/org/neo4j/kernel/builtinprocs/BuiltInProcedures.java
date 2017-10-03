@@ -38,19 +38,18 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.index.Index;
-import org.neo4j.graphdb.index.IndexHits;
 import org.neo4j.graphdb.index.IndexManager;
 import org.neo4j.graphdb.index.RelationshipIndex;
+import org.neo4j.kernel.api.ExplicitIndexHits;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.api.LegacyIndexHits;
 import org.neo4j.kernel.api.ReadOperations;
 import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.StatementTokenNameLookup;
 import org.neo4j.kernel.api.TokenNameLookup;
 import org.neo4j.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.api.exceptions.Status;
+import org.neo4j.kernel.api.exceptions.explicitindex.ExplicitIndexNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
-import org.neo4j.kernel.api.exceptions.legacyindex.LegacyIndexNotFoundKernelException;
 import org.neo4j.kernel.api.schema.index.IndexDescriptor;
 import org.neo4j.kernel.impl.api.TokenAccess;
 import org.neo4j.kernel.impl.api.index.IndexingService;
@@ -84,8 +83,10 @@ public class BuiltInProcedures
         Statement statement = tx.acquireStatement();
         try
         {
-            // Ownership of the reference to the acquired statement is transfered to the returned iterator stream
-            return TokenAccess.LABELS.inUse( statement ).map( LabelResult::new ).stream();
+            // Ownership of the reference to the acquired statement is transfered to the returned iterator stream,
+            // but we still want to eagerly consume the labels, so we can catch any exceptions,
+            List<LabelResult> labelResults = asList( TokenAccess.LABELS.inUse( statement ).map( LabelResult::new ) );
+            return labelResults.stream();
         }
         catch ( Throwable t )
         {
@@ -101,8 +102,11 @@ public class BuiltInProcedures
         Statement statement = tx.acquireStatement();
         try
         {
-            // Ownership of the reference to the acquired statement is transfered to the returned iterator stream
-            return TokenAccess.PROPERTY_KEYS.inUse( statement ).map( PropertyKeyResult::new ).stream();
+            // Ownership of the reference to the acquired statement is transfered to the returned iterator stream,
+            // but we still want to eagerly consume the labels, so we can catch any exceptions,
+            List<PropertyKeyResult> propertyKeys =
+                    asList( TokenAccess.PROPERTY_KEYS.inUse( statement ).map( PropertyKeyResult::new ) );
+            return propertyKeys.stream();
         }
         catch ( Throwable t )
         {
@@ -118,8 +122,11 @@ public class BuiltInProcedures
         Statement statement = tx.acquireStatement();
         try
         {
-            // Ownership of the reference to the acquired statement is transfered to the returned iterator stream
-            return TokenAccess.RELATIONSHIP_TYPES.inUse( statement ).map( RelationshipTypeResult::new ).stream();
+            // Ownership of the reference to the acquired statement is transfered to the returned iterator stream,
+            // but we still want to eagerly consume the labels, so we can catch any exceptions,
+            List<RelationshipTypeResult> relationshipTypes =
+                    asList( TokenAccess.RELATIONSHIP_TYPES.inUse( statement ).map( RelationshipTypeResult::new ) );
+            return relationshipTypes.stream();
         }
         catch ( Throwable t )
         {
@@ -226,15 +233,15 @@ public class BuiltInProcedures
 
             return asList( operations.constraintsGetAll() )
                     .stream()
-                    .map( ( constraint ) -> constraint.prettyPrint( tokens ) )
+                    .map( constraint -> constraint.prettyPrint( tokens ) )
                     .sorted()
                     .map( ConstraintResult::new );
         }
     }
 
-    @Description( "Get node from manual index. Replaces `START n=node:nodes(key = 'A')`" )
-    @Procedure( name = "db.index.manual.seek.nodes", mode = READ )
-    public Stream<NodeResult> nodeManualIndexSeek( @Name( "indexName" ) String legacyIndexName,
+    @Description( "Get node from explicit index. Replaces `START n=node:nodes(key = 'A')`" )
+    @Procedure( name = "db.index.explicit.seekNodes", mode = READ )
+    public Stream<NodeResult> nodeManualIndexSeek( @Name( "indexName" ) String explicitIndexName,
             @Name( "key" ) String key,
             @Name( "value" ) Object value )
             throws ProcedureException
@@ -242,18 +249,18 @@ public class BuiltInProcedures
         try ( Statement statement = tx.acquireStatement() )
         {
             ReadOperations readOperations = statement.readOperations();
-            LegacyIndexHits hits = readOperations.nodeLegacyIndexGet( legacyIndexName, key, value );
-            return toStream( hits, ( id ) -> new NodeResult( graphDatabaseAPI.getNodeById( id ) ) );
+            ExplicitIndexHits hits = readOperations.nodeExplicitIndexGet( explicitIndexName, key, value );
+            return toStream( hits, id -> new NodeResult( graphDatabaseAPI.getNodeById( id ) ) );
         }
-        catch ( LegacyIndexNotFoundKernelException e )
+        catch ( ExplicitIndexNotFoundKernelException e )
         {
             throw new ProcedureException( Status.LegacyIndex.LegacyIndexNotFound, "Node index %s not found",
-                    legacyIndexName );
+                    explicitIndexName );
         }
     }
 
-    @Description( "Search nodes from manual index. Replaces `START n=node:nodes('key:foo*')`" )
-    @Procedure( name = "db.index.manual.nodes", mode = READ )
+    @Description( "Search nodes from explicit index. Replaces `START n=node:nodes('key:foo*')`" )
+    @Procedure( name = "db.index.explicit.searchNodes", mode = READ )
     public Stream<WeightedNodeResult> nodeManualIndexSearch( @Name( "indexName" ) String manualIndexName,
             @Name( "query" ) Object query )
             throws ProcedureException
@@ -261,18 +268,18 @@ public class BuiltInProcedures
         try ( Statement statement = tx.acquireStatement() )
         {
             ReadOperations readOperations = statement.readOperations();
-            LegacyIndexHits hits = readOperations.nodeLegacyIndexQuery( manualIndexName, query );
+            ExplicitIndexHits hits = readOperations.nodeExplicitIndexQuery( manualIndexName, query );
             return toWeightedNodeResultStream( hits );
         }
-        catch ( LegacyIndexNotFoundKernelException e )
+        catch ( ExplicitIndexNotFoundKernelException e )
         {
             throw new ProcedureException( Status.LegacyIndex.LegacyIndexNotFound, "Node index %s not found",
                     manualIndexName );
         }
     }
 
-    @Description( "Get relationship from manual index. Replaces `START r=relationship:relIndex(key = 'A')`" )
-    @Procedure( name = "db.index.manual.seek.relationships", mode = READ )
+    @Description( "Get relationship from explicit index. Replaces `START r=relationship:relIndex(key = 'A')`" )
+    @Procedure( name = "db.index.explicit.seekRelationships", mode = READ )
     public Stream<RelationshipResult> relationshipManualIndexSeek( @Name( "indexName" ) String manualIndexName,
             @Name( "key" ) String key,
             @Name( "value" ) Object value )
@@ -281,18 +288,18 @@ public class BuiltInProcedures
         try ( Statement statement = tx.acquireStatement() )
         {
             ReadOperations readOperations = statement.readOperations();
-            LegacyIndexHits hits = readOperations.relationshipLegacyIndexGet( manualIndexName, key, value, -1, -1 );
-            return toStream( hits, ( id ) -> new RelationshipResult( graphDatabaseAPI.getRelationshipById( id ) ) );
+            ExplicitIndexHits hits = readOperations.relationshipExplicitIndexGet( manualIndexName, key, value, -1, -1 );
+            return toStream( hits, id -> new RelationshipResult( graphDatabaseAPI.getRelationshipById( id ) ) );
         }
-        catch ( LegacyIndexNotFoundKernelException e )
+        catch ( ExplicitIndexNotFoundKernelException e )
         {
             throw new ProcedureException( Status.LegacyIndex.LegacyIndexNotFound, "Relationship index %s not found",
                     manualIndexName );
         }
     }
 
-    @Description( "Search relationship from manual index. Replaces `START r=relationship:relIndex('key:foo*')`" )
-    @Procedure( name = "db.index.manual.relationships", mode = READ )
+    @Description( "Search relationship from explicit index. Replaces `START r=relationship:relIndex('key:foo*')`" )
+    @Procedure( name = "db.index.explicit.searchRelationships", mode = READ )
     public Stream<WeightedRelationshipResult> relationshipManualIndexSearch(
             @Name( "indexName" ) String manualIndexName,
             @Name( "query" ) Object query )
@@ -301,18 +308,18 @@ public class BuiltInProcedures
         try ( Statement statement = tx.acquireStatement() )
         {
             ReadOperations readOperations = statement.readOperations();
-            LegacyIndexHits hits = readOperations.relationshipLegacyIndexQuery( manualIndexName, query, -1, -1 );
+            ExplicitIndexHits hits = readOperations.relationshipExplicitIndexQuery( manualIndexName, query, -1, -1 );
             return toWeightedRelationshipResultStream( hits );
         }
-        catch ( LegacyIndexNotFoundKernelException e )
+        catch ( ExplicitIndexNotFoundKernelException e )
         {
             throw new ProcedureException( Status.LegacyIndex.LegacyIndexNotFound, "Relationship index %s not found",
                     manualIndexName );
         }
     }
 
-    @Description( "Search relationship from manual index, starting at the node 'in'." )
-    @Procedure( name = "db.index.manual.in", mode = READ )
+    @Description( "Search relationship from explicit index, starting at the node 'in'." )
+    @Procedure( name = "db.index.explicit.searchRelationshipsIn", mode = READ )
     public Stream<WeightedRelationshipResult> relationshipManualIndexSearchWithBoundStartNode(
             @Name( "indexName" ) String indexName,
             @Name( "in" ) Node in,
@@ -322,18 +329,18 @@ public class BuiltInProcedures
         try ( Statement statement = tx.acquireStatement() )
         {
             ReadOperations readOperations = statement.readOperations();
-            LegacyIndexHits hits = readOperations.relationshipLegacyIndexQuery( indexName, query, in.getId(), -1 );
+            ExplicitIndexHits hits = readOperations.relationshipExplicitIndexQuery( indexName, query, in.getId(), -1 );
             return toWeightedRelationshipResultStream( hits );
         }
-        catch ( LegacyIndexNotFoundKernelException e )
+        catch ( ExplicitIndexNotFoundKernelException e )
         {
             throw new ProcedureException( Status.LegacyIndex.LegacyIndexNotFound, "Relationship index %s not found",
                     indexName );
         }
     }
 
-    @Description( "Search relationship from manual index, ending at the node 'out'." )
-    @Procedure( name = "db.index.manual.out", mode = READ )
+    @Description( "Search relationship from explicit index, ending at the node 'out'." )
+    @Procedure( name = "db.index.explicit.searchRelationshipsOut", mode = READ )
     public Stream<WeightedRelationshipResult> relationshipManualIndexSearchWithBoundEndNode(
             @Name( "indexName" ) String indexName,
             @Name( "out" ) Node out,
@@ -343,18 +350,18 @@ public class BuiltInProcedures
         try ( Statement statement = tx.acquireStatement() )
         {
             ReadOperations readOperations = statement.readOperations();
-            LegacyIndexHits hits = readOperations.relationshipLegacyIndexQuery( indexName, query, -1, out.getId() );
+            ExplicitIndexHits hits = readOperations.relationshipExplicitIndexQuery( indexName, query, -1, out.getId() );
             return toWeightedRelationshipResultStream( hits );
         }
-        catch ( LegacyIndexNotFoundKernelException e )
+        catch ( ExplicitIndexNotFoundKernelException e )
         {
             throw new ProcedureException( Status.LegacyIndex.LegacyIndexNotFound, "Relationship index %s not found",
                     indexName );
         }
     }
 
-    @Description( "Search relationship from manual index, starting at the node 'in' and ending at 'out'." )
-    @Procedure( name = "db.index.manual.between", mode = READ )
+    @Description( "Search relationship from explicit index, starting at the node 'in' and ending at 'out'." )
+    @Procedure( name = "db.index.explicit.searchRelationshipsBetween", mode = READ )
     public Stream<WeightedRelationshipResult> relationshipManualIndexSearchWithBoundNodes(
             @Name( "indexName" ) String indexName,
             @Name( "in" ) Node in,
@@ -365,215 +372,215 @@ public class BuiltInProcedures
         try ( Statement statement = tx.acquireStatement() )
         {
             ReadOperations readOperations = statement.readOperations();
-            LegacyIndexHits hits = readOperations.relationshipLegacyIndexQuery( indexName, query, in.getId(), out.getId() );
+            ExplicitIndexHits hits = readOperations.relationshipExplicitIndexQuery( indexName, query, in.getId(), out.getId() );
             return toWeightedRelationshipResultStream( hits );
         }
-        catch ( LegacyIndexNotFoundKernelException e )
+        catch ( ExplicitIndexNotFoundKernelException e )
         {
             throw new ProcedureException( Status.LegacyIndex.LegacyIndexNotFound, "Relationship index %s not found",
                     indexName );
         }
     }
 
-    @Description( "Get node from automatic index. Replaces `START n=node:node_auto_index(key = 'A')`" )
-    @Procedure( name = "db.index.auto.seek.nodes", mode = READ )
+    @Description( "Get node from explicit automatic index. Replaces `START n=node:node_auto_index(key = 'A')`" )
+    @Procedure( name = "db.index.explicit.auto.seekNodes", mode = READ )
     public Stream<NodeResult> nodeAutoIndexSeek( @Name( "key" ) String key, @Name( "value" ) Object value )
             throws ProcedureException
     {
         try ( Statement statement = tx.acquireStatement() )
         {
             ReadOperations readOperations = statement.readOperations();
-            LegacyIndexHits hits = readOperations.nodeLegacyIndexGet( "node_auto_index", key, value );
-            return toStream( hits, ( id ) -> new NodeResult( graphDatabaseAPI.getNodeById( id ) ) );
+            ExplicitIndexHits hits = readOperations.nodeExplicitIndexGet( "node_auto_index", key, value );
+            return toStream( hits, id -> new NodeResult( graphDatabaseAPI.getNodeById( id ) ) );
         }
-        catch ( LegacyIndexNotFoundKernelException e )
+        catch ( ExplicitIndexNotFoundKernelException e )
         {
             // auto index will not exist if no nodes have been added that match the auto-index rules
             return Stream.empty();
         }
     }
 
-    @Description( "Search nodes from automatic index. Replaces `START n=node:node_auto_index('key:foo*')`" )
-    @Procedure( name = "db.index.auto.nodes", mode = READ )
+    @Description( "Search nodes from explicit automatic index. Replaces `START n=node:node_auto_index('key:foo*')`" )
+    @Procedure( name = "db.index.explicit.auto.searchNodes", mode = READ )
     public Stream<WeightedNodeResult> nodeAutoIndexSearch( @Name( "query" ) Object query ) throws ProcedureException
     {
         try ( Statement statement = tx.acquireStatement() )
         {
             ReadOperations readOperations = statement.readOperations();
-            LegacyIndexHits hits = readOperations.nodeLegacyIndexQuery( "node_auto_index", query );
+            ExplicitIndexHits hits = readOperations.nodeExplicitIndexQuery( "node_auto_index", query );
             return toWeightedNodeResultStream( hits );
         }
-        catch ( LegacyIndexNotFoundKernelException e )
+        catch ( ExplicitIndexNotFoundKernelException e )
         {
             // auto index will not exist if no nodes have been added that match the auto-index rules
             return Stream.empty();
         }
     }
 
-    @Description( "Get relationship from automatic index. Replaces `START r=relationship:relationship_auto_index(key " +
+    @Description( "Get relationship from explicit automatic index. Replaces `START r=relationship:relationship_auto_index(key " +
                   "= 'A')`" )
-    @Procedure( name = "db.index.auto.seek.relationships", mode = READ )
+    @Procedure( name = "db.index.explicit.auto.seekRelationships", mode = READ )
     public Stream<RelationshipResult> relationshipAutoIndexSeek( @Name( "key" ) String key,
             @Name( "value" ) Object value ) throws ProcedureException
     {
         try ( Statement statement = tx.acquireStatement() )
         {
             ReadOperations readOperations = statement.readOperations();
-            LegacyIndexHits hits =
-                    readOperations.relationshipLegacyIndexGet( "relationship_auto_index", key, value, -1, -1 );
-            return toStream( hits, ( id ) -> new RelationshipResult( graphDatabaseAPI.getRelationshipById( id ) ) );
+            ExplicitIndexHits hits =
+                    readOperations.relationshipExplicitIndexGet( "relationship_auto_index", key, value, -1, -1 );
+            return toStream( hits, id -> new RelationshipResult( graphDatabaseAPI.getRelationshipById( id ) ) );
         }
-        catch ( LegacyIndexNotFoundKernelException e )
+        catch ( ExplicitIndexNotFoundKernelException e )
         {
             // auto index will not exist if no relationships have been added that match the auto-index rules
             return Stream.empty();
         }
     }
 
-    @Description( "Search relationship from automatic index. Replaces `START r=relationship:relationship_auto_index" +
+    @Description( "Search relationship from explicit automatic index. Replaces `START r=relationship:relationship_auto_index" +
                   "('key:foo*')`" )
-    @Procedure( name = "db.index.auto.relationships", mode = READ )
+    @Procedure( name = "db.index.explicit.auto.searchRelationships", mode = READ )
     public Stream<WeightedRelationshipResult> relationshipAutoIndexSearch( @Name( "query" ) Object query )
             throws ProcedureException
     {
         try ( Statement statement = tx.acquireStatement() )
         {
             ReadOperations readOperations = statement.readOperations();
-            LegacyIndexHits hits =
-                    readOperations.relationshipLegacyIndexQuery( "relationship_auto_index", query, -1, -1 );
+            ExplicitIndexHits hits =
+                    readOperations.relationshipExplicitIndexQuery( "relationship_auto_index", query, -1, -1 );
             return toWeightedRelationshipResultStream( hits );
         }
-        catch ( LegacyIndexNotFoundKernelException e )
+        catch ( ExplicitIndexNotFoundKernelException e )
         {
             // auto index will not exist if no relationships have been added that match the auto-index rules
             return Stream.empty();
         }
     }
 
-    @Description( "Get or create a node manual index - YIELD type,name,config" )
-    @Procedure( name = "db.index.manual.forNodes", mode = WRITE )
-    public Stream<LegacyIndexInfo> nodeManualIndex( @Name( "indexName" ) String legacyIndexName )
+    @Description( "Get or create a node explicit index - YIELD type,name,config" )
+    @Procedure( name = "db.index.explicit.forNodes", mode = WRITE )
+    public Stream<ExplicitIndexInfo> nodeManualIndex( @Name( "indexName" ) String explicitIndexName )
     {
         IndexManager mgr = graphDatabaseAPI.index();
-        Index<Node> index = mgr.forNodes( legacyIndexName );
-        return Stream.of( new LegacyIndexInfo( "NODE", legacyIndexName, mgr.getConfiguration( index ) ) );
+        Index<Node> index = mgr.forNodes( explicitIndexName );
+        return Stream.of( new ExplicitIndexInfo( "NODE", explicitIndexName, mgr.getConfiguration( index ) ) );
     }
 
-    @Description( "Get or create a relationship manual index - YIELD type,name,config" )
-    @Procedure( name = "db.index.manual.forRelationships", mode = WRITE )
-    public Stream<LegacyIndexInfo> relationshipManualIndex( @Name( "indexName" ) String legacyIndexName )
+    @Description( "Get or create a relationship explicit index - YIELD type,name,config" )
+    @Procedure( name = "db.index.explicit.forRelationships", mode = WRITE )
+    public Stream<ExplicitIndexInfo> relationshipManualIndex( @Name( "indexName" ) String explicitIndexName )
     {
         IndexManager mgr = graphDatabaseAPI.index();
-        Index<Relationship> index = mgr.forRelationships( legacyIndexName );
-        return Stream.of( new LegacyIndexInfo( "RELATIONSHIP", legacyIndexName, mgr.getConfiguration( index ) ) );
+        Index<Relationship> index = mgr.forRelationships( explicitIndexName );
+        return Stream.of( new ExplicitIndexInfo( "RELATIONSHIP", explicitIndexName, mgr.getConfiguration( index ) ) );
     }
 
-    @Description( "Check if a node manual index exists" )
-    @Procedure( name = "db.index.manual.exists.forNodes", mode = READ )
-    public Stream<BooleanResult> nodeManualIndexExists( @Name( "indexName" ) String legacyIndexName )
+    @Description( "Check if a node explicit index exists" )
+    @Procedure( name = "db.index.explicit.existsForNodes", mode = READ )
+    public Stream<BooleanResult> nodeManualIndexExists( @Name( "indexName" ) String explicitIndexName )
     {
-        return Stream.of( new BooleanResult( graphDatabaseAPI.index().existsForNodes( legacyIndexName ) ) );
+        return Stream.of( new BooleanResult( graphDatabaseAPI.index().existsForNodes( explicitIndexName ) ) );
     }
 
-    @Description( "Check if a relationship manual index exists" )
-    @Procedure( "db.index.manual.exists.forRelationships" )
-    public Stream<BooleanResult> relationshipManualIndexExists( @Name( "indexName" ) String legacyIndexName )
+    @Description( "Check if a relationship explicit index exists" )
+    @Procedure( "db.index.explicit.existsForRelationships" )
+    public Stream<BooleanResult> relationshipManualIndexExists( @Name( "indexName" ) String explicitIndexName )
     {
-        return Stream.of( new BooleanResult( graphDatabaseAPI.index().existsForRelationships( legacyIndexName ) ) );
+        return Stream.of( new BooleanResult( graphDatabaseAPI.index().existsForRelationships( explicitIndexName ) ) );
     }
 
-    @Description( "List all manual indexes - YIELD type,name,config" )
-    @Procedure( name = "db.index.manual.list", mode = READ )
-    public Stream<LegacyIndexInfo> list()
+    @Description( "List all explicit indexes - YIELD type,name,config" )
+    @Procedure( name = "db.index.explicit.list", mode = READ )
+    public Stream<ExplicitIndexInfo> list()
     {
         IndexManager mgr = graphDatabaseAPI.index();
-        List<LegacyIndexInfo> indexInfos = new ArrayList<>( 100 );
+        List<ExplicitIndexInfo> indexInfos = new ArrayList<>( 100 );
         for ( String name : mgr.nodeIndexNames() )
         {
             Index<Node> index = mgr.forNodes( name );
-            indexInfos.add( new LegacyIndexInfo( "NODE", name, mgr.getConfiguration( index ) ) );
+            indexInfos.add( new ExplicitIndexInfo( "NODE", name, mgr.getConfiguration( index ) ) );
         }
         for ( String name : mgr.relationshipIndexNames() )
         {
             RelationshipIndex index = mgr.forRelationships( name );
-            indexInfos.add( new LegacyIndexInfo( "RELATIONSHIP", name, mgr.getConfiguration( index ) ) );
+            indexInfos.add( new ExplicitIndexInfo( "RELATIONSHIP", name, mgr.getConfiguration( index ) ) );
         }
         return indexInfos.stream();
     }
 
-    @Description( "Remove a manual index - YIELD type,name,config" )
-    @Procedure( name = "db.index.manual.drop", mode = WRITE )
-    public Stream<LegacyIndexInfo> manualIndexDrop( @Name( "indexName" ) String legacyIndexName )
+    @Description( "Remove a explicit index - YIELD type,name,config" )
+    @Procedure( name = "db.index.explicit.drop", mode = WRITE )
+    public Stream<ExplicitIndexInfo> manualIndexDrop( @Name( "indexName" ) String explicitIndexName )
     {
         IndexManager mgr = graphDatabaseAPI.index();
-        List<LegacyIndexInfo> results = new ArrayList<>( 2 );
-        if ( mgr.existsForNodes( legacyIndexName ) )
+        List<ExplicitIndexInfo> results = new ArrayList<>( 2 );
+        if ( mgr.existsForNodes( explicitIndexName ) )
         {
-            Index<Node> index = mgr.forNodes( legacyIndexName );
-            results.add( new LegacyIndexInfo( "NODE", legacyIndexName, mgr.getConfiguration( index ) ) );
+            Index<Node> index = mgr.forNodes( explicitIndexName );
+            results.add( new ExplicitIndexInfo( "NODE", explicitIndexName, mgr.getConfiguration( index ) ) );
             index.delete();
         }
-        if ( mgr.existsForRelationships( legacyIndexName ) )
+        if ( mgr.existsForRelationships( explicitIndexName ) )
         {
-            RelationshipIndex index = mgr.forRelationships( legacyIndexName );
-            results.add( new LegacyIndexInfo( "RELATIONSHIP", legacyIndexName, mgr.getConfiguration( index ) ) );
+            RelationshipIndex index = mgr.forRelationships( explicitIndexName );
+            results.add( new ExplicitIndexInfo( "RELATIONSHIP", explicitIndexName, mgr.getConfiguration( index ) ) );
             index.delete();
         }
         return results.stream();
     }
 
-    @Description( "Add a node to a manual index based on a specified key and value" )
-    @Procedure( name = "db.index.manual.add.node", mode = WRITE )
-    public Stream<BooleanResult> nodeManualIndexAdd( @Name( "indexName" ) String legacyIndexName,
+    @Description( "Add a node to a explicit index based on a specified key and value" )
+    @Procedure( name = "db.index.explicit.addNode", mode = WRITE )
+    public Stream<BooleanResult> nodeManualIndexAdd( @Name( "indexName" ) String explicitIndexName,
             @Name( "node" ) Node node, @Name( "key" ) String key,
             @Name( "value" ) Object value )
     {
-        graphDatabaseAPI.index().forNodes( legacyIndexName ).add( node, key, value );
+        graphDatabaseAPI.index().forNodes( explicitIndexName ).add( node, key, value );
         // Failures will be expressed as exceptions before the return
         return Stream.of( new BooleanResult( true ) );
     }
 
-    @Description( "Add a relationship to a manual index based on a specified key and value" )
-    @Procedure( name = "db.index.manual.add.relationship", mode = WRITE )
-    public Stream<BooleanResult> relationshipManualIndexAdd( @Name( "indexName" ) String legacyIndexName,
+    @Description( "Add a relationship to a explicit index based on a specified key and value" )
+    @Procedure( name = "db.index.explicit.addRelationship", mode = WRITE )
+    public Stream<BooleanResult> relationshipManualIndexAdd( @Name( "indexName" ) String explicitIndexName,
             @Name( "relationship" ) Relationship relationship,
             @Name( "key" ) String key, @Name( "value" ) Object value )
     {
-        graphDatabaseAPI.index().forRelationships( legacyIndexName ).add( relationship, key, value );
+        graphDatabaseAPI.index().forRelationships( explicitIndexName ).add( relationship, key, value );
         // Failures will be expressed as exceptions before the return
         return Stream.of( new BooleanResult( true ) );
     }
 
-    @Description( "Remove a node from a manual index with an optional key" )
-    @Procedure( name = "db.index.manual.remove.node", mode = WRITE )
-    public Stream<BooleanResult> nodeManualIndexRemove( @Name( "indexName" ) String legacyIndexName,
+    @Description( "Remove a node from a explicit index with an optional key" )
+    @Procedure( name = "db.index.explicit.removeNode", mode = WRITE )
+    public Stream<BooleanResult> nodeManualIndexRemove( @Name( "indexName" ) String explicitIndexName,
             @Name( "node" ) Node node, @Name( "key" ) String key )
     {
         if ( key.equals( Name.DEFAULT_VALUE ) )
         {
-            graphDatabaseAPI.index().forNodes( legacyIndexName ).remove( node );
+            graphDatabaseAPI.index().forNodes( explicitIndexName ).remove( node );
         }
         else
         {
-            graphDatabaseAPI.index().forNodes( legacyIndexName ).remove( node, key );
+            graphDatabaseAPI.index().forNodes( explicitIndexName ).remove( node, key );
         }
         // Failures will be expressed as exceptions before the return
         return Stream.of( new BooleanResult( true ) );
     }
 
-    @Description( "Remove a relationship from a manual index with an optional key" )
-    @Procedure( name = "db.index.manual.remove.relationship", mode = WRITE )
-    public Stream<BooleanResult> relationshipManualIndexRemove( @Name( "indexName" ) String legacyIndexName,
+    @Description( "Remove a relationship from a explicit index with an optional key" )
+    @Procedure( name = "db.index.explicit.removeRelationship", mode = WRITE )
+    public Stream<BooleanResult> relationshipManualIndexRemove( @Name( "indexName" ) String explicitIndexName,
             @Name( "relationship" ) Relationship relationship,
             @Name( "key" ) String key )
     {
         if ( key.equals( Name.DEFAULT_VALUE ) )
         {
-            graphDatabaseAPI.index().forRelationships( legacyIndexName ).remove( relationship );
+            graphDatabaseAPI.index().forRelationships( explicitIndexName ).remove( relationship );
         }
         else
         {
-            graphDatabaseAPI.index().forRelationships( legacyIndexName ).remove( relationship, key );
+            graphDatabaseAPI.index().forRelationships( explicitIndexName ).remove( relationship, key );
         }
         // Failures will be expressed as exceptions before the return
         return Stream.of( new BooleanResult( true ) );
@@ -599,7 +606,7 @@ public class BuiltInProcedures
         return StreamSupport.stream( Spliterators.spliteratorUnknownSize( it, Spliterator.ORDERED ), false );
     }
 
-    private Stream<WeightedNodeResult> toWeightedNodeResultStream( LegacyIndexHits iterator )
+    private Stream<WeightedNodeResult> toWeightedNodeResultStream( ExplicitIndexHits iterator )
     {
         Iterator<WeightedNodeResult> it = new Iterator<WeightedNodeResult>()
         {
@@ -619,7 +626,7 @@ public class BuiltInProcedures
         return StreamSupport.stream( Spliterators.spliteratorUnknownSize( it, Spliterator.ORDERED ), false );
     }
 
-    private Stream<WeightedRelationshipResult> toWeightedRelationshipResultStream( LegacyIndexHits iterator )
+    private Stream<WeightedRelationshipResult> toWeightedRelationshipResultStream( ExplicitIndexHits iterator )
     {
         Iterator<WeightedRelationshipResult> it = new Iterator<WeightedRelationshipResult>()
         {
@@ -703,13 +710,13 @@ public class BuiltInProcedures
         }
     }
 
-    public static class LegacyIndexInfo
+    public static class ExplicitIndexInfo
     {
         public final String type;
         public final String name;
         public final Map<String,String> config;
 
-        public LegacyIndexInfo( String type, String name, Map<String,String> config )
+        public ExplicitIndexInfo( String type, String name, Map<String,String> config )
         {
             this.type = type;
             this.name = name;

@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.logging.Level;
 
 import org.neo4j.configuration.Description;
 import org.neo4j.configuration.Internal;
@@ -142,6 +143,10 @@ public class CausalClusteringSettings implements LoadableConfig
     public static final Setting<Boolean> disable_middleware_logging =
             setting( "causal_clustering.disable_middleware_logging", BOOLEAN, TRUE );
 
+    @Description( "Logging level of middleware logging" )
+    public static final Setting<Integer> middleware_logging_level =
+            setting( "causal_clustering.middleware_logging.level", INTEGER, Integer.toString( Level.FINE.intValue() ) );
+
     @Internal // not supported yet
     @Description( "Hazelcast license key" )
     public static final Setting<String> hazelcast_license_key =
@@ -175,9 +180,17 @@ public class CausalClusteringSettings implements LoadableConfig
     public static final Setting<Integer> replicated_lock_token_state_size =
             setting( "causal_clustering.replicated_lock_token_state_size", INTEGER, "1000" );
 
-    @Description( "The number of messages waiting to be sent to other servers in the cluster" )
-    public static final Setting<Integer> outgoing_queue_size =
-            setting( "causal_clustering.outgoing_queue_size", INTEGER, "64" );
+    @Description( "The maximum amount of data which can be in the replication stage concurrently." )
+    public static final Setting<Long> replication_total_size_limit =
+            setting( "causal_clustering.replication_total_size_limit", BYTES, "128M" );
+
+    @Description( "The initial timeout until replication is retried. The timeout will increase exponentially." )
+    public static final Setting<Duration> replication_retry_timeout_base =
+            setting( "causal_clustering.replication_retry_timeout_base", DURATION, "10s" );
+
+    @Description( "The upper limit for the exponentially incremented retry timeout." )
+    public static final Setting<Duration> replication_retry_timeout_limit =
+            setting( "causal_clustering.replication_retry_timeout_limit", DURATION, "60s" );
 
     @Description( "The number of operations to be processed before the state machines flush to disk" )
     public static final Setting<Integer> state_machine_flush_window_size =
@@ -216,7 +229,7 @@ public class CausalClusteringSettings implements LoadableConfig
     @Internal
     public static final Setting<File> raft_messages_log_path =
             derivedSetting( "causal_clustering.raft_messages_log_path", logs_directory,
-                    ( logs ) -> new File( logs, "raft-messages.log" ), PATH );
+                    logs -> new File( logs, "raft-messages.log" ), PATH );
 
     @Description( "Interval of pulling updates from cores." )
     public static final Setting<Duration> pull_interval = setting( "causal_clustering.pull_interval", DURATION, "1s" );

@@ -28,15 +28,16 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.backup.OnlineBackupSettings;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.ha.HighlyAvailableGraphDatabase;
+import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacadeFactory;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
@@ -69,7 +70,8 @@ import static org.neo4j.metrics.MetricsTestHelper.readLongValueAndAssert;
 public class MetricsKernelExtensionFactoryIT
 {
     @Rule
-    public final ClusterRule clusterRule = new ClusterRule( getClass() );
+    public final ClusterRule clusterRule = new ClusterRule( getClass() )
+            .withSharedSetting( GraphDatabaseSettings.record_id_batch_size, "1" );
 
     private HighlyAvailableGraphDatabase db;
     private File outputPath;

@@ -29,14 +29,11 @@ import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.values.KeyT
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.values.TokenType.PropertyKey
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.compiled.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes._
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription.LogicalPlanIdentificationBuilder
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.slotted.expressions._
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.slotted.pipes._
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.slotted.{pipes => slottedPipes}
 import org.neo4j.cypher.internal.compiled_runtime.v3_3.codegen.CompiledRuntimeContextHelper
 import org.neo4j.cypher.internal.compiler.v3_3.planner.LogicalPlanningTestSupport2
-import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans._
-import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.{Ascending, plans}
 import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
 import org.neo4j.cypher.internal.compiler.v3_3.{HardcodedGraphStatistics, IDPPlannerName}
 import org.neo4j.cypher.internal.frontend.v3_3.ast._
@@ -44,6 +41,8 @@ import org.neo4j.cypher.internal.frontend.v3_3.symbols.{CTAny, CTList, CTNode, C
 import org.neo4j.cypher.internal.frontend.v3_3.test_helpers.CypherFunSuite
 import org.neo4j.cypher.internal.frontend.v3_3.{LabelId, PropertyKeyId, SemanticDirection, SemanticTable, ast}
 import org.neo4j.cypher.internal.ir.v3_3.{IdName, VarPatternLength}
+import org.neo4j.cypher.internal.v3_3.logical.plans
+import org.neo4j.cypher.internal.v3_3.logical.plans._
 
 class SlottedPipeBuilderTest extends CypherFunSuite with LogicalPlanningTestSupport2 {
 
@@ -58,12 +57,11 @@ class SlottedPipeBuilderTest extends CypherFunSuite with LogicalPlanningTestSupp
     val pipelines: Map[LogicalPlanId, PipelineInformation] = SlotAllocation.allocateSlots(beforeRewrite)
     val slottedRewriter = new SlottedRewriter(context.planContext)
     val logicalPlan = slottedRewriter(beforeRewrite, pipelines)
-    val idMap = LogicalPlanIdentificationBuilder(logicalPlan)
     val converters = new ExpressionConverters(CommunityExpressionConverter, SlottedExpressionConverters)
     val executionPlanBuilder = new PipeExecutionPlanBuilder(context.clock, context.monitors,
       expressionConverters = converters, pipeBuilderFactory = EnterprisePipeBuilderFactory(pipelines))
     val pipeBuildContext = PipeExecutionBuilderContext(context.metrics.cardinality, table, IDPPlannerName)
-    executionPlanBuilder.build(None, logicalPlan, idMap)(pipeBuildContext, context.planContext).pipe
+    executionPlanBuilder.build(None, logicalPlan)(pipeBuildContext, context.planContext).pipe
   }
 
   private val x = IdName("x")
@@ -644,19 +642,20 @@ class SlottedPipeBuilderTest extends CypherFunSuite with LogicalPlanningTestSupp
     val xVarName = IdName.fromVariable(xVar)
     val leaf = SingleRow()(solved)
     val unwind = UnwindCollection(leaf, xVarName, listOf(literalInt(1), literalInt(2), literalInt(3)))(solved)
-    val sort = Sort(unwind, List(Ascending(xVarName)))(solved)
+    val sort = Sort(unwind, List(plans.Ascending(xVarName)))(solved)
 
     // when
     val pipe = build(sort)
 
     // then
     val expectedPipeline1 = PipelineInformation(Map.empty, 0, 0)
+    val xSlot = RefSlot(0, nullable = true, CTAny, "x")
     val expectedPipeline2 = PipelineInformation(numberOfLongs = 0, numberOfReferences = 1, slots = Map(
-      "x" -> RefSlot(0, nullable = true, CTAny, "x")
+      "x" -> xSlot
     ))
 
     pipe should equal(
-      SortSlottedPipe(orderBy = Seq(slottedPipes.Ascending(0)), pipelineInformation = expectedPipeline2,
+      SortSlottedPipe(orderBy = Seq(slottedPipes.Ascending(xSlot)), pipelineInformation = expectedPipeline2,
         source = UnwindSlottedPipe(collection = commands.expressions.ListLiteral(commands.expressions.Literal(1), commands.expressions.Literal(2), commands.expressions.Literal(3)), offset = 0, pipeline = expectedPipeline2,
           source = SingleRowSlottedPipe(expectedPipeline1)()
         )()

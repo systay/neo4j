@@ -22,10 +22,10 @@ package org.neo4j.cypher.internal.compatibility.v3_3.runtime.slotted.pipes
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.predicates.Predicate
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.helpers.PrimitiveLongHelper
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes._
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription.Id
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.slotted.PrimitiveExecutionContext
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.slotted.helpers.NullChecker.nodeIsNull
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.{ExecutionContext, PipelineInformation}
+import org.neo4j.cypher.internal.v3_3.logical.plans.LogicalPlanId
 import org.neo4j.cypher.internal.frontend.v3_3.{InternalException, SemanticDirection}
 import org.neo4j.kernel.impl.api.RelationshipVisitor
 import org.neo4j.kernel.impl.api.store.RelationshipIterator
@@ -38,11 +38,9 @@ case class OptionalExpandAllSlottedPipe(source: Pipe,
                                         types: LazyTypes,
                                         predicate: Predicate,
                                         pipelineInformation: PipelineInformation)
-                                       (val id: Id = new Id) extends PipeWithSource(source) with Pipe {
+                                       (val id: LogicalPlanId = LogicalPlanId.DEFAULT) extends PipeWithSource(source) with Pipe {
 
   protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
-    implicit val s = state
-
     input.flatMap {
       (inputRow: ExecutionContext) =>
         val fromNode = inputRow.getLongAt(fromOffset)
@@ -68,7 +66,7 @@ case class OptionalExpandAllSlottedPipe(source: Pipe,
             outputRow.setLongAt(relOffset, relId)
             outputRow.setLongAt(toOffset, otherSide)
             outputRow
-          }).filter(ctx => predicate.isTrue(ctx))
+          }).filter(ctx => predicate.isTrue(ctx, state))
 
           if (matchIterator.isEmpty)
             Iterator(withNulls(inputRow))

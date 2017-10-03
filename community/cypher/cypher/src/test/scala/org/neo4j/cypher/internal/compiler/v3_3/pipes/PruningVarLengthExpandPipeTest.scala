@@ -27,8 +27,8 @@ import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.values.Unre
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes._
 import org.neo4j.cypher.internal.compiler.v3_3.QueryStateHelper.withQueryState
 import org.neo4j.cypher.internal.frontend.v3_3.SemanticDirection
-import org.neo4j.cypher.internal.javacompat.ValueUtils._
 import org.neo4j.graphdb.Node
+import org.neo4j.helpers.ValueUtils._
 import org.neo4j.kernel.api.KernelTransaction.Type
 import org.neo4j.kernel.api.security.SecurityContext
 import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
@@ -352,14 +352,14 @@ class PruningVarLengthExpandPipeTest extends GraphDatabaseFunSuite {
     PruningVarLengthExpandPipe(src, "from", "to", types, outgoing, min, max, new VarLengthPredicate {
       override def filterNode(row: ExecutionContext, state: QueryState)(node: NodeValue): Boolean = {
         row("to") = node
-        val result = nodePredicate.isTrue(row)(state)
+        val result = nodePredicate.isTrue(row, state)
         row.remove("to")
         result
       }
 
       override def filterRelationship(row: ExecutionContext, state: QueryState)(rel: EdgeValue): Boolean = {
         row("r") = rel
-        val result = relationshipPredicate.isTrue(row)(state)
+        val result = relationshipPredicate.isTrue(row, state)
         row.remove("r")
         result
       }

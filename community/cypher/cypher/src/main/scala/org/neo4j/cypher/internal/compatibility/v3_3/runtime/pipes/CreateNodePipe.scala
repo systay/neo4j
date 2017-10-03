@@ -25,10 +25,10 @@ import org.neo4j.cypher.internal.compatibility.v3_3.runtime.ExecutionContext
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.expressions.Expression
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.helpers.IsMap
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.mutation.{GraphElementPropertyFunctions, makeValueNeoSafe}
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription.Id
+import org.neo4j.cypher.internal.v3_3.logical.plans.LogicalPlanId
 import org.neo4j.cypher.internal.frontend.v3_3.{CypherTypeException, InvalidSemanticsException}
-import org.neo4j.cypher.internal.javacompat.ValueUtils
 import org.neo4j.cypher.internal.spi.v3_3.QueryContext
+import org.neo4j.helpers.ValueUtils
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.{EdgeValue, NodeValue}
@@ -48,7 +48,7 @@ abstract class BaseCreateNodePipe(src: Pipe, key: String, labels: Seq[LazyLabel]
 
   private def setProperties(context: ExecutionContext, state: QueryState, nodeId: Long) = {
     properties.foreach { expr =>
-      expr(context)(state) match {
+      expr(context, state) match {
         case _: NodeValue | _: EdgeValue =>
           throw new CypherTypeException("Parameter provided for node creation is not a Map")
         case IsMap(map) =>
@@ -81,7 +81,7 @@ abstract class BaseCreateNodePipe(src: Pipe, key: String, labels: Seq[LazyLabel]
 }
 
 case class CreateNodePipe(src: Pipe, key: String, labels: Seq[LazyLabel], properties: Option[Expression])
-                         (val id: Id = new Id) extends BaseCreateNodePipe(src, key, labels, properties) {
+                         (val id: LogicalPlanId = LogicalPlanId.DEFAULT) extends BaseCreateNodePipe(src, key, labels, properties) {
 
   override protected def handleNull(key: String) {
     // do nothing
@@ -89,7 +89,7 @@ case class CreateNodePipe(src: Pipe, key: String, labels: Seq[LazyLabel], proper
 }
 
 case class MergeCreateNodePipe(src: Pipe, key: String, labels: Seq[LazyLabel], properties: Option[Expression])
-                              (val id: Id = new Id) extends BaseCreateNodePipe(src, key, labels, properties) {
+                              (val id: LogicalPlanId = LogicalPlanId.DEFAULT) extends BaseCreateNodePipe(src, key, labels, properties) {
   override protected def handleNull(key: String) {
     //merge cannot use null properties, since in that case the match part will not find the result of the create
     throw new InvalidSemanticsException(s"Cannot merge node using null property value for $key")

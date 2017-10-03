@@ -28,6 +28,7 @@ import org.neo4j.kernel.api.index.IndexEntryUpdate;
 import org.neo4j.kernel.api.index.IndexPopulator;
 import org.neo4j.kernel.api.index.IndexUpdater;
 import org.neo4j.kernel.api.index.PropertyAccessor;
+import org.neo4j.kernel.impl.index.schema.fusion.FusionSchemaIndexProvider.DropAction;
 import org.neo4j.kernel.impl.index.schema.fusion.FusionSchemaIndexProvider.Selector;
 import org.neo4j.storageengine.api.schema.IndexSample;
 
@@ -38,12 +39,17 @@ class FusionIndexPopulator implements IndexPopulator
     private final IndexPopulator nativePopulator;
     private final IndexPopulator lucenePopulator;
     private final Selector selector;
+    private final long indexId;
+    private final DropAction dropAction;
 
-    FusionIndexPopulator( IndexPopulator nativePopulator, IndexPopulator lucenePopulator, Selector selector )
+    FusionIndexPopulator( IndexPopulator nativePopulator, IndexPopulator lucenePopulator, Selector selector,
+            long indexId, DropAction dropAction )
     {
         this.nativePopulator = nativePopulator;
         this.lucenePopulator = lucenePopulator;
         this.selector = selector;
+        this.indexId = indexId;
+        this.dropAction = dropAction;
     }
 
     @Override
@@ -64,6 +70,7 @@ class FusionIndexPopulator implements IndexPopulator
         {
             lucenePopulator.drop();
         }
+        dropAction.drop( indexId );
     }
 
     @Override
@@ -122,16 +129,9 @@ class FusionIndexPopulator implements IndexPopulator
     }
 
     @Override
-    public void includeSample( IndexEntryUpdate update )
+    public void includeSample( IndexEntryUpdate<?> update )
     {
         selector.select( nativePopulator, lucenePopulator, update.values() ).includeSample( update );
-    }
-
-    @Override
-    public void configureSampling( boolean onlineSampling )
-    {
-        nativePopulator.configureSampling( onlineSampling );
-        lucenePopulator.configureSampling( onlineSampling );
     }
 
     @Override

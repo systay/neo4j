@@ -5,7 +5,7 @@
   <parent>
     <groupId>org.neo4j.build</groupId>
     <artifactId>parent-central</artifactId>
-    <version>45</version>
+    <version>46</version>
     <relativePath/>
   </parent>
 
@@ -22,13 +22,11 @@
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
     <neo4j.java.version>${maven.compiler.source}</neo4j.java.version>
-    <pico.version>2.14.3</pico.version>
     <licensing.prepend.text>notice-agpl-prefix.txt</licensing.prepend.text>
     <licensing.phase>compile</licensing.phase>
     <lucene.version>5.5.0</lucene.version>
     <bouncycastle.version>1.53</bouncycastle.version>
     <generate-config-docs-phase>prepare-package</generate-config-docs-phase>
-    <hsqldb.version>2.3.2</hsqldb.version>
     <test.runner.jvm.settings.additional></test.runner.jvm.settings.additional>
     <test.runner.jvm.settings>-Xmx2G -XX:+UseG1GC -XX:-OmitStackTraceInFastThrow -XX:+HeapDumpOnOutOfMemoryError
       -XX:HeapDumpPath=target/test-data -Dorg.neo4j.unsafe.impl.internal.dragons.UnsafeUtil.DIRTY_MEMORY=true
@@ -38,7 +36,7 @@
       -XX:+UnlockExperimentalVMOptions -XX:+TrustFinalNonStaticFields ${test.runner.jvm.settings.additional}
     </test.runner.jvm.settings>
     <doclint-groups>reference</doclint-groups>
-    <jetty.version>9.2.9.v20150224</jetty.version>
+    <jetty.version>9.2.22.v20170606</jetty.version>
     <findbugs.version>3.0.1</findbugs.version>
     <clirr.comparisonVersion>3.0.1</clirr.comparisonVersion>
     <git.commit>unknown-commit</git.commit>
@@ -125,7 +123,7 @@
           <dependency>
             <groupId>com.puppycrawl.tools</groupId>
             <artifactId>checkstyle</artifactId>
-            <version>7.6.1</version>
+            <version>8.2</version>
           </dependency>
         </dependencies>
         <executions>
@@ -144,12 +142,12 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.20</version>
+          <version>2.20.1</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-failsafe-plugin</artifactId>
-          <version>2.20</version>
+          <version>2.20.1</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -473,6 +471,22 @@
           </exclusion>
         </exclusions>
       </dependency>
+      <dependency>
+        <groupId>org.apache.shiro</groupId>
+        <artifactId>shiro-core</artifactId>
+        <version>1.4.0</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.ben-manes.caffeine</groupId>
+        <artifactId>caffeine</artifactId>
+        <version>2.3.3</version>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-nop</artifactId>
+        <version>1.7.22</version>
+      </dependency>
+
       <!-- testing -->
       <dependency>
         <groupId>org.neo4j.driver</groupId>
@@ -480,6 +494,19 @@
         <version>1.4.3</version>
         <scope>test</scope>
       </dependency>
+      <dependency>
+        <groupId>org.apache.directory.server</groupId>
+        <artifactId>apacheds-server-integ</artifactId>
+        <version>2.0.0-M21</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava-testlib</artifactId>
+        <version>19.0</version>
+        <scope>test</scope>
+      </dependency>
+
       <dependency>
         <groupId>org.apache.httpcomponents</groupId>
         <artifactId>httpclient</artifactId>
@@ -496,19 +523,6 @@
         <artifactId>httpcore</artifactId>
         <version>4.4.5</version>
       </dependency>
-      <dependency>
-        <groupId>org.picocontainer</groupId>
-        <artifactId>picocontainer</artifactId>
-        <version>${pico.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>com.google.jimfs</groupId>
-        <artifactId>jimfs</artifactId>
-        <version>1.1</version>
-        <scope>test</scope>
-      </dependency>
-
 
       <!-- The JUnit-Hamcrest-Mockito combo -->
       <dependency>
@@ -545,11 +559,6 @@
       </dependency>
 
       <dependency>
-        <groupId>org.hsqldb</groupId>
-        <artifactId>hsqldb</artifactId>
-        <version>${hsqldb.version}</version>
-      </dependency>
-      <dependency>
         <groupId>commons-codec</groupId>
         <artifactId>commons-codec</artifactId>
         <version>1.9</version>
@@ -582,10 +591,22 @@
       </dependency>
       <!-- Added (directly) to avoid version clash in commons-configuration. -->
       <dependency>
-        <groupId>commons-digester</groupId>
-        <artifactId>commons-digester</artifactId>
-        <version>2.1</version>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-digester3</artifactId>
+        <version>3.2</version>
         <type>jar</type>
+        <scope>compile</scope>
+        <exclusions>
+          <exclusion>
+            <groupId>commons-beanutils</groupId>
+            <artifactId>commons-beanutils</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>commons-beanutils</groupId>
+        <artifactId>commons-beanutils</artifactId>
+        <version>1.9.3</version>
         <scope>compile</scope>
       </dependency>
       <dependency>
@@ -619,7 +640,7 @@
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-all</artifactId>
-        <version>4.1.8.Final</version>
+        <version>4.1.15.Final</version>
       </dependency>
 
       <dependency>
@@ -708,7 +729,7 @@
       <dependency>
         <groupId>org.eclipse.jetty.websocket</groupId>
         <artifactId>websocket-client</artifactId>
-        <version>9.2.10.v20150310</version>
+        <version>${jetty.version}</version>
       </dependency>
       <dependency>
         <groupId>org.mozilla</groupId>
@@ -729,24 +750,6 @@
         <groupId>org.neo4j.3rdparty.javax.ws.rs</groupId>
         <artifactId>jsr311-api</artifactId>
         <version>1.1.2.r612</version>
-      </dependency>
-      <dependency>
-        <groupId>org.asciidoctor</groupId>
-        <artifactId>asciidoctorj</artifactId>
-        <version>1.5.2</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.jruby</groupId>
-        <artifactId>jruby-complete</artifactId>
-        <version>1.7.20</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.jsoup</groupId>
-        <artifactId>jsoup</artifactId>
-        <version>1.8.1</version>
-        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>io.dropwizard.metrics</groupId>

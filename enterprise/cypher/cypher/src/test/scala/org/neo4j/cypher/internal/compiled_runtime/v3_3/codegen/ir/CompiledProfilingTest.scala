@@ -22,21 +22,21 @@ package org.neo4j.cypher.internal.compiled_runtime.v3_3.codegen.ir
 import org.mockito.Matchers._
 import org.mockito.Mockito._
 import org.neo4j.collection.primitive.PrimitiveLongIterator
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.compiled.codegen.Variable
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.compiled.codegen.ir.{AcceptVisitor, ScanAllNodes, WhileLoop}
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.compiled.codegen.ir.expressions.{CodeGenType, NodeProjection}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.ProfileMode
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.compiled.codegen.Variable
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.compiled.codegen.ir.expressions.{CodeGenType, NodeProjection}
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.compiled.codegen.ir.{AcceptVisitor, ScanAllNodes, WhileLoop}
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.executionplan.Provider
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription._
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription.InternalPlanDescription.Arguments.{DbHits, Rows}
-import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans
-import org.neo4j.cypher.internal.compiler.v3_3.planner.logical.plans._
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.planDescription._
 import org.neo4j.cypher.internal.compiler.v3_3.spi.KernelStatisticProvider
 import org.neo4j.cypher.internal.frontend.v3_3.ast.SignedDecimalIntegerLiteral
 import org.neo4j.cypher.internal.frontend.v3_3.test_helpers.CypherFunSuite
 import org.neo4j.cypher.internal.ir.v3_3.{Cardinality, CardinalityEstimation, IdName, PlannerQuery}
 import org.neo4j.cypher.internal.spi.v3_3.{QueryContext, QueryTransactionalContext, TransactionalContextWrapper}
 import org.neo4j.cypher.internal.v3_3.codegen.profiling.ProfilingTracer
+import org.neo4j.cypher.internal.v3_3.logical.plans._
+import org.neo4j.cypher.internal.v3_3.logical.plans
 import org.neo4j.cypher.javacompat.internal.GraphDatabaseCypherService
 import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracer
 import org.neo4j.kernel.api._
@@ -48,14 +48,14 @@ class CompiledProfilingTest extends CypherFunSuite with CodeGenSugar {
 
   test("should count db hits and rows") {
     // given
-    val id1 = new Id()
-    val id2 = new Id()
+    val id1 = new LogicalPlanId(0)
+    val id2 = new LogicalPlanId(1)
 
     val variable = Variable("name", CodeGenType.primitiveNode)
     val projectNode = NodeProjection(variable)
     val compiled = compile(Seq(WhileLoop(variable,
       ScanAllNodes("OP1"), AcceptVisitor("OP2", Map("n" -> projectNode)))),
-      Seq("n"), Map("OP1" -> id1, "OP2" -> id2, "X" -> new Id()))
+      Seq("n"), Map("OP1" -> id1, "OP2" -> id2, "X" -> LogicalPlanId.DEFAULT))
 
     val readOps = mock[ReadOperations]
     val entityAccessor = mock[NodeManager]
@@ -113,6 +113,7 @@ class CompiledProfilingTest extends CypherFunSuite with CodeGenSugar {
       val join = NodeHashJoin(Set(IdName("a")), lhs, rhs)(solved)
       val projection = plans.Projection(join, Map("foo" -> SignedDecimalIntegerLiteral("1")(null)))(solved)
       val plan = plans.ProduceResult(List("foo"), projection)
+      plan.assignIds()
 
       // when
       val result = compileAndExecute(plan, graphDb, mode = ProfileMode)

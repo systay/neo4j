@@ -28,33 +28,32 @@ import org.neo4j.cypher.internal.spi.v3_3.QueryContext
 /*
 Takes an input morsel and compacts all rows to the beginning of it, only keeping the rows that match a predicate
  */
-class FilterOperator(pipeline: PipelineInformation, predicate: Predicate) extends Operator {
+class FilterOperator(pipeline: PipelineInformation, predicate: Predicate) extends MiddleOperator {
+  override def operate(iterationState: Iteration,
+                       data: Morsel,
+                       context: QueryContext,
+                       state: QueryState): Unit = {
 
-  override def init(state: QueryState, context: QueryContext): Unit = {}
-
-  override def operate(morsel: Morsel, context: QueryContext, state: QueryState): ReturnType = {
     var readingPos = 0
     var writingPos = 0
     val longCount = pipeline.numberOfLongs
     val refCount = pipeline.numberOfReferences
-    val currentRow = new MorselExecutionContext(morsel, longCount, refCount, currentRow = readingPos)
-    val longs = morsel.longs
-    val objects = morsel.refs
+    val currentRow = new MorselExecutionContext(data, longCount, refCount, currentRow = readingPos)
+    val longs = data.longs
+    val objects = data.refs
     val queryState = new OldQueryState(context, resources = null, params = state.params)
 
-    while (readingPos < morsel.validRows) {
+    while (readingPos < data.validRows) {
       currentRow.currentRow = readingPos
       if (predicate.isTrue(currentRow, queryState)) {
-        System.arraycopy(morsel.longs, readingPos * longCount, longs, longCount * writingPos, longCount)
-        System.arraycopy(morsel.refs, readingPos * refCount, objects, refCount * writingPos, refCount)
+        System.arraycopy(data.longs, readingPos * longCount, longs, longCount * writingPos, longCount)
+        System.arraycopy(data.refs, readingPos * refCount, objects, refCount * writingPos, refCount)
         writingPos += 1
       }
       readingPos += 1
       currentRow.currentRow = readingPos
     }
 
-    morsel.validRows = writingPos
-
-    MorselType
+    data.validRows = writingPos
   }
 }

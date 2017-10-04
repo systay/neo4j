@@ -270,13 +270,15 @@ object SlotAllocation {
            _: ConditionalApply =>
         rhsPipeline
 
-      case _:CartesianProduct =>
-        val cartesianProductPipeline = lhsPipeline.seedClone()
+      case _: CartesianProduct |
+           _: NodeHashJoin =>
+        val joinedPipeline = lhsPipeline.seedClone()
         rhsPipeline.foreachSlot {
-          case (k, slot) =>
-            cartesianProductPipeline.add(k, slot)
+          case (k, slot) if lhsPipeline.get(k).isEmpty =>
+            joinedPipeline.add(k, slot)
+          case _ =>
         }
-        cartesianProductPipeline
+        joinedPipeline
 
       case p => throw new SlotAllocationFailed(s"Don't know how to handle $p")
     }

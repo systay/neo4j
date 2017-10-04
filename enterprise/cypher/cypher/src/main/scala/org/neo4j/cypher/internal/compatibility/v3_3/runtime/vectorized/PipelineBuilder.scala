@@ -1,9 +1,28 @@
+/*
+ * Copyright (c) 2002-2017 "Neo Technology,"
+ * Network Engine for Objects in Lund AB [http://neotechnology.com]
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.neo4j.cypher.internal.compatibility.v3_3.runtime.vectorized
 
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.PipelineInformation
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.LazyTypes
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.vectorized.operators.{AllNodeScanOperator, ExpandAllOperator, FilterOperator}
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.vectorized.operators._
 import org.neo4j.cypher.internal.frontend.v3_3.SemanticTable
 import org.neo4j.cypher.internal.ir.v3_3.IdName
 import org.neo4j.cypher.internal.v3_3.logical.plans
@@ -29,16 +48,21 @@ class PipelineBuilder(pipelines: Map[LogicalPlanId, PipelineInformation], conver
 
     }
 
-    Pipeline(thisOp, Seq.empty, pipeline, Set.empty)()
+    Pipeline(thisOp, Seq.empty, pipeline, NoDependencies)()
   }
 
   override protected def build(plan: LogicalPlan, source: Pipeline): Pipeline = {
     val pipeline = pipelines(plan.assignedId)
 
-    if(plan.isInstanceOf[ProduceResult])
-      source
-    else {
       val thisOp = plan match {
+        case plans.ProduceResult(_, _) =>
+          new ProduceResultOperator(pipeline)
+
+        case plans.Optional(inner, symbols) =>
+          val nullableKeys = inner.availableSymbols -- symbols
+          val nullableOffsets = nullableKeys.map(k => pipeline.getLongOffsetFor(k.name))
+          new OptionalOperator(nullableOffsets)
+
         case plans.Selection(predicates, _) =>
           val predicate = converters.toCommandPredicate(predicates.head)
           new FilterOperator(pipeline, predicate)
@@ -48,17 +72,36 @@ class PipelineBuilder(pipelines: Map[LogicalPlanId, PipelineInformation], conver
           val relOffset = pipeline.getLongOffsetFor(relName)
           val toOffset = pipeline.getLongOffsetFor(to)
           val fromPipe = pipelines(lhs.assignedId)
-          new ExpandAllOperator(pipeline, fromPipe, fromOffset, relOffset, toOffset, dir, LazyTypes(types)(SemanticTable()))
+          val lazyTypes = LazyTypes(types.toArray)(SemanticTable())
+          new ExpandAllOperator(pipeline, fromPipe, fromOffset, relOffset, toOffset, dir, lazyTypes)
       }
 
-      thisOp match {
-        case op: Operator =>
-          source.addOperator(op)
-        case breaker: LeafOperator =>
-          Pipeline(breaker, Seq.empty, pipeline, Set(source))()
-      }
+    thisOp match {
+      case o: Operator =>
+        Pipeline(o, Seq.empty, pipeline, MorselByMorsel(source))()
+      case mo: MiddleOperator =>
+        source.addOperator(mo)
     }
   }
 
-  override protected def build(plan: LogicalPlan, lhs: Pipeline, rhs: Pipeline): Pipeline = ???
+  override protected def build(plan: LogicalPlan, lhs: Pipeline, rhs: Pipeline): Pipeline = {
+      val pipeline = pipelines(plan.assignedId)
+
+      val thisOp = plan match {
+        case plans.NodeHashJoin(nodes, _, _) =>
+//          val updatedRhs = rhs.copy(dependency = rhs.dependency+lhs)
+//
+//          Pipeline()
+          ???
+      }
+    ???
+  }
+}
+
+object IsPipelineBreaker {
+  def apply(plan: LogicalPlan): Boolean = {
+    plan match {
+      case _ => true
+    }
+  }
 }

@@ -19,10 +19,14 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import java.io.File
+
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.commands.expressions.PathImpl
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.vectorized.dispatcher.Dispatcher
 import org.neo4j.graphdb.Result.ResultVisitor
 import org.neo4j.graphdb._
+import org.neo4j.graphdb.factory.GraphDatabaseFactory
 import org.neo4j.helpers.collection.Iterators.single
 import org.neo4j.internal.cypher.acceptance.CypherComparisonSupport.Configs
 
@@ -33,71 +37,73 @@ import scala.util.Random
 class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
   test("apa") {
 
-    println("creating graph")
-
-    val n1 = createNode()
-    relate(n1, createNode())
-    relate(n1, createNode())
-    relate(n1, createNode())
-    val n2 = createNode()
-    relate(n2, createNode())
-    relate(n2, createNode())
-    relate(n2, createNode())
-    val n3 = createNode()
-    relate(n3, createNode())
-    relate(n3, createNode())
-    relate(n3, createNode())
-    val n4 = createNode()
-    relate(n4, createNode())
-    relate(n4, createNode())
-    relate(n4, createNode())
-
-//    val NODES = 10
-//    val EDGES = 100
-//    createNode()
-//    val nodes = (0 to NODES).map(x =>
-//      createNode("x" -> x, "y" -> 12)
-//    ).toArray
+    val db = new GraphDatabaseFactory().newEmbeddedDatabase(new File("/home/systay/dev/temp"))
+//
+//    println("creating graph")
+//
+//    var tx = db.beginTx()
+//    var i = 0
+//
+//    def ping() = {
+//      i += 1
+//      if (i % 5000 == 0) {
+//        tx.success()
+//        tx.close()
+//        tx = db.beginTx()
+//      }
+//    }
+//
+//    val NODES = 10000
+//    val EDGES = 1000000
+//
+//    val nodes = (0 to NODES).map { x =>
+//      ping()
+//      db.createNode()
+//    }.toArray
 //
 //    val r = new Random()
 //
-//    graph.inTx {
-//      (0 to EDGES).foreach( _ => {
-//        val lhs = nodes(r.nextInt(NODES))
-//        val rhs = nodes(r.nextInt(NODES))
-//        relate(lhs, rhs)
-//      })
-//    }
+//    (0 to EDGES).foreach(_ => {
+//      val lhs = nodes(r.nextInt(NODES))
+//      val rhs = nodes(r.nextInt(NODES))
+//      ping()
+//      lhs.createRelationshipTo(rhs, RelationshipType.withName("apa"))
+//    })
+//
+//
+//    db.shutdown()
 
     println("running query")
-    val q = "cypher runtime=interpreted match (a)-->(b) return a, b"
-    val res = graph.execute(q)
-    res.accept(new ResultVisitor[RuntimeException] {
+    val q = "cypher runtime=interpreted optional match (a)-->(b)-->() return a, b"
+    val res = db.execute(q)
+    val visitor = new ResultVisitor[RuntimeException] {
       override def visit(row: Result.ResultRow): Boolean = {
-        println(s"${row.getNode("a")} ${row.getNode("b")}")
+        //        println(s"${row.getNode("a")} ${row.getNode("b")}")
         true
       }
-    })
+    }
+    res.accept(visitor)
 
-//    if (true) {
-//      val threads =
-//        0 to 10 map { _ =>
-//          val thread = new Thread(new Runnable {
-//            override def run(): Unit = {
-//              val result = graph.execute(q)
-//              result.accept(new ResultVisitor[RuntimeException] {
-//                override def visit(row: Result.ResultRow): Boolean = {
-//                  //                println(s"${row.getNode("a")} from thread ${Thread.currentThread().getName}")
-//                  true
-//                }
-//              })
-//            }
-//          })
-//          thread.start()
-//          thread
-//        }
-//      threads.foreach(_.join())
-//    }
+    val now = System.nanoTime()
+
+    if (true) {
+      val threads =
+        0 to 10 map { _ =>
+          val thread = new Thread(new Runnable {
+            override def run(): Unit = {
+              val result = db.execute(q)
+              result.accept(visitor)
+            }
+          })
+          thread.start()
+          thread
+        }
+      threads.foreach(_.join())
+    }
+
+    println(System.nanoTime() - now)
+    Dispatcher.instance.shutdown()
+    db.shutdown()
   }
 
   test("Do not count null elements in nodes without labels") {

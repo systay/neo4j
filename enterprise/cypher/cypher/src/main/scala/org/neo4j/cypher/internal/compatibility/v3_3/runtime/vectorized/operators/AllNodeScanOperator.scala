@@ -23,21 +23,22 @@ import org.neo4j.collection.primitive.PrimitiveLongIterator
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.vectorized._
 import org.neo4j.cypher.internal.spi.v3_3.QueryContext
 
-class AllNodeScanOperator(longsPerRow: Int, refsPerRow: Int, offset: Int) extends LeafOperator {
+class AllNodeScanOperator(longsPerRow: Int, refsPerRow: Int, offset: Int) extends Operator {
 
-  override def init(state: QueryState, context: QueryContext): Unit = {
-    state.operatorState(this) = context.nodeOps.allPrimitive
-  }
+  override def operate(message: Message,
+                       data: Morsel,
+                       context: QueryContext,
+                       state: QueryState): Continuation = {
+    var nodeIterator: PrimitiveLongIterator = null
+    var iterationState: Iteration = null
 
-  def operate(source: Continuation,
-              data: Morsel,
-              context: QueryContext,
-              state: QueryState): (ReturnType, Continuation) = {
-    val nodeIterator = source match {
-      case Init =>
-        context.nodeOps.allPrimitive
-      case ContinueWithSource(it) =>
-        it.asInstanceOf[PrimitiveLongIterator]
+    message match {
+      case InitIteration(is, _) =>
+        nodeIterator = context.nodeOps.allPrimitive
+        iterationState = is
+      case ContinueWith(ContinueWithSource(it, is)) =>
+        nodeIterator = it.asInstanceOf[PrimitiveLongIterator]
+        iterationState = is
     }
 
     val longs: Array[Long] = data.longs
@@ -50,12 +51,10 @@ class AllNodeScanOperator(longsPerRow: Int, refsPerRow: Int, offset: Int) extend
 
     data.validRows = processedRows
 
-    val next = if (nodeIterator.hasNext)
-      ContinueWithSource(nodeIterator)
+    if (nodeIterator.hasNext)
+      ContinueWithSource(nodeIterator, iterationState)
     else
-      Done
-
-
-    (MorselType, next)
+      EndOfIteration(iterationState)
   }
+
 }

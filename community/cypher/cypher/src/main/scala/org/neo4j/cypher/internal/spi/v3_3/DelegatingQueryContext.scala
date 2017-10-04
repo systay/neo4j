@@ -37,7 +37,7 @@ import org.neo4j.values.virtual.EdgeValue
 
 import scala.collection.Iterator
 
-class DelegatingQueryContext(val inner: QueryContext) extends QueryContext {
+abstract class DelegatingQueryContext(val inner: QueryContext) extends QueryContext {
 
   protected def singleDbHit[A](value: A): A = value
   protected def manyDbHits[A](value: Iterator[A]): Iterator[A] = value

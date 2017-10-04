@@ -17,24 +17,23 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.internal.compatibility.v3_3.runtime.vectorized
+package org.neo4j.cypher.internal.compatibility.v3_3.runtime.vectorized.dispatcher
+
+import java.util.concurrent.atomic.AtomicBoolean
 
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.PipelineInformation
-import org.neo4j.values.AnyValue
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.vectorized.{Pipeline, QueryState}
+import org.neo4j.cypher.internal.spi.v3_3.QueryContext
 
+case class Query(pipeline: Pipeline,
+                 context: QueryContext,
+                 queryState: QueryState,
+                 resultPipe: PipelineInformation) {
+  private val _alive = new AtomicBoolean(true)
 
-object Morsel {
-  def create(pipeline: PipelineInformation, rows: Int): Morsel = {
-    val longs = new Array[Long](rows * pipeline.numberOfLongs)
-    val objects = new Array[AnyValue](rows * pipeline.numberOfReferences)
+  def alive: Boolean = _alive.get()
 
-    new Morsel(longs, objects, rows)
+  def finished(): Unit = {
+    _alive.set(false)
   }
-}
-/*
-The lifetime of a Morsel instance is entirely controlled by the Dispatcher. No operator should create Morsels - they
- should only operate on Morsels provided to them
- */
-class Morsel(val longs: Array[Long], val refs: Array[AnyValue], var validRows: Int) {
-  override def toString = s"Morsel(validRows=$validRows)"
 }

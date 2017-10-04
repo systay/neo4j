@@ -1,7 +1,27 @@
+/*
+ * Copyright (c) 2002-2017 "Neo Technology,"
+ * Network Engine for Objects in Lund AB [http://neotechnology.com]
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.neo4j.cypher.internal.compatibility.v3_3.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.PipelineInformation
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.pipes.LazyTypes
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.slotted.helpers.NullChecker.nodeIsNull
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.vectorized._
 import org.neo4j.cypher.internal.frontend.v3_3.{InternalException, SemanticDirection}
 import org.neo4j.cypher.internal.spi.v3_3.QueryContext
@@ -14,12 +34,12 @@ class ExpandAllOperator(toPipeline: PipelineInformation,
                         relOffset: Int,
                         toOffset: Int,
                         dir: SemanticDirection,
-                        types: LazyTypes) extends LeafOperator {
+                        types: LazyTypes) extends Operator {
 
-  override def operate(source: Continuation,
+  override def operate( source: Message,
                        output: Morsel,
                        context: QueryContext,
-                       state: QueryState): (ReturnType, Continuation) = {
+                       state: QueryState): Continuation = {
 
     /*
     This might look wrong, but it's like this by design. This allows the loop to terminate early and still be
@@ -29,17 +49,21 @@ class ExpandAllOperator(toPipeline: PipelineInformation,
     var readPos = 0
     var writePos = 0
     var relationships: RelationshipIterator = null
-    var input:  Morsel = null
+    var input: Morsel = null
+    var iterationState: Iteration = null
 
     source match {
-      case InitWithData(data) =>
+      case InitIterationWithData(data, is) =>
         input = data
-      case ContinueWithData(data, index) =>
-        input = data
-        readPos = index
-      case ContinueWithDataAndSource(data, index, rels) =>
+        iterationState = is
+      case ContinueWith(ContinueWithData(data, index, is)) =>
         input = data
         readPos = index
+        iterationState = is
+      case ContinueWith(ContinueWithDataAndSource(data, index, rels, is)) =>
+        input = data
+        readPos = index
+        iterationState = is
         relationships = rels.asInstanceOf[RelationshipIterator]
     }
 
@@ -48,7 +72,7 @@ class ExpandAllOperator(toPipeline: PipelineInformation,
       val inputLongRow = readPos * fromPipeline.numberOfLongs
       val fromNode = input.longs(inputLongRow + fromOffset)
 
-      if (fromNode == -1) // If the input node is null, no need to expand
+      if (nodeIsNull(fromNode))
         readPos += 1
       else {
         if (relationships == null) {
@@ -86,15 +110,13 @@ class ExpandAllOperator(toPipeline: PipelineInformation,
 
     val next = if (readPos < input.validRows || relationships != null) {
       if(relationships == null)
-        ContinueWithData(input, readPos)
+        ContinueWithData(input, readPos, iterationState)
       else
-        ContinueWithDataAndSource(input, readPos, relationships)
+        ContinueWithDataAndSource(input, readPos, relationships, iterationState)
     } else
-      Done
+      EndOfIteration(iterationState)
 
     output.validRows = writePos
-    (MorselType, next)
+    next
   }
-
-  override def init(state: QueryState, context: QueryContext): Unit = {}
 }

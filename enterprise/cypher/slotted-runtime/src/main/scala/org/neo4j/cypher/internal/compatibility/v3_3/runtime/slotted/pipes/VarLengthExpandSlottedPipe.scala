@@ -32,7 +32,7 @@ import org.neo4j.kernel.impl.api.store.RelationshipIterator
 
 import scala.collection.mutable
 
-case class VarLengthExpandSlottedPipe(source: Pipe,
+case class        VarLengthExpandSlottedPipe(source: Pipe,
                                       fromOffset: Int,
                                       relOffset: Int,
                                       toOffset: Int,

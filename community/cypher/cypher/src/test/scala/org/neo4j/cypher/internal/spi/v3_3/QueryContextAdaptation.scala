@@ -35,6 +35,8 @@ import org.neo4j.values.virtual.{EdgeValue, NodeValue}
 trait QueryContextAdaptation {
   self: QueryContext =>
 
+  override def createNewQueryContext(): QueryContext = ???
+
   override type EntityAccessor = this.type
 
   override def indexScanByContains(index: IndexDescriptor, value: String): scala.Iterator[Node] = ???

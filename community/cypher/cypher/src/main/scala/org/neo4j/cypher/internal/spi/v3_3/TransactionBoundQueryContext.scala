@@ -20,7 +20,7 @@
 package org.neo4j.cypher.internal.spi.v3_3
 
 import java.net.URL
-import java.util.function.Predicate
+import java.util.function.{Predicate, Supplier}
 
 import org.neo4j.collection.RawIterator
 import org.neo4j.collection.primitive.PrimitiveLongIterator
@@ -56,10 +56,13 @@ import org.neo4j.kernel.api.proc.CallableUserAggregationFunction.Aggregator
 import org.neo4j.kernel.api.proc.{QualifiedName => KernelQualifiedName}
 import org.neo4j.kernel.api.schema.constaints.ConstraintDescriptorFactory
 import org.neo4j.kernel.api.schema.{IndexQuery, SchemaDescriptorFactory}
+import org.neo4j.kernel.guard.TerminationGuard
 import org.neo4j.kernel.impl.api.RelationshipVisitor
 import org.neo4j.kernel.impl.api.store.RelationshipIterator
-import org.neo4j.kernel.impl.core.{NodeManager, RelationshipProxy}
+import org.neo4j.kernel.impl.core.{NodeManager, RelationshipProxy, ThreadToStatementContextBridge}
+import org.neo4j.kernel.impl.coreapi.PropertyContainerLocker
 import org.neo4j.kernel.impl.locking.ResourceTypes
+import org.neo4j.kernel.impl.query.Neo4jTransactionalContext
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.{Value, Values}
 import org.neo4j.values.virtual.EdgeValue
@@ -78,6 +81,23 @@ final class TransactionBoundQueryContext(val transactionalContext: Transactional
     transactionalContext.graph.getDependencyResolver.resolveDependency(classOf[NodeManager])
   override def setLabelsOnNode(node: Long, labelIds: Iterator[Int]): Int = labelIds.foldLeft(0) {
     case (count, labelId) => if (transactionalContext.statement.dataWriteOperations().nodeAddLabel(node, labelId)) count + 1 else count
+  }
+
+  def createNewQueryContext(): QueryContext = {
+    val statementProvider : ThreadToStatementContextBridge = transactionalContext.
+      graph.
+      getDependencyResolver.
+      provideDependency(classOf[ThreadToStatementContextBridge]).
+      get
+    transactionalContext.tc.asInstanceOf[Neo4jTransactionalContext]
+    val guard = new TerminationGuard
+    val locker = new PropertyContainerLocker
+    val query = transactionalContext.tc.executingQuery()
+
+    val context = transactionalContext.tc.asInstanceOf[Neo4jTransactionalContext]
+    val newTx = transactionalContext.graph.beginTransaction(context.transactionType, context.securityContext)
+    val neo4jTransactionalContext = new Neo4jTransactionalContext(context.graph, statementProvider, guard, statementProvider, locker, newTx, statementProvider.get(), query)
+    new TransactionBoundQueryContext(TransactionalContextWrapper(neo4jTransactionalContext))
   }
 
   override def withAnyOpenQueryContext[T](work: (QueryContext) => T): T = {

@@ -17,24 +17,8 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.internal.compatibility.v3_3.runtime.vectorized
+package org.neo4j.cypher.internal.compatibility.v3_3.runtime.vectorized.dispatcher
 
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.PipelineInformation
-import org.neo4j.values.AnyValue
+import org.neo4j.cypher.internal.compatibility.v3_3.runtime.vectorized.{Message, Morsel, Pipeline}
 
-
-object Morsel {
-  def create(pipeline: PipelineInformation, rows: Int): Morsel = {
-    val longs = new Array[Long](rows * pipeline.numberOfLongs)
-    val objects = new Array[AnyValue](rows * pipeline.numberOfReferences)
-
-    new Morsel(longs, objects, rows)
-  }
-}
-/*
-The lifetime of a Morsel instance is entirely controlled by the Dispatcher. No operator should create Morsels - they
- should only operate on Morsels provided to them
- */
-class Morsel(val longs: Array[Long], val refs: Array[AnyValue], var validRows: Int) {
-  override def toString = s"Morsel(validRows=$validRows)"
-}
+case class Task(pipeline: Pipeline, query: Query, message: Message, morsel: Morsel)

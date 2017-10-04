@@ -21,89 +21,89 @@ package org.neo4j.cypher.internal.compatibility.v3_3.runtime.vectorized
 
 import org.neo4j.cypher.internal.compatibility.v3_3.runtime.PipelineInformation
 import org.neo4j.cypher.internal.spi.v3_3.QueryContext
+import org.neo4j.graphdb.Result
 import org.neo4j.values.virtual.MapValue
 
-import scala.collection.mutable
-
-trait Initiable {
-  def init(state: QueryState, context: QueryContext): Unit
-}
-
-trait Operator extends Initiable {
-  def operate(data: Morsel, context: QueryContext, state: QueryState): ReturnType
-}
-
-trait LeafOperator extends Initiable {
-  def operate(source: Continuation,
-              output: Morsel,
+trait Operator {
+  def operate(message: Message,
+              data: Morsel,
               context: QueryContext,
-              state: QueryState): (ReturnType, Continuation)
+              state: QueryState): Continuation
 }
 
-/*
-A continuation is an abstract representation of program state. It allows us to pause the iteration of something and
-schedule the continuation of this iteration for a later point in time.
- */
-sealed trait Continuation
-case object Init extends Continuation
-case class InitWithData(data: Morsel) extends Continuation
-case class ContinueWithData(data: Morsel, index: Int) extends Continuation
-case class ContinueWithDataAndSource[T](data: Morsel, index: Int, source: T) extends Continuation
-case class ContinueWithSource[T](source: T) extends Continuation
-case object Done extends Continuation
+trait MiddleOperator {
+  def operate(iterationState: Iteration,
+              data: Morsel,
+              context: QueryContext,
+              state: QueryState): Unit
+}
 
 /*
 The return type allows an operator to signal if the a morsel it has operated on contains interesting information or not
  */
 sealed trait ReturnType
+
 object MorselType extends ReturnType
+
 object UnitType extends ReturnType
 
-class QueryState(val operatorState: mutable.Map[Initiable, AnyRef] = mutable.Map[Initiable, AnyRef](),
-                 val params: MapValue)
+sealed trait Dependency {
+  def foreach(f: Pipeline => Unit): Unit
 
-case class Pipeline(startOperator: LeafOperator,
-                    operators: Seq[Operator],
+  def pipeline: Pipeline
+}
+
+case class MorselByMorsel(pipeline: Pipeline) extends Dependency {
+  override def foreach(f: Pipeline => Unit): Unit = f(pipeline)
+}
+
+case class Eager(pipeline: Pipeline) extends Dependency {
+  override def foreach(f: Pipeline => Unit): Unit = {}
+}
+
+case object NoDependencies extends Dependency {
+  override def foreach(f: Pipeline => Unit): Unit = {}
+
+  override def pipeline = throw new IllegalArgumentException("No dependencies here!")
+}
+
+case class QueryState(params: MapValue, visitor: Result.ResultVisitor[_])
+
+case class Pipeline(start: Operator,
+                    operators: Seq[MiddleOperator],
                     slotInformation: PipelineInformation,
-                    dependencies: Set[Pipeline])
+                    dependency: Dependency)
                    (var parent: Option[Pipeline] = None) {
 
   def endPipeline: Boolean = parent.isEmpty
 
-  def addOperator(operator: Operator): Pipeline = copy(operators = operators :+ operator)(parent)
+  def addOperator(operator: MiddleOperator): Pipeline = copy(operators = operators :+ operator)(parent)
 
-  def init(queryState: QueryState, queryContext: QueryContext): Unit = {
-    startOperator.init(queryState, queryContext)
-    operators.foreach(_.init(queryState, queryContext))
-  }
+  def operate(message: Message, data: Morsel, context: QueryContext, state: QueryState): Continuation = {
+    val next = start.operate(message, data, context, state)
 
-  def operate(continue: Continuation, data: Morsel, context: QueryContext, state: QueryState): (ReturnType, Continuation) = {
-
-    val (ret, next) = startOperator.operate(continue, data, context, state)
-
-    val returnType = operators.foldLeft(ret) {
-      case (r, op) =>
-        op.operate(data, context, state)
+    operators.foreach { op =>
+      op.operate(next.iterationState, data, context, state)
     }
 
-    (returnType, next)
+    next
   }
 
   /*
   Walks the tree, setting parent information everywhere so we can push up the tree
    */
   def construct: Pipeline = {
-    dependencies.foreach(_.noIamYourFather(this))
+    dependency.foreach(_.noIamYourFather(this))
     this
   }
 
   protected def noIamYourFather(daddy: Pipeline): Unit = {
-    dependencies.foreach(_.noIamYourFather(this))
+    dependency.foreach(_.noIamYourFather(this))
     parent = Some(daddy)
   }
 
-  override def toString = {
-    val x = (startOperator +: operators).map(x => x.getClass.getSimpleName)
+  override def toString: String = {
+    val x = (start +: operators).map(x => x.getClass.getSimpleName)
     s"Pipeline(${x.mkString(",")})"
   }
 }

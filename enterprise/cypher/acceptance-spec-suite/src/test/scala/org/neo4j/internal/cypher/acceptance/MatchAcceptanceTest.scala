@@ -71,33 +71,33 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     println("running query")
     val q = "cypher runtime=interpreted match (a)-->(b) return a, b"
-//    val res = graph.execute(q)
-//    res.accept(new ResultVisitor[RuntimeException] {
-//      override def visit(row: Result.ResultRow): Boolean = {
-//        println(s"${row.getNode("a")} ${row.getNode("b")} from thread ${Thread.currentThread().getName}")
-//        true
-//      }
-//    })
+    val res = graph.execute(q)
+    res.accept(new ResultVisitor[RuntimeException] {
+      override def visit(row: Result.ResultRow): Boolean = {
+        println(s"${row.getNode("a")} ${row.getNode("b")}")
+        true
+      }
+    })
 
-    if (true) {
-      val threads =
-        0 to 10 map { _ =>
-          val thread = new Thread(new Runnable {
-            override def run(): Unit = {
-              val result = graph.execute(q)
-              result.accept(new ResultVisitor[RuntimeException] {
-                override def visit(row: Result.ResultRow): Boolean = {
-                  //                println(s"${row.getNode("a")} from thread ${Thread.currentThread().getName}")
-                  true
-                }
-              })
-            }
-          })
-          thread.start()
-          thread
-        }
-      threads.foreach(_.join())
-    }
+//    if (true) {
+//      val threads =
+//        0 to 10 map { _ =>
+//          val thread = new Thread(new Runnable {
+//            override def run(): Unit = {
+//              val result = graph.execute(q)
+//              result.accept(new ResultVisitor[RuntimeException] {
+//                override def visit(row: Result.ResultRow): Boolean = {
+//                  //                println(s"${row.getNode("a")} from thread ${Thread.currentThread().getName}")
+//                  true
+//                }
+//              })
+//            }
+//          })
+//          thread.start()
+//          thread
+//        }
+//      threads.foreach(_.join())
+//    }
   }
 
   test("Do not count null elements in nodes without labels") {

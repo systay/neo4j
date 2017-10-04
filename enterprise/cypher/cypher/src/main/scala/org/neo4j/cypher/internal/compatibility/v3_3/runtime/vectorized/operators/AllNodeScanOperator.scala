@@ -50,12 +50,11 @@ class AllNodeScanOperator(longsPerRow: Int, refsPerRow: Int, offset: Int) extend
 
     data.validRows = processedRows
 
-    val next = if(nodeIterator.hasNext)
+    val next = if (nodeIterator.hasNext)
       ContinueWithSource(nodeIterator)
-    else {
-      data.lastOne = true
+    else
       Done
-    }
+
 
     (MorselType, next)
   }

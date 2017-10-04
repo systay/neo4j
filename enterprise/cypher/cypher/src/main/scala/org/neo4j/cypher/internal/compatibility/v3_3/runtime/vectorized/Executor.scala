@@ -19,60 +19,63 @@
  */
 package org.neo4j.cypher.internal.compatibility.v3_3.runtime.vectorized
 
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.PipelineInformation
+import org.neo4j.cypher.internal.frontend.v3_3.InternalException
 import org.neo4j.cypher.internal.spi.v3_3.QueryContext
-import org.neo4j.cypher.internal.v3_3.logical.plans.{LogicalPlan, LogicalPlanId, TreeBuilder}
 import org.neo4j.graphdb.Result
 import org.neo4j.values.virtual.MapValue
-
 import scala.collection.mutable
 
 class Executor(lane: Pipeline,
-               pipelineInformation: Map[LogicalPlanId, PipelineInformation],
                queryContext: QueryContext,
                params: MapValue) {
-  def accept[E <: Exception](visitor: Result.ResultVisitor[E]): Unit = ???
-//  {
-//    val queryState = new QueryState(params = params)
-//    lane.init(queryState, queryContext)
-//
-//    val morsel = Morsel.create(lane.slotInformation, 654)
-//    val resultRow = new MorselResultRow(null, 0, lane.slotInformation, queryContext)
-//
-//    while(morsel.moreDataToCome) {
-//      val (data, continuation) = lane.operate(morsel, queryContext, queryState, None)
-//
-//      resultRow.morsel = data
-//
-//      (0 until data.rows) foreach { position =>
-//        resultRow.currentPos = position
-//        visitor.visit(resultRow)
-//      }
-//    }
-//  }
 
-  /*
-  Returns a map that can be used to look up parents of plans
-   */
-  private def parents(logicalPlan: LogicalPlan): Map[LogicalPlanId, LogicalPlanId] = {
-    val mapBuilder = new mutable.HashMap[LogicalPlanId, LogicalPlanId]()
+  private val MORSEL_SIZE = 10
 
-    def add(parent: LogicalPlan): Unit = {
-      parent.lhs.foreach(x => mapBuilder.put(x.assignedId, parent.assignedId))
-      parent.rhs.foreach(x => mapBuilder.put(x.assignedId, parent.assignedId))
+  def accept[E <: Exception](visitor: Result.ResultVisitor[E]): Unit = {
+    val state = new QueryState(params = params)
+    val query = Query(lane, visitor, queryContext, state, lane.slotInformation, Thread.currentThread().getId.toString)
+
+    val workQueue = new mutable.Queue[Task]()
+    val pipelines = new mutable.Stack[Pipeline]
+    pipelines.push(lane)
+
+
+    // Queue up all leafs that we can start on
+    while (pipelines.nonEmpty) {
+      val current = pipelines.pop()
+      if (current.dependencies.nonEmpty)
+        current.dependencies.foreach(pipelines.push)
+      else
+        workQueue.enqueue(new Task(current, query, Init))
     }
 
-    val builder = new TreeBuilder[Unit] {
-      override protected def build(plan: LogicalPlan): Unit = add(plan)
+    // Now execute tasks until we are done
+    while(workQueue.nonEmpty) {
+      val task = workQueue.dequeue()
+      val context = task.query.context
+      val state = task.query.state
+      val morsel = Morsel.create(task.pipeline.slotInformation, MORSEL_SIZE)
+      val (returnType, continue) = task.pipeline.operate(task.continue, morsel, context, state)
 
-      override protected def build(plan: LogicalPlan, source: Unit): Unit = add(plan)
+      (task.pipeline.parent, returnType) match {
+        case (None, MorselType) =>
+          val resultRow = new MorselResultRow(morsel, 0, task.query.resultPipe, context)
+          (0 until morsel.validRows) foreach { position =>
+            resultRow.currentPos = position
+            task.query.visitor.visit(resultRow)
+          }
+        case (None, UnitType) =>
+        // Empty on purpose
 
-      override protected def build(plan: LogicalPlan, lhs: Unit, rhs: Unit): Unit = add(plan)
+        case (Some(parent), MorselType) =>
+          val nextTask = new Task(parent, task.query, InitWithData(morsel))
+          workQueue.enqueue(nextTask)
+
+        case (Some(_), UnitType) =>
+          throw new InternalException("something went wrong dispatching work for this query")
+      }
+
+      task.continueWith(continue).foreach(workQueue.enqueue(_))
     }
-
-    builder.create(logicalPlan)
-
-    mapBuilder.toMap
-
   }
 }

@@ -51,11 +51,9 @@ class ExpandAllOperator(toPipeline: PipelineInformation,
       if (fromNode == -1) // If the input node is null, no need to expand
         readPos += 1
       else {
-        relationships = if (relationships == null) {
-          context.getRelationshipsForIdsPrimitive(fromNode, dir, types.types(context))
+        if (relationships == null) {
+          relationships = context.getRelationshipsForIdsPrimitive(fromNode, dir, types.types(context))
         }
-        else
-          relationships
 
         var otherSide: Long = 0
         val relVisitor = new RelationshipVisitor[InternalException] {

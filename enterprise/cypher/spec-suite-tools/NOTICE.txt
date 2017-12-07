@@ -34,6 +34,8 @@ Apache Software License, Version 2.0
   casbah-core
   casbah-query
   Cucumber-JVM Repackaged Dependencies
+  FindBugs-jsr305
+  Guava: Google Core Libraries for Java
   Joda convert
   Joda-Time
   json4s-ast
@@ -58,6 +60,7 @@ BSD - Scala License
 BSD License
   ANTLR 4 Tool
   Cucumber-JVM Repackaged Dependencies
+  JLine
   ParaNamer Core
   Scala Compiler
   scala-parser-combinators
@@ -78,7 +81,11 @@ MIT License
   Cucumber-JVM: JUnit
   Cucumber-JVM: Scala (2.11)
   Gherkin
+  scallop
   SLF4J API Module
+
+Mozilla Public License, Version 2.0
+  kiama
 
 Dependencies with multiple licenses
 -----------------------------------

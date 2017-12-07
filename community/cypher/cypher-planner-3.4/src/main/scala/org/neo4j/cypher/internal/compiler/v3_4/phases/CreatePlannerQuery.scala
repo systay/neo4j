@@ -24,7 +24,7 @@ import org.neo4j.cypher.internal.compiler.v3_4.ast.convert.plannerQuery.Statemen
 import org.neo4j.cypher.internal.frontend.v3_4.ast.Query
 import org.neo4j.cypher.internal.frontend.v3_4.phases.CompilationPhaseTracer.CompilationPhase.LOGICAL_PLANNING
 import org.neo4j.cypher.internal.frontend.v3_4.phases.{BaseContext, BaseState, Phase}
-import org.neo4j.cypher.internal.ir.v3_4.UnionQuery
+import org.neo4j.cypher.internal.ir.v3_4.{IRPrettyPrinter, UnionQuery}
 
 object CreatePlannerQuery extends Phase[BaseContext, BaseState, LogicalPlanState] {
   override def phase = LOGICAL_PLANNING
@@ -36,6 +36,10 @@ object CreatePlannerQuery extends Phase[BaseContext, BaseState, LogicalPlanState
   override def process(from: BaseState, context: BaseContext): LogicalPlanState = from.statement() match {
     case query: Query =>
       val unionQuery: UnionQuery = toUnionQuery(query, from.semanticTable())
+      val str = IRPrettyPrinter.pretty(IRPrettyPrinter.show(unionQuery))
+      println("*"*80)
+      println(from.queryText)
+      println(str)
       LogicalPlanState(from).copy(maybeUnionQuery = Some(unionQuery))
 
     case x => throw new InternalException(s"Expected a Query and not `$x`")

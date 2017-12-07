@@ -16,7 +16,9 @@ Apache Software License, Version 2.0
   disposables.js
   dom-storage.js
   ecdsa-sig-formatter.js
+  FindBugs-jsr305
   firebase.js
+  Guava: Google Core Libraries for Java
   Jackson
   JAX-RS provider for JSON content type
   Jetty :: Http Utility
@@ -1297,6 +1299,7 @@ MIT License
   restore-cursor.js
   safe-buffer.js
   save-as.js
+  scallop
   setimmediate.js
   shebang-command.js
   shebang-regex.js
@@ -1351,6 +1354,7 @@ THE SOFTWARE.
 
 ------------------------------------------------------------------------------
 Mozilla Public License, Version 2.0
+  kiama
   Mozilla Rhino
 ------------------------------------------------------------------------------
 

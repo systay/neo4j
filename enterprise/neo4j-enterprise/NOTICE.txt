@@ -42,7 +42,9 @@ Apache Software License, Version 2.0
   Caffeine cache
   ConcurrentLinkedHashMap
   Data Mapper for Jackson
+  FindBugs-jsr305
   Graphite Integration for Metrics
+  Guava: Google Core Libraries for Java
   hazelcast-all
   Jackson
   Lucene codecs
@@ -65,6 +67,7 @@ BSD License
   ASM Core
   ASM Tree
   ASM Util
+  JLine
   Scala Compiler
 
 Bouncy Castle License
@@ -72,6 +75,10 @@ Bouncy Castle License
   Bouncy Castle Provider
 
 MIT License
+  scallop
   SLF4J API Module
   SLF4J NOP Binding
+
+Mozilla Public License, Version 2.0
+  kiama
 

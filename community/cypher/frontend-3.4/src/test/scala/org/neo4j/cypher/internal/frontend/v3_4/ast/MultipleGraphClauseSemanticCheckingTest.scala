@@ -23,6 +23,7 @@ import org.neo4j.cypher.internal.frontend.v3_4.parser.ParserTest
 import org.neo4j.cypher.internal.frontend.v3_4.phases._
 import org.neo4j.cypher.internal.frontend.v3_4.semantics._
 import org.neo4j.cypher.internal.frontend.v3_4.{PlannerName, ast, parser}
+import org.neo4j.cypher.internal.util.v3_4.attribution.{Attributes, IdGen}
 import org.parboiled.scala.Rule1
 
 class MultipleGraphClauseSemanticCheckingTest
@@ -1253,6 +1254,12 @@ class MultipleGraphClauseSemanticCheckingTest
     override def withSemanticState(s: SemanticState) = ???
 
     override def withParams(p: Map[String, Any]) = ???
+
+    override def maybeAttributes: Option[Attributes] = ???
+
+    override def idGen: IdGen = ???
+
+    override def withAttributes(attributes: Attributes): BaseState = ???
   }
 
   //noinspection TypeAnnotation

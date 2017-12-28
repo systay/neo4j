@@ -17,10 +17,13 @@
 package org.neo4j.cypher.internal.util.v3_4
 
 import org.neo4j.cypher.internal.util.v3_4.Rewritable._
+import org.neo4j.cypher.internal.util.v3_4.attribution.SequentialIdGen
 
 trait ASTNode extends Product with Foldable with Rewritable {
 
   self =>
+
+  val secretId = ASTNode.idGen.id()
 
   def position: InputPosition
 
@@ -39,4 +42,8 @@ trait ASTNode extends Product with Foldable with Rewritable {
     }
 
   def asCanonicalStringVal: String = toString
+}
+
+object ASTNode {
+  val idGen = new SequentialIdGen
 }

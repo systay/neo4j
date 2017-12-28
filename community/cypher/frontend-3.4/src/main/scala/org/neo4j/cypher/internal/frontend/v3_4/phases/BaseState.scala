@@ -16,10 +16,11 @@
  */
 package org.neo4j.cypher.internal.frontend.v3_4.phases
 
-import org.neo4j.cypher.internal.util.v3_4.{InputPosition, InternalException}
-import org.neo4j.cypher.internal.frontend.v3_4.ast.{Query, Statement}
 import org.neo4j.cypher.internal.frontend.v3_4._
+import org.neo4j.cypher.internal.frontend.v3_4.ast.{Query, Statement}
 import org.neo4j.cypher.internal.frontend.v3_4.semantics.{SemanticState, SemanticTable}
+import org.neo4j.cypher.internal.util.v3_4.attribution.{Attributes, IdGen, SequentialIdGen}
+import org.neo4j.cypher.internal.util.v3_4.{InputPosition, InternalException}
 
 trait BaseState {
   def queryText: String
@@ -30,6 +31,9 @@ trait BaseState {
   def maybeExtractedParams: Option[Map[String, Any]]
   def maybeSemanticTable: Option[SemanticTable]
 
+  def maybeAttributes: Option[Attributes]
+
+  def idGen: IdGen
   def accumulatedConditions: Set[Condition]
 
   def isPeriodicCommit: Boolean = statement() match {
@@ -42,6 +46,8 @@ trait BaseState {
   def extractedParams(): Map[String, Any] = maybeExtractedParams getOrElse fail("Extracted parameters")
   def semanticTable(): SemanticTable = maybeSemanticTable getOrElse fail("Semantic table")
 
+  def attributes(): Attributes = maybeAttributes getOrElse fail("Attributes")
+
   protected def fail(what: String) = {
     throw new InternalException(s"$what not yet initialised")
   }
@@ -50,6 +56,7 @@ trait BaseState {
   def withSemanticTable(s: SemanticTable): BaseState
   def withSemanticState(s: SemanticState): BaseState
   def withParams(p: Map[String, Any]): BaseState
+  def withAttributes(attributes: Attributes): BaseState
 }
 
 case class BaseStateImpl(queryText: String,
@@ -59,8 +66,12 @@ case class BaseStateImpl(queryText: String,
                          maybeSemantics: Option[SemanticState] = None,
                          maybeExtractedParams: Option[Map[String, Any]] = None,
                          maybeSemanticTable: Option[SemanticTable] = None,
-                         accumulatedConditions: Set[Condition] = Set.empty) extends BaseState {
+                         accumulatedConditions: Set[Condition] = Set.empty,
+                         idGen: IdGen = new SequentialIdGen,
+                         maybeAttributes: Option[Attributes]) extends BaseState {
   override def withStatement(s: Statement): BaseState = copy(maybeStatement = Some(s))
+
+  override def withAttributes(attributes: Attributes): BaseState = copy(maybeAttributes = Some(attributes))
 
   override def withSemanticTable(s: SemanticTable): BaseState = copy(maybeSemanticTable = Some(s))
 

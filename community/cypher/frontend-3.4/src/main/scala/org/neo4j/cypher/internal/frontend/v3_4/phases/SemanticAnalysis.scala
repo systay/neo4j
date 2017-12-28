@@ -16,10 +16,13 @@
  */
 package org.neo4j.cypher.internal.frontend.v3_4.phases
 
-import org.neo4j.cypher.internal.frontend.v3_4.ast.UnaliasedReturnItem
+import org.neo4j.cypher.internal.frontend.v3_4.ast._
 import org.neo4j.cypher.internal.frontend.v3_4.ast.conditions.{StatementCondition, containsNoNodesOfType}
 import org.neo4j.cypher.internal.frontend.v3_4.phases.CompilationPhaseTracer.CompilationPhase.SEMANTIC_CHECK
+import org.neo4j.cypher.internal.frontend.v3_4.phases.semantics.Scoping
 import org.neo4j.cypher.internal.frontend.v3_4.semantics.{SemanticCheckResult, SemanticChecker, SemanticFeature, SemanticState}
+import org.neo4j.cypher.internal.util.v3_4.ASTNode
+import org.neo4j.cypher.internal.util.v3_4.attribution.Attributes
 
 case class SemanticAnalysis(warn: Boolean, features: SemanticFeature*)
   extends Phase[BaseContext, BaseState, BaseState] {
@@ -28,9 +31,13 @@ case class SemanticAnalysis(warn: Boolean, features: SemanticFeature*)
     val SemanticCheckResult(state, errors) = SemanticChecker.check(from.statement(), features: _*)
     if (warn) state.notifications.foreach(context.notificationLogger.log)
 
+    val (readScope, writeScope) = Scoping.doIt(from.statement())
+
+    val attributes = new Attributes(ASTNode.idGen, readScope, writeScope)
+
     context.errorHandler(errors)
 
-    from.withSemanticState(state)
+    from.withSemanticState(state).withAttributes(attributes)
   }
 
   override def phase: CompilationPhaseTracer.CompilationPhase = SEMANTIC_CHECK

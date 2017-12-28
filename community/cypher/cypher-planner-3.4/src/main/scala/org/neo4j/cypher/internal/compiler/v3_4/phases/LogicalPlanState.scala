@@ -19,12 +19,13 @@
  */
 package org.neo4j.cypher.internal.compiler.v3_4.phases
 
-import org.neo4j.cypher.internal.util.v3_4.InputPosition
 import org.neo4j.cypher.internal.frontend.v3_4.PlannerName
 import org.neo4j.cypher.internal.frontend.v3_4.ast.{Query, Statement}
 import org.neo4j.cypher.internal.frontend.v3_4.phases.{BaseState, Condition}
 import org.neo4j.cypher.internal.frontend.v3_4.semantics.{SemanticState, SemanticTable}
 import org.neo4j.cypher.internal.ir.v3_4.{PeriodicCommit, UnionQuery}
+import org.neo4j.cypher.internal.util.v3_4.InputPosition
+import org.neo4j.cypher.internal.util.v3_4.attribution.{Attributes, IdGen, SequentialIdGen}
 import org.neo4j.cypher.internal.v3_4.logical.plans.LogicalPlan
 
 /*
@@ -44,7 +45,9 @@ case class LogicalPlanState(queryText: String,
                             maybeUnionQuery: Option[UnionQuery] = None,
                             maybeLogicalPlan: Option[LogicalPlan] = None,
                             maybePeriodicCommit: Option[Option[PeriodicCommit]] = None,
-                            accumulatedConditions: Set[Condition] = Set.empty) extends BaseState {
+                            accumulatedConditions: Set[Condition] = Set.empty,
+                            idGen: IdGen = new SequentialIdGen,
+                            maybeAttributes: Option[Attributes] = None) extends BaseState {
 
   def unionQuery: UnionQuery = maybeUnionQuery getOrElse fail("Union query")
   def logicalPlan: LogicalPlan = maybeLogicalPlan getOrElse fail("Logical plan")
@@ -55,8 +58,10 @@ case class LogicalPlanState(queryText: String,
   override def withSemanticTable(s: SemanticTable): LogicalPlanState = copy(maybeSemanticTable = Some(s))
   override def withSemanticState(s: SemanticState): LogicalPlanState = copy(maybeSemantics = Some(s))
   override def withParams(p: Map[String, Any]): LogicalPlanState = copy(maybeExtractedParams = Some(p))
+  override def withAttributes(attributes: Attributes): BaseState = copy(maybeAttributes = Some(attributes))
 
   def withMaybeLogicalPlan(p: Option[LogicalPlan]): LogicalPlanState = copy(maybeLogicalPlan = p)
+
 }
 
 object LogicalPlanState {
@@ -68,7 +73,9 @@ object LogicalPlanState {
                      maybeSemantics = state.maybeSemantics,
                      maybeExtractedParams = state.maybeExtractedParams,
                      maybeSemanticTable = state.maybeSemanticTable,
-                     accumulatedConditions = state.accumulatedConditions)
+                     accumulatedConditions = state.accumulatedConditions,
+                     maybeAttributes = state.maybeAttributes,
+                     idGen = state.idGen)
 }
 
 

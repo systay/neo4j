@@ -60,6 +60,58 @@ object Foldable {
     def fold[R](init: R)(f: PartialFunction[Any, R => R]): R =
       foldAcc(mutable.ArrayStack(that), init, f.lift)
 
+
+    def lessFunctionalFold[R](init: R)(f: PartialFunction[(Any, R), R]): R = {
+     val f2: PartialFunction[Any, R => R] = {
+        case (v) => (r: R) => if (f.isDefinedAt((v, r))) f((v, r)) else r
+      }
+      fold(init)(f2)
+    }
+
+    def treeFold2[R](init: R)(f: PartialFunction[(Any, R), R]): R = {
+      val leftToVisit = mutable.ArrayStack[(Any, R)]((that, init))
+      var r: R = init
+      while (leftToVisit.nonEmpty) {
+        val current = leftToVisit.pop()
+
+        r = if(f.isDefinedAt(current)) {
+          f(current)
+        } else
+          current._2
+
+        val kids: Iterator[AnyRef] = current._1.reverseChildren
+        while(kids.hasNext) {
+          leftToVisit.push((kids.next(), r))
+        }
+      }
+
+      r
+    }
+
+    def treeFold3[R](init: R)(f: PartialFunction[(Any, R), Seq[(Any, R)]]): Unit = {
+      val leftToVisit = mutable.ArrayStack[(Any, R)]((that, init))
+      while (leftToVisit.nonEmpty) {
+        val current = leftToVisit.pop()
+
+        if(f.isDefinedAt(current)) {
+          // There is a defined way of handling this element and it's children
+          val kids: Iterator[(Any, R)] = f(current).reverseIterator
+          while(kids.hasNext) {
+            val tuple = kids.next()
+            leftToVisit.push(tuple)
+          }
+        } else {
+          // Fall back to the default, which means using the default children and just passing the state along
+          val kids: Iterator[AnyRef] = current._1.reverseChildren
+          val currentState = current._2
+          while(kids.hasNext) {
+            leftToVisit.push((kids.next(), currentState))
+          }
+        }
+      }
+    }
+
+
     /**
      * Fold of a tree structure
      *

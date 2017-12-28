@@ -88,15 +88,15 @@ object Foldable {
       r
     }
 
-    def treeFold3[R](init: R)(f: PartialFunction[(Any, R), Seq[(Any, R)]]): Unit = {
+    def treeAccumulateTopDown[R](init: R)(f: PartialFunction[(Any, R), Seq[(Any, R)]]): Unit = {
       val leftToVisit = mutable.ArrayStack[(Any, R)]((that, init))
       while (leftToVisit.nonEmpty) {
         val current = leftToVisit.pop()
 
-        if(f.isDefinedAt(current)) {
+        if (f.isDefinedAt(current)) {
           // There is a defined way of handling this element and it's children
           val kids: Iterator[(Any, R)] = f(current).reverseIterator
-          while(kids.hasNext) {
+          while (kids.hasNext) {
             val tuple = kids.next()
             leftToVisit.push(tuple)
           }
@@ -104,9 +104,23 @@ object Foldable {
           // Fall back to the default, which means using the default children and just passing the state along
           val kids: Iterator[AnyRef] = current._1.reverseChildren
           val currentState = current._2
-          while(kids.hasNext) {
+          while (kids.hasNext) {
             leftToVisit.push((kids.next(), currentState))
           }
+        }
+      }
+    }
+
+    def treeVisitTopDown(f: PartialFunction[Any, Unit]): Unit = {
+      val leftToVisit = mutable.ArrayStack[Any](that)
+      while (leftToVisit.nonEmpty) {
+        val current = leftToVisit.pop()
+        if (f.isDefinedAt(current)) {
+          f(current)
+        }
+        val kids: Iterator[AnyRef] = current.reverseChildren
+        while (kids.hasNext) {
+          leftToVisit.push(kids.next())
         }
       }
     }

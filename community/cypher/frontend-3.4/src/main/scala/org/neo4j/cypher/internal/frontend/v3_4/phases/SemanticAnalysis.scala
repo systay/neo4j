@@ -19,7 +19,7 @@ package org.neo4j.cypher.internal.frontend.v3_4.phases
 import org.neo4j.cypher.internal.frontend.v3_4.ast._
 import org.neo4j.cypher.internal.frontend.v3_4.ast.conditions.{StatementCondition, containsNoNodesOfType}
 import org.neo4j.cypher.internal.frontend.v3_4.phases.CompilationPhaseTracer.CompilationPhase.SEMANTIC_CHECK
-import org.neo4j.cypher.internal.frontend.v3_4.phases.semantics.Scoping
+import org.neo4j.cypher.internal.frontend.v3_4.phases.semantics.{Scoping, VariableBinding}
 import org.neo4j.cypher.internal.frontend.v3_4.semantics.{SemanticCheckResult, SemanticChecker, SemanticFeature, SemanticState}
 import org.neo4j.cypher.internal.util.v3_4.ASTNode
 import org.neo4j.cypher.internal.util.v3_4.attribution.Attributes
@@ -28,13 +28,14 @@ case class SemanticAnalysis(warn: Boolean, features: SemanticFeature*)
   extends Phase[BaseContext, BaseState, BaseState] {
 
   override def process(from: BaseState, context: BaseContext): BaseState = {
-    val SemanticCheckResult(state, errors) = SemanticChecker.check(from.statement(), features: _*)
+    val statement = from.statement()
+    val SemanticCheckResult(state, errors) = SemanticChecker.check(statement, features: _*)
     if (warn) state.notifications.foreach(context.notificationLogger.log)
 
-    val (readScope, writeScope) = Scoping.doIt(from.statement())
+    val (readScope, writeScope) = Scoping.doIt(statement)
+    val variableBinding = VariableBinding.doIt(statement, readScope, writeScope)
 
-    val attributes = new Attributes(ASTNode.idGen, readScope, writeScope)
-
+    val attributes = new Attributes(ASTNode.idGen, readScope, writeScope, variableBinding)
     context.errorHandler(errors)
 
     from.withSemanticState(state).withAttributes(attributes)

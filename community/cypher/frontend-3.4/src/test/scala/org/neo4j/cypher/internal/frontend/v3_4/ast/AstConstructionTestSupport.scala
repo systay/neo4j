@@ -19,6 +19,7 @@ package org.neo4j.cypher.internal.frontend.v3_4.ast
 import org.neo4j.cypher.internal.util.v3_4.{DummyPosition, InputPosition}
 import org.neo4j.cypher.internal.util.v3_4.test_helpers.CypherTestSupport
 import org.neo4j.cypher.internal.v3_4.expressions._
+import org.neo4j.cypher.internal.util.v3_4.symbols._
 
 import scala.language.implicitConversions
 
@@ -77,4 +78,6 @@ trait AstConstructionTestSupport extends CypherTestSupport {
 
   def graphAt(name: String, address: String): SingleGraphAs =
     GraphAtAs(url(address), Some(varFor(name)))(pos)
+
+  def parameter(name: String, typ: CypherType) = Parameter("x", typ)(pos)
 }

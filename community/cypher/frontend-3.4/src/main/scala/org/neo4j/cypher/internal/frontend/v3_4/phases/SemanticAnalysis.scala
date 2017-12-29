@@ -19,7 +19,7 @@ package org.neo4j.cypher.internal.frontend.v3_4.phases
 import org.neo4j.cypher.internal.frontend.v3_4.ast._
 import org.neo4j.cypher.internal.frontend.v3_4.ast.conditions.{StatementCondition, containsNoNodesOfType}
 import org.neo4j.cypher.internal.frontend.v3_4.phases.CompilationPhaseTracer.CompilationPhase.SEMANTIC_CHECK
-import org.neo4j.cypher.internal.frontend.v3_4.phases.semantics.{Scoping, VariableBinding}
+import org.neo4j.cypher.internal.frontend.v3_4.phases.semantics.{Scoping, Typing, VariableBinding}
 import org.neo4j.cypher.internal.frontend.v3_4.semantics.{SemanticCheckResult, SemanticChecker, SemanticFeature, SemanticState}
 import org.neo4j.cypher.internal.util.v3_4.ASTNode
 import org.neo4j.cypher.internal.util.v3_4.attribution.Attributes
@@ -34,8 +34,9 @@ case class SemanticAnalysis(warn: Boolean, features: SemanticFeature*)
 
     val (readScope, writeScope) = Scoping.doIt(statement)
     val variableBinding = VariableBinding.doIt(statement, readScope, writeScope)
+    val types = Typing.doIt(statement, variableBinding)
 
-    val attributes = new Attributes(ASTNode.idGen, readScope, writeScope, variableBinding)
+    val attributes = new Attributes(ASTNode.idGen, readScope, writeScope, variableBinding, types)
     context.errorHandler(errors)
 
     from.withSemanticState(state).withAttributes(attributes)

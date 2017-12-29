@@ -27,7 +27,7 @@ class Unchangeable[A]() {
 
   // Getter
   def value: A = {
-    val result = _value.getOrElse(throw new InternalException("Value still not set"))
+    val result = _value.getOrElse(fail())
     _seen = true
     result
   }
@@ -43,4 +43,6 @@ class Unchangeable[A]() {
     value_=(other.value)
 
   override def toString: String = s"Unchangeable(${_value.getOrElse("NOT SET")})"
+
+  private def fail() = throw new InternalException("Value still not set")
 }

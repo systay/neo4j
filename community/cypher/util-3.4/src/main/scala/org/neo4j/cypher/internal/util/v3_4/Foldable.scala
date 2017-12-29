@@ -111,16 +111,44 @@ object Foldable {
       }
     }
 
-    def treeVisitTopDown(f: PartialFunction[Any, Unit]): Unit = {
+    def treeVisitTopDown(visitor: PartialFunction[Any, Unit]): Unit = {
       val leftToVisit = mutable.ArrayStack[Any](that)
       while (leftToVisit.nonEmpty) {
         val current = leftToVisit.pop()
-        if (f.isDefinedAt(current)) {
-          f(current)
+        if (visitor.isDefinedAt(current)) {
+          visitor(current)
         }
         val kids: Iterator[AnyRef] = current.reverseChildren
         while (kids.hasNext) {
           leftToVisit.push(kids.next())
+        }
+      }
+    }
+
+    def treeVisitBottomUp(visitor: PartialFunction[Any, Unit]): Unit = {
+      val leftToVisit = mutable.ArrayStack[(AnyRef, Iterator[AnyRef])]()
+
+      // Eagerly populates the stack with the first child recursively until we reach a leaf
+      @tailrec
+      def populate(obj: AnyRef): Unit = {
+        val children: Iterator[AnyRef] = obj.children
+        leftToVisit.push((obj, children))
+
+        if (children.nonEmpty) {
+          populate(children.next())
+        }
+      }
+
+      populate(that.asInstanceOf[AnyRef]) // Unless someone tries to do a 1.treeVisitBottomUp(...), this should be safe
+
+      while (leftToVisit.nonEmpty) {
+        val (current, children) = leftToVisit.pop()
+
+        if (children.isEmpty) {
+          visitor.applyOrElse(current, (_:AnyRef) => {})
+        } else {
+          leftToVisit.push((current, children))
+          populate(children.next())
         }
       }
     }

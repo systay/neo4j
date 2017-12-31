@@ -125,30 +125,48 @@ object Foldable {
       }
     }
 
-    def treeVisitBottomUp(visitor: PartialFunction[Any, Unit]): Unit = {
-      val leftToVisit = mutable.ArrayStack[(AnyRef, Iterator[AnyRef])]()
+    /**
+      * Allows a visitor to visit all elements in the tree bottom up, left to right.
+      * Also allows for context to be set when walking down the tree, to give the
+      * visitor enough information to do it's work
+      *
+      * @param initialContext       The initial context to use when going down the tree
+      * @param topDownContextSetter A partial function that takes the current element in the tree
+      *                             and the current context as inputs, and outputs the new context to use
+      * @param bottomUpVisitor      A partial function that will be applied to all elements, visiting them in a bottom up,
+      *                             left to right path
+      * @tparam Context The type of the Context to be used for the tree traversal
+      */
+    def treeVisitBottomUp[Context](initialContext: Context,
+                                   topDownContextSetter: PartialFunction[Any, Context],
+                                   bottomUpVisitor: PartialFunction[(Any, Context), Unit]): Unit = {
+      val leftToVisit = mutable.ArrayStack[((AnyRef, Context), Iterator[AnyRef])]()
 
       // Eagerly populates the stack with the first child recursively until we reach a leaf
       @tailrec
-      def populate(obj: AnyRef): Unit = {
+      def populate(obj: AnyRef, context: Context): Unit = {
         val children: Iterator[AnyRef] = obj.children
-        leftToVisit.push((obj, children))
-
+        leftToVisit.push(((obj, context), children))
+        val childrenContext = nextContext(obj, context)
         if (children.nonEmpty) {
-          populate(children.next())
+          populate(children.next(), childrenContext)
         }
       }
 
-      populate(that.asInstanceOf[AnyRef]) // Unless someone tries to do a 1.treeVisitBottomUp(...), this should be safe
+      def nextContext(el: Any): Context = {
+        topDownContextSetter.applyOrElse(el, (_: Any) => initialContext)
+      }
+
+      populate(that.asInstanceOf[AnyRef], initialContext) // Unless someone tries to do a 1.treeVisitBottomUp(...), this should be safe
 
       while (leftToVisit.nonEmpty) {
-        val (current, children) = leftToVisit.pop()
+        val ((current, ctx), children) = leftToVisit.pop()
 
         if (children.isEmpty) {
-          visitor.applyOrElse(current, (_:AnyRef) => {})
+          bottomUpVisitor.applyOrElse((current, ctx), (_: (AnyRef, Context)) => {})
         } else {
-          leftToVisit.push((current, children))
-          populate(children.next())
+          leftToVisit.push(((current, ctx), children))
+          populate(children.next(), ctx)
         }
       }
     }

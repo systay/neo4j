@@ -25,14 +25,14 @@ import org.neo4j.cypher.internal.util.v3_4.symbols
 class AddTypingTest extends CypherFunSuite with AstConstructionTestSupport {
   test("very simple test") {
     val expression = Add(literalInt(1), literalInt(2))(pos)
-    val types: Typing = constructAndTypeAst(expression)
-    types.getTypesFor(expression) should equal(Set(IntegerType))
+    val types: TypeTable = constructAndTypeAst(expression)
+    types.get(expression) should equal(Set(IntegerType))
   }
 
   test("param types") {
     val expression = Add(parameter("prop", symbols.CTAny), literalInt(2))(pos)
-    val types: Typing = constructAndTypeAst(expression)
-    types.getTypesFor(expression) should equal(Set(IntegerType, FloatType, StringType, ListType.ListOfUnknown))
+    val types: TypeTable = constructAndTypeAst(expression)
+    types.get(expression) should equal(Set(IntegerType, FloatType, StringType, ListType.ListOfUnknown))
   }
 
   testValidTypes(StringType, StringType)(StringType)
@@ -71,18 +71,20 @@ class AddTypingTest extends CypherFunSuite with AstConstructionTestSupport {
   protected def testValidTypes(lhsType: NewCypherType, rhsType: NewCypherType)(expected: NewCypherType) {
     val expression = Add(parameter("l", translate(lhsType)), parameter("r", translate(rhsType)))(pos)
     test(s"$lhsType + $rhsType should equal $expected") {
-      val types: Typing = constructAndTypeAst(expression)
-      types.getTypesFor(expression) should equal(Set(expected))
+      val types: TypeTable = constructAndTypeAst(expression)
+      types.get(expression) should equal(Set(expected))
       types.get(expression.secretId) shouldBe a [ValidTypeConstraint]
     }
   }
+
   protected def testInvalidApplication(lhsType: NewCypherType, rhsType: NewCypherType) {
     val expression = Add(parameter("l", translate(lhsType)), parameter("r", translate(rhsType)))(pos)
     test(s"$lhsType + $rhsType should fail") {
-      val types: Typing = constructAndTypeAst(expression)
+      val types: TypeTable = constructAndTypeAst(expression)
       val constraint = types.get(expression.secretId)
       constraint shouldBe an [InvalidTypeConstraint]
-      constraint.possibleErrors should equal(Set(s"Don't know how to + between $lhsType and $rhsType"))
+      constraint.asInstanceOf[InvalidTypeConstraint].possibleErrors should
+        equal(Set(s"Don't know how to + between $lhsType and $rhsType"))
     }
   }
 

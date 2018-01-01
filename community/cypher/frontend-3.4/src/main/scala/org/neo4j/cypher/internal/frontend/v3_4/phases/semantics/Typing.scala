@@ -18,7 +18,9 @@ package org.neo4j.cypher.internal.frontend.v3_4.phases.semantics
 
 import org.neo4j.cypher.internal.frontend.v3_4.ast
 import org.neo4j.cypher.internal.frontend.v3_4.ast._
+import org.neo4j.cypher.internal.frontend.v3_4.phases.semantics.TypeJudgements.TypeJudgement
 import org.neo4j.cypher.internal.frontend.v3_4.phases.semantics.Types._
+import org.neo4j.cypher.internal.util.v3_4.attribution.Id
 import org.neo4j.cypher.internal.v3_4.expressions._
 
 object Typing {
@@ -33,12 +35,26 @@ object Typing {
   only when there could different types coming through do we need to do type checking.
 
   This is done in two stages - first stage is while walking down the tree, we annotate expressions with expectations
-  on them, and then when coming back up the tree, we calculate types for expressions.
+  on them, and then when coming back up the tree, we calculate types for expressions. Actually checking if we pass the
+  type checking or not is done in one of two places:
+   -> either while typing an expression, because we need to know the children type to decide the expressions type. If
+      the children have the wrong type, the expression will be marked as failed but still get valid output types.
+   -> if the expression does not have any type calculation to do on the children type, a step after typing will go
+      over all expressions and check whether we pass or fail the type check
   */
-  type TypeJudgement = PartialFunction[(Expression, TypingContext, Bindings, TypeTable), TypeConstraint]
+
+  // This is just a read only version of the type table, so no-one get's confused
+  // and tries to update it in a TypeJudgement
+  trait TypeAccessor {
+    def contains(id: Id): Boolean
+    def get(e: Expression): Set[NewCypherType]
+    def get(id: Id): TypeConstraint
+  }
 
   def doIt(statement: ast.Statement, variableBindings: VariableBinding): TypeTable = {
     val types = new TypeTable
+    val expectations = new TypeExpectations
+
     val bindings = new Bindings(statement, variableBindings)
 
     val bottomUpVisitor: PartialFunction[(Any, TypingContext), Unit] = {
@@ -69,6 +85,7 @@ object Typing {
 
       case (e: Expression, c) =>
         val typeConstraint = TypeJudgements.expressionTyper(e, c, bindings, types)
+        TypeJudgements.addExpectation(e, c, bindings, types, expectations)
         types.set(e, typeConstraint)
     }
 
@@ -92,10 +109,10 @@ object Typing {
 
   sealed trait TypingContext
 
-  case class VariableFreeTypeJudgement(pf: PartialFunction[(Expression, TypeTable), TypeConstraint]) extends TypeJudgement {
-    override def isDefinedAt(x: (Expression, TypingContext, Bindings, TypeTable)): Boolean = pf.isDefinedAt((x._1, x._4))
+  case class VariableFreeTypeJudgement(pf: PartialFunction[(Expression, TypeAccessor), TypeConstraint]) extends TypeJudgement {
+    override def isDefinedAt(x: (Expression, TypingContext, Bindings, TypeAccessor)): Boolean = pf.isDefinedAt((x._1, x._4))
 
-    override def apply(v1: (Expression, TypingContext, Bindings, TypeTable)): TypeConstraint = pf.apply((v1._1, v1._4))
+    override def apply(v1: (Expression, TypingContext, Bindings, TypeAccessor)): TypeConstraint = pf.apply((v1._1, v1._4))
   }
 
   case object MatchContext extends TypingContext

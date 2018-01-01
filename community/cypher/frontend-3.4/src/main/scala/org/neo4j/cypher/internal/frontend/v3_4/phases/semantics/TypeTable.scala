@@ -17,19 +17,21 @@
 package org.neo4j.cypher.internal.frontend.v3_4.phases.semantics
 
 import org.neo4j.cypher.internal.frontend.v3_4.phases.semantics.Types.NewCypherType
+import org.neo4j.cypher.internal.frontend.v3_4.phases.semantics.Typing.TypeAccessor
 import org.neo4j.cypher.internal.util.v3_4.attribution.Attribute
 import org.neo4j.cypher.internal.v3_4.expressions.Expression
 
-class TypeTable extends Attribute[TypeConstraint] {
+class TypeTable extends Attribute[TypeConstraint] with TypeAccessor {
   def get(e: Expression): Set[NewCypherType] =
-  // The scala type system does not see it, but we are guaranteed to have a
-  // TypeConstraint per expression by this phase
-    get(e.secretId).asInstanceOf[TypeConstraint].possibleTypes
+    get(e.secretId).possibleTypes
 
   def set(e: Expression, t: TypeConstraint): Unit = set(e.secretId, t)
 }
 
-class TypeExpectations extends Attribute[Set[NewCypherType]]
+class TypeExpectations extends Attribute[Set[NewCypherType]] {
+  def set(e: Expression, types: NewCypherType*): Unit = set(e.secretId, types.toSet)
+  def set(e: Expression, types: Set[NewCypherType]): Unit = set(e.secretId, types)
+}
 
 sealed trait TypeConstraint {
   def possibleTypes: Set[NewCypherType]

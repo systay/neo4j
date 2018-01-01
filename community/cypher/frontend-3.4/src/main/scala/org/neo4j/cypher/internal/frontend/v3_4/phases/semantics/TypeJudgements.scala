@@ -23,13 +23,28 @@ import org.neo4j.cypher.internal.v3_4.expressions._
 
 object TypeJudgements {
 
+  def addExpectation(e: Expression, c: TypingContext, b: Bindings, t: TypeAccessor, expectations: TypeExpectations): Unit =
+    e match {
+      case Modulo(lhs, rhs) =>
+        expectations.set(lhs, IntegerType, FloatType)
+        expectations.set(rhs, IntegerType, FloatType)
+
+      // Fallback that catches all expressions that do not have any expectations on children, or not even have children
+      case _ =>
+    }
+
+
+  type TypeJudgement = PartialFunction[(Expression, TypingContext, Bindings, TypeAccessor), TypeConstraint]
+
   private val allJudgements =
     params orElse
       literals orElse
       add orElse
-      variable
+      variable orElse
+      property orElse
+      modulo
 
-  def expressionTyper(e: Expression, ctx: TypingContext, bindings: Bindings, typeTable: TypeTable): TypeConstraint = {
+  def expressionTyper(e: Expression, ctx: TypingContext, bindings: Bindings, typeTable: TypeAccessor): TypeConstraint = {
     val tuple = (e, ctx, bindings, typeTable)
     if(!allJudgements.isDefinedAt(tuple))
       throw new InternalException(s"Failed to type $e")
@@ -61,8 +76,36 @@ object TypeJudgements {
       valid(ListType(innerTypes))
   })
 
+  def property: TypeJudgement = VariableFreeTypeJudgement({
+    case (_: Property, _) => valid(IntegerType, FloatType, StringType, BoolType, ListType(?), NullType)
+  })
+
+  def modulo: TypeJudgement = VariableFreeTypeJudgement({
+    case (Modulo(lhs, rhs), types) =>
+      val lhsTypes = types.get(lhs)
+      val rhsTypes = types.get(rhs)
+      val possibleTypes: Set[Option[NewCypherType]] = for {
+        lt <- lhsTypes
+        rt <- rhsTypes
+      } yield {
+        (lt, rt) match {
+          case (IntegerType, IntegerType) => Some(IntegerType)
+          case (IntegerType, FloatType) => Some(FloatType)
+          case (FloatType, IntegerType) => Some(FloatType)
+          case (FloatType, FloatType) => Some(FloatType)
+          case (NullType, _) => Some(NullType)
+          case (_, NullType) => Some(NullType)
+          case (_, _) => None
+        }
+      }
+      if(possibleTypes.nonEmpty)
+        ValidTypeConstraint(possibleTypes.flatten)
+      else
+        InvalidTypeConstraint(Set(IntegerType, FloatType, NullType), Set("modulo expected int, floats or null"))
+  })
+
   def variable: TypeJudgement = {
-    case (e: Variable, c: TypingContext, bindings: Bindings, types: TypeTable) =>
+    case (e: Variable, c: TypingContext, bindings: Bindings, types: TypeAccessor) =>
       bindings.variableBindings.get(e.secretId) match {
           // Sometimes variables are typed from the outside when walking down the tree. If this is the case,
           // just return this type
@@ -77,7 +120,7 @@ object TypeJudgements {
   }
 
   def add: TypeJudgement = VariableFreeTypeJudgement({
-    case (a: Add, types: TypeTable) =>
+    case (a: Add, types: TypeAccessor) =>
       val lhsTypes = types.get(a.lhs)
       val rhsTypes = types.get(a.rhs)
 

@@ -18,19 +18,24 @@ package org.neo4j.cypher.internal.frontend.v3_4.phases.semantics
 
 import org.neo4j.cypher.internal.frontend.v3_4.ast.{Return, Statement}
 import org.neo4j.cypher.internal.frontend.v3_4.parser.CypherParser
-import org.neo4j.cypher.internal.frontend.v3_4.phases.semantics.Types.{IntegerType, NewCypherType, StringType}
+import org.neo4j.cypher.internal.frontend.v3_4.phases.semantics.Types._
 import org.neo4j.cypher.internal.util.v3_4.Foldable._
 import org.neo4j.cypher.internal.util.v3_4.test_helpers.CypherFunSuite
 import org.scalatest.matchers.{MatchResult, Matcher}
 
 class TrickTheTyperTest extends CypherFunSuite with TypingTestBase {
-  test("apa") {
+  test("unwind mix of ints and strings") {
     query("UNWIND [1,2,3, 'a','b','c'] AS x RETURN 42 as y, x") should
       typedAs(
         "x" -> (IntegerType, StringType),
         "y" -> t(IntegerType))
   }
 
+  test("modulo on a property") {
+    query("MATCH (a) RETURN a.prop % 1 AS x") should
+      typedAs(
+        "x" -> (IntegerType, FloatType, NullType))
+  }
 }
 
 trait TypingTestBase {

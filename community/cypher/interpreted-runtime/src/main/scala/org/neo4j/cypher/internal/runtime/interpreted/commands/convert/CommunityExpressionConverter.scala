@@ -60,7 +60,7 @@ object CommunityExpressionConverter extends ExpressionConverter {
         case e: ast.IsNull => predicates.IsNull(self.toCommandExpression(e.lhs))
         case e: ast.IsNotNull => predicates.Not(predicates.IsNull(self.toCommandExpression(e.lhs)))
         case e: ast.InequalityExpression => inequalityExpression(e, self)
-        case e: ast.Add => commandexpressions.Add(self.toCommandExpression(e.lhs), self.toCommandExpression(e.rhs))
+        case e: ast.Add => commandexpressions.AddDynamic(self.toCommandExpression(e.lhs), self.toCommandExpression(e.rhs))
         case e: ast.UnaryAdd => self.toCommandExpression(e.rhs)
         case e: ast.Subtract => commandexpressions.Subtract(self.toCommandExpression(e.lhs), self.toCommandExpression(e.rhs))
         case e: ast.UnarySubtract => commandexpressions.Subtract(commandexpressions.Literal(0), self.toCommandExpression(e.rhs))

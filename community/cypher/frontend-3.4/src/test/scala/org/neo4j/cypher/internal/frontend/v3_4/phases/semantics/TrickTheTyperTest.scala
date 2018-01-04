@@ -32,7 +32,7 @@ class TrickTheTyperTest extends CypherFunSuite with TypingTestBase {
   }
 
   test("modulo on a property") {
-    query("MATCH (a) RETURN a.prop % 1 AS x") should
+    query("MATCH (a) RETURN a.prop + 1 AS x") should
       typedAs(
         "x" -> (IntegerType, FloatType, NullType))
   }

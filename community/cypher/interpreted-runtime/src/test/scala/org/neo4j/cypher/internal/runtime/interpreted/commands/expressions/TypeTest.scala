@@ -26,7 +26,7 @@ import org.neo4j.values.storable.{DoubleValue, LongValue}
 class TypeTest extends CypherFunSuite {
 
   test("plus int int") {
-    val op = Add(Literal(1), Literal(2))
+    val op = AddDynamic(Literal(1), Literal(2))
 
     val result = calc(op)
 
@@ -35,7 +35,7 @@ class TypeTest extends CypherFunSuite {
   }
 
   test("plus double int") {
-    val op = Add(Literal(1.2), Literal(2))
+    val op = AddDynamic(Literal(1.2), Literal(2))
 
     val result = calc(op)
 

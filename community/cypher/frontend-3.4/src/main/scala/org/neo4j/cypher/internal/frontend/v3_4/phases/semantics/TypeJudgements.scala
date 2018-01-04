@@ -129,6 +129,9 @@ object TypeJudgements {
         rhsTyp <- rhsTypes
       } yield {
         (lhsTyp, rhsTyp) match {
+          case (NullType, _) => Left(NullType)
+          case (_, NullType) => Left(NullType)
+
           // 1 + 1 => 2
           // 1 + 1.1 => 2.1
           // 1.1 + 1 => 2.1

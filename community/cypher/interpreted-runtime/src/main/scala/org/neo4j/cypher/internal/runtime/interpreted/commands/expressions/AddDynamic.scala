@@ -19,17 +19,16 @@
  */
 package org.neo4j.cypher.internal.runtime.interpreted.commands.expressions
 
-import org.neo4j.cypher.internal.runtime.interpreted.{ExecutionContext, IsList}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.TypeSafeMathSupport
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
+import org.neo4j.cypher.internal.runtime.interpreted.{ExecutionContext, IsList}
 import org.neo4j.cypher.internal.util.v3_4.CypherTypeException
-import org.neo4j.cypher.internal.util.v3_4.symbols._
 import org.neo4j.values._
 import org.neo4j.values.storable.{UTF8StringValue, _}
 import org.neo4j.values.utils.UTF8Utils
 import org.neo4j.values.virtual.VirtualValues
 
-case class Add(a: Expression, b: Expression) extends Expression with TypeSafeMathSupport {
+case class AddDynamic(a: Expression, b: Expression) extends Expression with TypeSafeMathSupport {
   def apply(ctx: ExecutionContext, state: QueryState): AnyValue = {
     val aVal = a(ctx, state)
     val bVal = b(ctx, state)
@@ -51,16 +50,39 @@ case class Add(a: Expression, b: Expression) extends Expression with TypeSafeMat
     }
   }
 
-  def rewrite(f: (Expression) => Expression) = f(Add(a.rewrite(f), b.rewrite(f)))
-
+  def rewrite(f: (Expression) => Expression) = f(AddDynamic(a.rewrite(f), b.rewrite(f)))
 
   def arguments = Seq(a, b)
 
-  private def mergeWithCollection(collection: CypherType, singleElement: CypherType):CypherType= {
-    val collectionType = collection.asInstanceOf[ListType]
-    val mergedInnerType = collectionType.innerType.leastUpperBound(singleElement)
-    CTList(mergedInnerType)
+  def symbolTableDependencies = a.symbolTableDependencies ++ b.symbolTableDependencies
+}
+
+case class AddIntegers(a: Expression, b: Expression) extends Expression with TypeSafeMathSupport {
+
+  override def apply(ctx: ExecutionContext, state: QueryState): AnyValue = {
+    val aVal = a(ctx, state).asInstanceOf[IntegralValue]
+    val bVal = b(ctx, state).asInstanceOf[IntegralValue]
+    Values.longValue(StrictMath.addExact(aVal.longValue(), bVal.longValue()))
   }
 
-  def symbolTableDependencies = a.symbolTableDependencies ++ b.symbolTableDependencies
+  override def rewrite(f: Expression => Expression): Expression = f(AddIntegers(a.rewrite(f), b.rewrite(f)))
+
+  override def arguments: Seq[Expression] = Seq(a, b)
+
+  override def symbolTableDependencies: Set[String] = a.symbolTableDependencies ++ b.symbolTableDependencies
+}
+
+case class AddFloats(a: Expression, b: Expression) extends Expression with TypeSafeMathSupport {
+
+  override def apply(ctx: ExecutionContext, state: QueryState): AnyValue = {
+    val aVal = a(ctx, state).asInstanceOf[FloatValue]
+    val bVal = b(ctx, state).asInstanceOf[FloatValue]
+    Values.doubleValue(aVal.doubleValue() + bVal.doubleValue())
+  }
+
+  override def rewrite(f: Expression => Expression): Expression = f(AddIntegers(a.rewrite(f), b.rewrite(f)))
+
+  override def arguments: Seq[Expression] = Seq(a, b)
+
+  override def symbolTableDependencies: Set[String] = a.symbolTableDependencies ++ b.symbolTableDependencies
 }

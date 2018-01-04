@@ -30,6 +30,11 @@ import scala.collection.mutable.ArrayBuffer
 
 class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
+  test("apa") {
+    val r = graph.execute("""UNWIND [1,2,3,4,5,6,7,8,9,10] as x RETURN x % 2""")
+    println(r.resultAsString())
+  }
+
   test("Do not count null elements in nodes without labels") {
 
     createNode("name" -> "a")

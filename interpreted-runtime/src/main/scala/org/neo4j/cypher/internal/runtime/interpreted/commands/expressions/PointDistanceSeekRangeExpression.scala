@@ -17,17 +17,23 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.internal.runtime.interpreted.pipes
+package org.neo4j.cypher.internal.runtime.interpreted.commands.expressions
 
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
-import org.neo4j.cypher.internal.util.v3_4.attribution.Id
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
+import org.neo4j.cypher.internal.util.v3_4.InternalException
+import org.neo4j.cypher.internal.v3_4.logical.plans.PointDistanceRange
+import org.neo4j.values.AnyValue
 
-case class EagerPipe(src: Pipe)(val id: Id = Id.INVALID_ID)
-  extends PipeWithSource(src) {
+case class PointDistanceSeekRangeExpression(range: PointDistanceRange[Expression])
+  extends Expression {
 
-  protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
-    val buffer = input.toIndexedSeq
-    state.query.transactionalContext.markAsStable()
-    buffer.toIterator
-  }
+  override def apply(ctx: ExecutionContext, state: QueryState): AnyValue = throw new
+      InternalException("This should never be called")
+
+  override def rewrite(f: (Expression) => Expression): Expression = f(this)
+
+  override def arguments: Seq[Expression] = Seq.empty
+
+  override def symbolTableDependencies: Set[String] = Set.empty
 }

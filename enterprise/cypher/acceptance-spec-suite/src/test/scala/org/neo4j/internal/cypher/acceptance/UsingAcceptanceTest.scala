@@ -810,5 +810,45 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
       }, expectPlansToFail = Configs.AllRulePlanners))
 
     result.columnAs[Node]("f").toList should equal(List(node))
+    result.executionPlanDescription() should includeAtLeastOne(classOf[NodeIndexSeek], withVariable = "f")
+  }
+
+  test("should handle join hint solved multiple times") {
+    val initQuery = "CREATE (a:Node)-[:R]->(b:Node)-[:R]->(c:Node), (d:Node)-[:R]->(b)-[:R]->(e:Node)"
+    graph.execute(initQuery)
+
+    val query =
+      s"""MATCH (a:Node)-->(b:Node),(b)-->(c:Node),(d:Node)-->(b),(b)-->(e:Node)
+         |USING JOIN ON b
+         |RETURN count(*) as c""".stripMargin
+
+    val result = innerExecute(query)
+
+    result.toList should equal (List(Map("c" -> 4)))
+    result should useOperationTimes("NodeHashJoin", 3)
+  }
+
+  //---------------------------------------------------------------------------
+  // Verification helpers
+
+  private def verifyJoinHintUnfulfillableOnRunWithConfig(initQuery: String, query: String, expectedResult: Any): Unit = {
+    runWithConfig(GraphDatabaseSettings.cypher_hints_error -> "false") {
+      db =>
+        db.execute(initQuery)
+        val result = db.execute(query)
+        shouldHaveNoWarnings(result)
+        import scala.collection.JavaConverters._
+        result.asScala.toList.map(_.asScala) should equal(expectedResult)
+
+        val explainResult = db.execute(s"EXPLAIN $query")
+        shouldHaveWarning(explainResult, Status.Statement.JoinHintUnfulfillableWarning)
+    }
+
+    runWithConfig(GraphDatabaseSettings.cypher_hints_error -> "true") {
+      db =>
+        db.execute(initQuery)
+        intercept[QueryExecutionException](db.execute(query)).getStatusCode should equal("Neo.DatabaseError.Statement.ExecutionFailed")
+        intercept[QueryExecutionException](db.execute(s"EXPLAIN $query")).getStatusCode should equal("Neo.DatabaseError.Statement.ExecutionFailed")
+    }
   }
 }

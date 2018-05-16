@@ -46,6 +46,10 @@ object extractPredicates {
     val seed: (NodePredicates, EdgePredicates, SolvedPredicates) =
       (List.empty, List.empty, List.empty)
 
+    def notPathDependent(innerPredicate: Expression) = {
+      innerPredicate.dependencies.map(_.name).intersect(Set(originalEdgeName, originalNodeName)).isEmpty
+    }
+
     availablePredicates.foldLeft(seed) {
 
       //MATCH ()-[r* {prop:1337}]->()
@@ -57,26 +61,30 @@ object extractPredicates {
 
       //MATCH p = (a)-[x*]->(b) WHERE ALL(r in rels(p) WHERE r.prop > 5)
       case ((n, e, s),
-            p @ AllRelationshipsInPath(`originalNodeName`, `originalEdgeName`, variable, innerPredicate)) =>
+            p @ AllRelationshipsInPath(`originalNodeName`, `originalEdgeName`, variable, innerPredicate))
+            if notPathDependent(innerPredicate) =>
         val rewrittenPredicate = innerPredicate.endoRewrite(replaceVariable(variable, tempEdge))
         (n, e :+ rewrittenPredicate, s :+ p)
 
       //MATCH p = ()-[*]->() WHERE NONE(r in rels(p) WHERE <innerPredicate>)
       case ((n, e, s),
-            p @ NoRelationshipInPath(`originalNodeName`, `originalEdgeName`, variable, innerPredicate)) =>
+            p @ NoRelationshipInPath(`originalNodeName`, `originalEdgeName`, variable, innerPredicate))
+            if notPathDependent(innerPredicate) =>
         val rewrittenPredicate = innerPredicate.endoRewrite(replaceVariable(variable, tempEdge))
         val negatedPredicate = Not(rewrittenPredicate)(innerPredicate.position)
         (n, e :+ negatedPredicate, s :+ p)
 
       //MATCH p = ()-[*]->() WHERE ALL(r in nodes(p) WHERE <innerPredicate>)
       case ((n, e, s),
-            p @ AllNodesInPath(`originalNodeName`, `originalEdgeName`, variable, innerPredicate)) =>
+            p @ AllNodesInPath(`originalNodeName`, `originalEdgeName`, variable, innerPredicate))
+            if notPathDependent(innerPredicate) =>
         val rewrittenPredicate = innerPredicate.endoRewrite(replaceVariable(variable, tempNode))
         (n :+ rewrittenPredicate, e, s :+ p)
 
       //MATCH p = ()-[*]->() WHERE NONE(r in nodes(p) WHERE <innerPredicate>)
       case ((n, e, s),
-            p @ NoNodeInPath(`originalNodeName`, `originalEdgeName`, variable, innerPredicate)) =>
+            p @ NoNodeInPath(`originalNodeName`, `originalEdgeName`, variable, innerPredicate))
+            if notPathDependent(innerPredicate) =>
         val rewrittenPredicate = innerPredicate.endoRewrite(replaceVariable(variable, tempNode))
         val negatedPredicate = Not(rewrittenPredicate)(innerPredicate.position)
         (n :+ negatedPredicate, e, s :+ p)

@@ -142,14 +142,14 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
       }, expectPlansToFail = ignoreConfiguration))
   }
 
-  test("should handle variable length path with nested AllNodesInPath predicate using nodes of the path") {
+  test("should handle variable length path with label with nested AllNodesInPath predicate using nodes of the path") {
 
     val node1 = createLabeledNode("NODE")
     val node2 = createLabeledNode("NODE")
     relate(node1,node2)
 
     val query =
-      """
+      """CYPHER runtime=interpreted
         | MATCH p = (:NODE)-[*1]->(:NODE)
         | WHERE ALL(x IN nodes(p) WHERE single(y IN nodes(p) WHERE y = x))
         | RETURN p
@@ -157,9 +157,52 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
 
     val configs = Configs.CommunityInterpreted - Configs.Cost3_2 - Configs.Cost3_1
 
-    val result = executeWith(configs, query).toList.head("p").asInstanceOf[Path]
-    result.startNode() should equal(node1)
-    result.endNode() should equal(node2)
+    val result = innerExecuteDeprecated(query, Map.empty)
+    val path = result.toList.head("p").asInstanceOf[Path]
+    path.startNode() should equal(node1)
+    path.endNode() should equal(node2)
+  }
+
+  test("should handle variable length path with label with nested AllNodesInPath predicate using nodes of the path with names") {
+
+    val node1 = createLabeledNode("NODE")
+    val node2 = createLabeledNode("NODE")
+    relate(node1,node2)
+
+    val query =
+      """CYPHER runtime=interpreted
+        | MATCH p = (start:NODE)-[rel*1]->(end:NODE)
+        | WHERE ALL(x IN nodes(p) WHERE single(y IN nodes(p) WHERE y = x))
+        | RETURN p
+      """.stripMargin
+
+    val configs = Configs.CommunityInterpreted - Configs.Cost3_2 - Configs.Cost3_1
+
+    val result = innerExecuteDeprecated(query, Map.empty)
+    val path = result.toList.head("p").asInstanceOf[Path]
+    path.startNode() should equal(node1)
+    path.endNode() should equal(node2)
+  }
+
+  test("should handle variable length path with nested AllNodesInPath predicate using nodes of the path with no labels") {
+
+    val node1 = createNode()
+    val node2 = createNode()
+    relate(node1,node2)
+
+    val query =
+      """
+        | MATCH p = ()-[*1]->()
+        | WHERE ALL(x IN nodes(p) WHERE single(y IN nodes(p) WHERE y = x))
+        | RETURN p
+      """.stripMargin
+
+    val configs = Configs.CommunityInterpreted - Configs.Cost3_2 - Configs.Cost3_1
+
+    val result = executeWith(configs, query)
+    val path = result.toList.head("p").asInstanceOf[Path]
+    path.startNode() should equal(node1)
+    path.endNode() should equal(node2)
   }
 
   test("should handle variable length path with nested AllNodesInPath predicate using the path") {
@@ -169,7 +212,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
     relate(node1,node2)
 
     val query =
-      """
+      """CYPHER runtime=interpreted
         | MATCH p = (:NODE)-[*1]->(:NODE)
         | WHERE ALL(x IN nodes(p) WHERE length(p) = 1)
         | RETURN p
@@ -177,9 +220,10 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
 
     val configs = Configs.CommunityInterpreted - Configs.Cost3_2 - Configs.Cost3_1
 
-    val result = executeWith(configs, query).toList.head("p").asInstanceOf[Path]
-    result.startNode() should equal(node1)
-    result.endNode() should equal(node2)
+    val result = innerExecuteDeprecated(query, Map.empty)
+    val path = result.toList.head("p").asInstanceOf[Path]
+    path.startNode() should equal(node1)
+    path.endNode() should equal(node2)
   }
 
   test("should handle variable length path with nested AllRelationshipsInPath predicate using rels of the path") {
@@ -197,9 +241,10 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
 
     val configs = Configs.CommunityInterpreted - Configs.Cost3_2 - Configs.Cost3_1
 
-    val result = executeWith(configs, query).toList.head("p").asInstanceOf[Path]
-    result.startNode() should equal(node1)
-    result.endNode() should equal(node2)
+    val result = executeWith(configs, query)
+    val path = result.toList.head("p").asInstanceOf[Path]
+    path.startNode() should equal(node1)
+    path.endNode() should equal(node2)
   }
 
   test("should handle variable length path with nested AllRelationshipsInPath predicate using the path") {
@@ -217,9 +262,10 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
 
     val configs = Configs.CommunityInterpreted - Configs.Cost3_2 - Configs.Cost3_1
 
-    val result = executeWith(configs, query).toList.head("p").asInstanceOf[Path]
-    result.startNode() should equal(node1)
-    result.endNode() should equal(node2)
+    val result = executeWith(configs, query)
+    val path = result.toList.head("p").asInstanceOf[Path]
+    path.startNode() should equal(node1)
+    path.endNode() should equal(node2)
   }
 
   test("should handle variable length path with nested NoNodesInPath predicate using the path") {
@@ -237,9 +283,10 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
 
     val configs = Configs.CommunityInterpreted - Configs.Cost3_2 - Configs.Cost3_1
 
-    val result = executeWith(configs, query).toList.head("p").asInstanceOf[Path]
-    result.startNode() should equal(node1)
-    result.endNode() should equal(node2)
+    val result = executeWith(configs, query)
+    val path = result.toList.head("p").asInstanceOf[Path]
+    path.startNode() should equal(node1)
+    path.endNode() should equal(node2)
   }
 
   test("should handle variable length path with nested NoRelationshipsInPath predicate using the path") {
@@ -257,9 +304,32 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
 
     val configs = Configs.CommunityInterpreted - Configs.Cost3_2 - Configs.Cost3_1
 
-    val result = executeWith(configs, query).toList.head("p").asInstanceOf[Path]
-    result.startNode() should equal(node1)
-    result.endNode() should equal(node2)
+    val result = executeWith(configs, query)
+    val path = result.toList.head("p").asInstanceOf[Path]
+    path.startNode() should equal(node1)
+    path.endNode() should equal(node2)
+  }
+
+
+  test("should handle variable length path with nested AllNodesInPath predicate using the start node") {
+
+    val node1 = createLabeledNode(Map("prop" -> 1), "NODE")
+    val node2 = createLabeledNode(Map("prop" -> 1),"NODE")
+    relate(node1,node2)
+
+    val query =
+      """
+        | MATCH p = (start:NODE)-[*1..2]->(end:NODE)
+        | WHERE ALL(x IN nodes(p) WHERE x.prop = nodes(p)[0].prop AND x.prop = nodes(p)[1].prop)
+        | RETURN p
+      """.stripMargin
+
+//    val configs = Configs.CommunityInterpreted - Configs.Cost3_2 - Configs.Cost3_1
+
+    val result = innerExecuteDeprecated(query, Map.empty)
+    val path = result.toList.head("p").asInstanceOf[Path]
+    path.startNode() should equal(node1)
+    path.endNode() should equal(node2)
   }
 
   //  test("Do not plan pruning var expand when path is needed") {

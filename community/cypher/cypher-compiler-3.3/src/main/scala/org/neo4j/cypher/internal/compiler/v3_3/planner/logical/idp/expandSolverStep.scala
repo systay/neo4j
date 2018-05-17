@@ -133,7 +133,7 @@ object expandSolverStep {
           && rel.name == patternRel.name =>
         (variable, innerPredicate) -> all
 
-      //MATCH p = ... WHERE all(n in nodes(p)... or all(r in relationships(p)
+      //MATCH p = ... WHERE none(n in nodes(p)... or none(r in relationships(p)
       case none@NoneIterablePredicate(FilterScope(variable, Some(innerPredicate)),
       FunctionInvocation(_, FunctionName(fname), false,
       Seq(PathExpression(
